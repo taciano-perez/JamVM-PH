@@ -86,6 +86,7 @@ void showUsage(char *name) {
     printf("  -version\t   print out version number and copyright information\n");
     printf("  -showversion     show version number and copyright and continue\n");
     printf("  -fullversion     show jpackage-compatible version number and exit\n");
+    printf("  -persistentheap    enable persistent heap and set it to a specific file\n");
     printf("  -? -help\t   print out this message\n");
     printf("  -X\t\t   show help on non-standard options\n");
 }
@@ -238,6 +239,12 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
                        MIN_STACK/KB);
                 goto exit;
             }
+
+        } else if(strncmp(argv[i], "-persistentheap:", 16) == 0) {
+            args->persistent_heap = TRUE;
+            memcpy( args->heap_file, &argv[i][16], strlen(argv[i]));
+
+            //printf("HEAP FILE NAME %s\n", args->heap_file);
 
         } else if(strncmp(argv[i], "-D", 2) == 0) {
             char *key = strcpy(sysMalloc(strlen(argv[i] + 2) + 1), argv[i] + 2);
