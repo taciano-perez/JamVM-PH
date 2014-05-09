@@ -151,7 +151,7 @@
 #define TIME_WITH_SYS_TIME 1
 
 /* defined if object allocation tracing enabled for debugging */
-#define TRACEALLOC 1
+/* #undef TRACEALLOC */
 
 /* defined if GC compaction phase tracing enabled for debugging */
 /* #undef TRACECOMPACT */
