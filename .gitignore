@@ -7,6 +7,8 @@
 # Libraries
 *.lib
 *.a
+*.lo
+*.la
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -24,3 +26,8 @@
 
 # Persistent Heap
 *.ph
+
+# Eclipse files and folders
+.project
+.cproject
+.settings/
