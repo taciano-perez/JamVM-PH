@@ -231,7 +231,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                READ_U8(*(u8 *)&(CP_INFO(constant_pool,i)), ptr, len);
                CP_TYPE(constant_pool,++i) = 0;
                break;
-               
+
            case CONSTANT_Double:
                READ_DBL(*(u8 *)&(CP_INFO(constant_pool,i)), ptr, len);
                CP_TYPE(constant_pool,++i) = 0;
@@ -304,7 +304,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
        READ_TYPE_INDEX(index, constant_pool, CONSTANT_Class, ptr, len);
        interfaces[i] = resolveClass(class, index, FALSE);
        if(exceptionOccurred())
-           return NULL; 
+           return NULL;
     }
 
     READ_U2(classblock->fields_count, ptr, len);
@@ -400,7 +400,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                 method->exception_table = sysMalloc(method->exception_table_size*sizeof(ExceptionTableEntry));
 
                 for(j = 0; j < method->exception_table_size; j++) {
-                    ExceptionTableEntry *entry = &method->exception_table[j];              
+                    ExceptionTableEntry *entry = &method->exception_table[j];
 
                     READ_U2(entry->start_pc, ptr, len);
                     READ_U2(entry->end_pc, ptr, len);
@@ -422,8 +422,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                         method->line_no_table = sysMalloc(method->line_no_table_size*sizeof(LineNoTableEntry));
 
                         for(j = 0; j < method->line_no_table_size; j++) {
-                            LineNoTableEntry *entry = &method->line_no_table[j];              
-                         
+                            LineNoTableEntry *entry = &method->line_no_table[j];
+
                             READ_U2(entry->start_pc, ptr, len);
                             READ_U2(entry->line_no, ptr, len);
                         }
@@ -530,7 +530,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                 if(attr_name == SYMBOL(EnclosingMethod)) {
                     READ_TYPE_INDEX(classblock->enclosing_class, constant_pool, CONSTANT_Class, ptr, len);
                     READ_TYPE_INDEX(classblock->enclosing_method, constant_pool, CONSTANT_NameAndType, ptr, len);
-                } else 
+                } else
                     if(attr_name == SYMBOL(Signature)) {
                         u2 signature_idx;
                         READ_TYPE_INDEX(signature_idx, constant_pool, CONSTANT_Utf8, ptr, len);
@@ -602,7 +602,7 @@ Class *createArrayClass(char *classname, Object *class_loader) {
 
         classblock->element_class = CLASS_CB(comp_class)->element_class;
         classblock->dim = CLASS_CB(comp_class)->dim + 1;
-    } else { 
+    } else {
         if(classname[1] == 'L') {
             char element_name[len - 2];
 
@@ -645,7 +645,7 @@ error:
 Class *createPrimClass(char *classname, int index) {
     Class *class;
     ClassBlock *classblock;
- 
+
     if((class = allocClass()) == NULL)
         return NULL;
 
@@ -916,7 +916,7 @@ void linkClass(Class *class) {
 
        if(mb->access_flags & ACC_NATIVE) {
 
-           /* set up native invoker to wrapper to resolve function 
+           /* set up native invoker to wrapper to resolve function
               on first invocation */
 
            mb->native_invoker = &resolveNativeWrapper;
@@ -1055,7 +1055,7 @@ void linkClass(Class *class) {
                        if(intf_mb->name == miranda[k]->name &&
                                    intf_mb->type == miranda[k]->type)
                            break;
-                           
+
                    *offsets_pntr++ = method_table_size + k;
 
                    if(k == miranda_count) {
@@ -1075,7 +1075,7 @@ void linkClass(Class *class) {
        if(old_mtbl_size != method_table_size) {
            /* We've created some abstract methods */
            int num_mirandas = method_table_size - old_mtbl_size;
-   
+
            mb = (MethodBlock *) sysRealloc(cb->methods,
                    (cb->methods_count + num_mirandas) * sizeof(MethodBlock));
 
@@ -1255,7 +1255,7 @@ Class *initClass(Class *class) {
    if((excep = exceptionOccurred())) {
        Class *error, *eiie;
 
-       clearException(); 
+       clearException();
 
        /* Don't wrap exceptions of type java.lang.Error... */
        if((error = findSystemClass0(SYMBOL(java_lang_Error)))
@@ -1275,7 +1275,7 @@ Class *initClass(Class *class) {
        state = CLASS_BAD;
    } else
        state = CLASS_INITED;
-   
+
 set_state_and_notify:
    objectLock(class);
    cb->state = state;
@@ -1316,7 +1316,7 @@ void defineBootPackage(char *classname, int index) {
         int len = last_slash - classname + 1;
         PackageEntry *package = sysMalloc(sizeof(PackageEntry) + len);
         PackageEntry *hashed;
-        
+
         package->index = index;
         slash2dots2buff(classname, package->name, len);
 
@@ -1556,7 +1556,7 @@ Object *getSystemClassLoader() {
                                           SYMBOL(___java_lang_ClassLoader))) != NULL) {
             Object *system_loader = *(Object**)executeStaticMethod(class_loader, mb);
 
-            if(!exceptionOccurred()) 
+            if(!exceptionOccurred())
                 return system_loader;
         }
     }
@@ -1572,7 +1572,7 @@ Object *createBootPackage(PackageEntry *package_entry) {
                                             vm_loader_create_package, name,
                                             package_entry->index);
 
-        if(!exceptionOccurred()) 
+        if(!exceptionOccurred())
             return package;
     }
 
@@ -1736,7 +1736,7 @@ void freeClassData(Class *class) {
             }
             gcPendingFree(mb->annotations);
         }
-    } 
+    }
 
     gcPendingFree(cb->methods);
     gcPendingFree(cb->inner_classes);
@@ -1749,7 +1749,7 @@ void freeClassData(Class *class) {
    if(cb->state >= CLASS_LINKED) {
         ClassBlock *super_cb = CLASS_CB(cb->super);
 
-        /* interfaces do not have a method table, or 
+        /* interfaces do not have a method table, or
             imethod table offsets */
         if(!IS_INTERFACE(cb)) {
              int spr_imthd_sze = super_cb->imethod_table_size;
@@ -1782,7 +1782,7 @@ void freeClassLoaderData(Object *class_loader) {
    when the class loader is garbage collected */
 void newLibraryUnloader(Object *class_loader, void *entry) {
     Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
-    
+
     if(vmdata != NULL)
         executeMethod(vmdata, ldr_new_unloader, (long long)(uintptr_t)entry);
 }
@@ -1835,7 +1835,7 @@ int parseBootClassPath(char *cp_var) {
 
 void setClassPath(char *cmdlne_cp) {
     char *env;
-    classpath = cmdlne_cp ? cmdlne_cp : 
+    classpath = cmdlne_cp ? cmdlne_cp :
                  ((env = getenv("CLASSPATH")) ? env : ".");
 }
 
@@ -1928,7 +1928,7 @@ char *setBootClassPath(char *cmdlne_bcp, char bootpathopt) {
             default:
                 bootpath = sysMalloc(strlen(cmdlne_bcp) + 1);
                 strcpy(bootpath, cmdlne_bcp);
-        }           
+        }
     else {
         char *env = getenv("BOOTCLASSPATH");
         char *path = env ? env : DFLT_BCP;
@@ -2050,4 +2050,3 @@ void initialiseClass(InitArgs *args) {
     /* Register the address of where the java.lang.Class ref _will_ be */
     registerStaticClassRef(&java_lang_Class);
 }
-

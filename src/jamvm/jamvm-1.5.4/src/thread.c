@@ -1034,8 +1034,8 @@ void dumpThreadsLoop(Thread *self) {
         sigwait(&mask, &sig);
 
         /* If it was an interrupt (e.g. Ctrl-C) terminate the VM */
-        if(sig == SIGINT)
-            exitVM(0);
+        //if(sig == SIGINT)
+        //    exitVM(0);
 
         /* It must be a SIGQUIT.  Do a thread dump */
 

@@ -102,6 +102,10 @@
                                            ^ special bit
  */
 
+#define HEAPADDR 0xaf497000
+
+/* HEAP MEM ADDRESS */
+
 static int verbosegc;
 static int compact_override;
 static int compact_value;
@@ -291,13 +295,16 @@ void clearMarkBits() {
 
 void initialiseAlloc(InitArgs *args) {
 	int fd,result;
+
 	maxHeap = args->max_heap;
+	unsigned int volatile * const heapMemAddr = (unsigned int *) HEAPADDR;
+
 	if(args->persistent_heap == TRUE){
-		fd = open (args->heap_file, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		fd = open (args->heap_file, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
 		lseek (fd, args->max_heap, SEEK_SET);
 		// Write Dummy Byte
 		result = write(fd,"",1);
-		heapMem = (char*)mmap(0, args->max_heap, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+		heapMem = (char*)mmap(heapMemAddr, args->max_heap, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 	}
 	else {
 		heapMem = (char*)mmap(0, args->max_heap, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);

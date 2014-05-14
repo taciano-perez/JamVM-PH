@@ -242,9 +242,7 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
 
         } else if(strncmp(argv[i], "-persistentheap:", 16) == 0) {
             args->persistent_heap = TRUE;
-            memcpy( args->heap_file, &argv[i][16], strlen(argv[i]));
-
-            //printf("HEAP FILE NAME %s\n", args->heap_file);
+            args->heap_file = argv[i] + 16;
 
         } else if(strncmp(argv[i], "-D", 2) == 0) {
             char *key = strcpy(sysMalloc(strlen(argv[i] + 2) + 1), argv[i] + 2);
