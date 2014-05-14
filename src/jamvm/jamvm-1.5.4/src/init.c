@@ -49,6 +49,8 @@ void setDefaultInitArgs(InitArgs *args) {
 
     args->props_count = 0;
 
+    args->persistent_heap = FALSE;
+
     args->vfprintf = vfprintf;
     args->abort    = abort;
     args->exit     = exit;

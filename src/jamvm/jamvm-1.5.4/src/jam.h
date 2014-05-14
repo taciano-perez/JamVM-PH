@@ -645,6 +645,10 @@ typedef struct InitArgs {
     unsigned long min_heap;
     unsigned long max_heap;
 
+    int persistent_heap;
+
+    char *heap_file;
+
     Property *commandline_props;
     int props_count;
 
