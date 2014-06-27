@@ -244,7 +244,10 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
             args->persistent_heap = TRUE;
             args->heap_file = argv[i] + 16;
 
-        } else if(strncmp(argv[i], "-D", 2) == 0) {
+        }else if(strncmp(argv[i], "-testingmode", 12) == 0) {
+            args->testing_mode = TRUE;
+
+        }else if(strncmp(argv[i], "-D", 2) == 0) {
             char *key = strcpy(sysMalloc(strlen(argv[i] + 2) + 1), argv[i] + 2);
             char *pntr;
 
@@ -358,6 +361,8 @@ int main(int argc, char *argv[]) {
     char *cpntr;
     int status;
     int i;
+
+    initialise_tests_file();
 
     setDefaultInitArgs(&args);
     class_arg = parseCommandLine(argc, argv, &args);

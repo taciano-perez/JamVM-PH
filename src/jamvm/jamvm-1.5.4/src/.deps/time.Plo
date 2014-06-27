@@ -10,6 +10,7 @@ time.lo: time.c /usr/include/stdc-predef.h \
  /usr/include/i386-linux-gnu/sys/select.h \
  /usr/include/i386-linux-gnu/bits/select.h \
  /usr/include/i386-linux-gnu/bits/sigset.h \
+ /usr/include/i386-linux-gnu/bits/select2.h \
  /usr/lib/gcc/i686-linux-gnu/4.8/include/stddef.h /usr/include/xlocale.h \
  /usr/lib/gcc/i686-linux-gnu/4.8/include-fixed/limits.h \
  /usr/lib/gcc/i686-linux-gnu/4.8/include-fixed/syslimits.h \
@@ -44,6 +45,8 @@ time.lo: time.c /usr/include/stdc-predef.h \
 /usr/include/i386-linux-gnu/bits/select.h:
 
 /usr/include/i386-linux-gnu/bits/sigset.h:
+
+/usr/include/i386-linux-gnu/bits/select2.h:
 
 /usr/lib/gcc/i686-linux-gnu/4.8/include/stddef.h:
 

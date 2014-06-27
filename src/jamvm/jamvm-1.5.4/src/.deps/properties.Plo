@@ -47,8 +47,8 @@ properties.lo: properties.c /usr/include/stdc-predef.h \
  /usr/include/i386-linux-gnu/bits/stdio_lim.h \
  /usr/include/i386-linux-gnu/bits/sys_errlist.h \
  /usr/include/i386-linux-gnu/bits/stdio.h \
- /usr/include/i386-linux-gnu/bits/stdio2.h config.h arch.h symbol.h \
- properties.h /usr/include/locale.h \
+ /usr/include/i386-linux-gnu/bits/stdio2.h config.h arch.h \
+ nvm/test/testing_utils.h symbol.h properties.h /usr/include/locale.h \
  /usr/include/i386-linux-gnu/bits/locale.h
 
 /usr/include/stdc-predef.h:
@@ -192,6 +192,8 @@ jam.h:
 config.h:
 
 arch.h:
+
+nvm/test/testing_utils.h:
 
 symbol.h:
 

@@ -51,6 +51,8 @@ void setDefaultInitArgs(InitArgs *args) {
 
     args->persistent_heap = FALSE;
 
+    args->testing_mode = FALSE;
+
     args->vfprintf = vfprintf;
     args->abort    = abort;
     args->exit     = exit;
@@ -80,7 +82,7 @@ void initVM(InitArgs *args) {
     initialiseProperties(args);
     initialiseAlloc(args);
     initialiseDll(args);
-    initialiseUtf8();
+    initialiseUtf8(args);
     initialiseThreadStage1(args);
     initialiseSymbol();
     initialiseClass(args);

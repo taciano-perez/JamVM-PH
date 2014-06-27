@@ -52,7 +52,7 @@ os.lo: os.c /usr/include/stdc-predef.h /usr/include/stdio.h \
  /usr/include/limits.h /usr/include/i386-linux-gnu/bits/posix1_lim.h \
  /usr/include/i386-linux-gnu/bits/local_lim.h /usr/include/linux/limits.h \
  /usr/include/i386-linux-gnu/bits/posix2_lim.h ../../config.h \
- ../../arch.h
+ ../../arch.h ../../nvm/test/testing_utils.h
 
 /usr/include/stdc-predef.h:
 
@@ -209,3 +209,5 @@ os.lo: os.c /usr/include/stdc-predef.h /usr/include/stdio.h \
 ../../config.h:
 
 ../../arch.h:
+
+../../nvm/test/testing_utils.h:

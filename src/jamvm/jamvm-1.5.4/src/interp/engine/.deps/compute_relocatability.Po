@@ -21,7 +21,8 @@ compute_relocatability.o: compute_relocatability.c \
  /usr/include/i386-linux-gnu/bits/local_lim.h /usr/include/linux/limits.h \
  /usr/include/i386-linux-gnu/bits/posix2_lim.h /usr/include/time.h \
  /usr/include/i386-linux-gnu/bits/time.h /usr/include/xlocale.h \
- ../../../src/config.h ../../../src/arch.h ../../../src/interp/inlining.h
+ ../../../src/config.h ../../../src/arch.h \
+ ../../../src/nvm/test/testing_utils.h ../../../src/interp/inlining.h
 
 /usr/include/stdc-predef.h:
 
@@ -92,5 +93,7 @@ compute_relocatability.o: compute_relocatability.c \
 ../../../src/config.h:
 
 ../../../src/arch.h:
+
+../../../src/nvm/test/testing_utils.h:
 
 ../../../src/interp/inlining.h:

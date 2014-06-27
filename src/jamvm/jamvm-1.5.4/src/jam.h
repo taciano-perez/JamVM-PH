@@ -31,6 +31,9 @@
 /* Architecture dependent definitions */
 #include "arch.h"
 
+/* NVM specific includes */
+#include "nvm/test/testing_utils.h"
+
 #ifndef TRUE
 #define         TRUE    1
 #define         FALSE   0
@@ -649,6 +652,8 @@ typedef struct InitArgs {
 
     char *heap_file;
 
+    int testing_mode;
+
     Property *commandline_props;
     int props_count;
 
@@ -955,7 +960,7 @@ extern int utf8CharLen(unsigned short *unicode, int len);
 extern char *unicode2Utf8(unsigned short *unicode, int len, char *utf8);
 extern char *slash2dots(char *utf8);
 extern char *slash2dots2buff(char *utf8, char *buff, int buff_len);
-extern void initialiseUtf8();
+extern void initialiseUtf8(InitArgs *args);
 
 #define findUtf8(string) \
     findHashedUtf8(string, FALSE)

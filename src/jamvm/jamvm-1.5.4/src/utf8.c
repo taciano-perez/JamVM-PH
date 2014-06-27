@@ -21,6 +21,9 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "jam.h"
 #include "hash.h"
 
@@ -32,7 +35,12 @@
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
 
-static HashTable hash_table;
+HashTable *hash_table;
+char *filename = "utf8.ht";
+char *sep = "\n";
+int persistentHeap;
+FILE *hashFile;
+int fileExists;
 
 #define GET_UTF8_CHAR(ptr, c)                         \
 {                                                     \
@@ -95,7 +103,13 @@ char *findHashedUtf8(char *string, int add_if_absent) {
     char *interned;
 
     /* Add if absent, no scavenge, locked */
-    findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE);
+    findHashEntry((*hash_table), string, interned, add_if_absent, FALSE, TRUE);
+
+    if(persistentHeap == TRUE && add_if_absent == TRUE) {
+    	if (hashFile != NULL) {
+	        fprintf(hashFile, "%s%s", string, sep);
+    	}
+    }
 
     return interned;
 }
@@ -136,9 +150,57 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
     return buff;
 }
 
-void initialiseUtf8() {
+void initialiseUtf8(InitArgs *args) {
     /* Init hash table, and create lock */
-    initHashTable(hash_table, HASHTABSZE, TRUE);
+	int countHashEntries = 0;
+
+	if(args->persistent_heap){
+		persistentHeap = args->persistent_heap;
+
+	    hash_table = sysMalloc(sizeof(HashTable));
+		initHashTable((*hash_table), HASHTABSZE, TRUE);
+
+		if(access (filename, F_OK) != -1) fileExists = TRUE;
+		else fileExists = FALSE;
+		int result;
+
+		hashFile = fopen (filename, "a+");
+
+		if(fileExists == TRUE) {
+		    //RE-ADD ALL ENTRIES
+			//FILE EXISTS
+		    char *line = NULL;
+		    size_t len = 0;
+		    ssize_t read;
+
+		    if(hashFile == NULL) exit(EXIT_FAILURE);
+            while ((read = getline(&line, &len, hashFile)) != -1) {
+            	char *interned;
+                findHashEntry((*hash_table), line, interned, TRUE, FALSE, FALSE);
+                if(interned != NULL) {
+                	countHashEntries++;
+                }
+		    }
+            if(line) free(line);
+		    }
+	}else {
+	    hash_table = sysMalloc(sizeof(HashTable));
+	    initHashTable((*hash_table), HASHTABSZE, TRUE);
+	}
+
+	if(args->testing_mode) {
+
+		if(access (filename, F_OK) != -1) fileExists = TRUE;
+		else fileExists = FALSE;
+
+		log_test_results("initaliseUTF8", fileExists);
+
+		if(countHashEntries == hash_table->hash_count){
+			log_test_results("recoverUTF8", TRUE);
+		} else {
+			log_test_results("recoverUTF8", FALSE);
+		}
+	}
 }
 
 #ifndef NO_JNI
@@ -146,7 +208,6 @@ void initialiseUtf8() {
 
 int utf8CharLen(unsigned short *unicode, int len) {
     int count = 0;
-
     for(; len > 0; len--) {
         unsigned short c = *unicode++;
         count += c == 0 || c > 0x7f ? (c > 0x7ff ? 3 : 2) : 1;

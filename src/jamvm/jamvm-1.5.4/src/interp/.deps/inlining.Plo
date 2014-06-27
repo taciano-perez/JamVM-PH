@@ -21,8 +21,8 @@ inlining.lo: inlining.c /usr/include/stdc-predef.h ../../src/jam.h \
  /usr/include/i386-linux-gnu/bits/stdio.h \
  /usr/include/i386-linux-gnu/bits/stdio2.h /usr/include/time.h \
  /usr/include/i386-linux-gnu/bits/time.h /usr/include/xlocale.h \
- ../../src/config.h ../../src/arch.h /usr/include/string.h \
- /usr/include/i386-linux-gnu/bits/string.h \
+ ../../src/config.h ../../src/arch.h ../../src/nvm/test/testing_utils.h \
+ /usr/include/string.h /usr/include/i386-linux-gnu/bits/string.h \
  /usr/include/i386-linux-gnu/bits/string2.h /usr/include/endian.h \
  /usr/include/i386-linux-gnu/bits/endian.h \
  /usr/include/i386-linux-gnu/bits/byteswap.h \
@@ -121,6 +121,8 @@ inlining.lo: inlining.c /usr/include/stdc-predef.h ../../src/jam.h \
 ../../src/config.h:
 
 ../../src/arch.h:
+
+../../src/nvm/test/testing_utils.h:
 
 /usr/include/string.h:
 

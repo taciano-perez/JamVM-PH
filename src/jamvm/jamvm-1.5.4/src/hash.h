@@ -117,6 +117,7 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
         unlockHashTable0(&table, self);                                            \
 }
 
+
 #define deleteHashEntry(table, ptr, locked)                                        \
 {                                                                                  \
     int hash = HASH(ptr);                                                          \

@@ -37,7 +37,8 @@ init.lo: init.c /usr/include/stdc-predef.h /usr/include/stdio.h \
  /usr/lib/gcc/i686-linux-gnu/4.8/include-fixed/syslimits.h \
  /usr/include/limits.h /usr/include/i386-linux-gnu/bits/posix1_lim.h \
  /usr/include/i386-linux-gnu/bits/local_lim.h /usr/include/linux/limits.h \
- /usr/include/i386-linux-gnu/bits/posix2_lim.h config.h arch.h
+ /usr/include/i386-linux-gnu/bits/posix2_lim.h config.h arch.h \
+ nvm/test/testing_utils.h
 
 /usr/include/stdc-predef.h:
 
@@ -152,3 +153,5 @@ jam.h:
 config.h:
 
 arch.h:
+
+nvm/test/testing_utils.h:

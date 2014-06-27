@@ -25,7 +25,10 @@
 #include <ctype.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include <dirent.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "jam.h"
 #include "sig.h"
@@ -41,6 +44,8 @@
 #define PREPARE(ptr) ptr
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
+
+#define HASHFILESIZE 4194304
 
 static int verbose;
 static char *bootpath;
@@ -116,8 +121,9 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
 #define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2) && \
             CLASS_CB((Class *)ptr1)->name == CLASS_CB((Class *)ptr2)->name
 
-    if(class_loader == NULL)
+    if(class_loader == NULL) {
         table = &boot_classes;
+    }
     else {
         Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
 
@@ -132,8 +138,15 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                 }
 
                 table = sysMalloc(sizeof(HashTable));
+
                 initHashTable((*table), CLASS_INITSZE, TRUE);
 
+				if(table->hash_count == 0) {
+					printf("INITIAL HASHTABLE COUNT IS 0\n");
+				}
+				else {
+					printf("RESUMING JAMVM... HASHTABLE COUNT %d\n", table->hash_count);
+				}
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
 
@@ -146,6 +159,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
 
     /* Add if absent, no scavenge, locked */
     findHashEntry((*table), class, entry, TRUE, FALSE, TRUE);
+	msync(table, HASHFILESIZE, MS_SYNC);
 
     return entry;
 }
@@ -176,6 +190,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     ClassBlock *classblock;
     Class *class, *found;
     Class **interfaces;
+
+    if(strcmp("HelloWorld", classname) == 0) printf("LOADING %s\n", classname);
 
     READ_U4(magic, ptr, len);
 
@@ -1385,16 +1401,26 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 
     /* If the class name is not in the utf8 table it can't
        have been loaded */
-    if((name = findUtf8(classname)) == NULL)
-        return NULL;
 
-    if(class_loader == NULL)
+    if((name = findUtf8(classname)) == NULL) {
+    	printf("findUtf8 NULL %s\n", classname);
+        return NULL;
+    } else {
+    	if(strcmp("HelloWorld", classname) == 0) {
+    		printf("FOUND HASHED CLASS %s\n", classname);
+    	}
+    }
+
+    if(class_loader == NULL) {
         table = &boot_classes;
+    }
     else {
         Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
 
-        if(vmdata == NULL)
+        if(vmdata == NULL) {
+        	printf("NULL VMDATA\n");
             return NULL;
+        }
 
         table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
     }
@@ -1405,8 +1431,9 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 #define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2) && \
             (ptr1 == CLASS_CB((Class *)ptr2)->name)
 
+
     /* Do not add if absent, no scavenge, locked */
-   findHashEntry((*table), name, class, FALSE, FALSE, TRUE);
+    findHashEntry((*table), name, class, FALSE, FALSE, TRUE);
 
    return class;
 }
@@ -1414,11 +1441,12 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 Class *findSystemClass0(char *classname) {
    Class *class = findHashedClass(classname, NULL);
 
-   if(class == NULL)
+   if(class == NULL) {
        class = loadSystemClass(classname);
-
-   if(!exceptionOccurred())
-       linkClass(class);
+   }
+   if(!exceptionOccurred()) {
+      linkClass(class);
+   }
 
    return class;
 }
@@ -2015,12 +2043,21 @@ void initialiseClass(InitArgs *args) {
 
     initHashTable(boot_packages, PCKG_INITSZE, TRUE);
 
+    //printf("initHashTable boot_packages\n");
+
+    //printf("findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData)) %s\n", SYMBOL(jamvm_java_lang_VMClassLoaderData));
+
     loader_data_class = findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData));
+
+    //printf("loader_data_class %p\n", loader_data_class);
+
     if(loader_data_class != NULL) {
         ldr_new_unloader = findMethod(loader_data_class, SYMBOL(newLibraryUnloader),
                                                          SYMBOL(_J__V));
         hashtable = findField(loader_data_class, SYMBOL(hashtable), SYMBOL(J));
+
     }
+
 
     if(hashtable == NULL || ldr_new_unloader == NULL) {
         jam_fprintf(stderr, "Fatal error: Bad VMClassLoaderData (missing or corrupt)\n");

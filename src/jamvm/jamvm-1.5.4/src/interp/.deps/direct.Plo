@@ -21,8 +21,9 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
  /usr/include/i386-linux-gnu/bits/stdio.h \
  /usr/include/i386-linux-gnu/bits/stdio2.h /usr/include/time.h \
  /usr/include/i386-linux-gnu/bits/time.h /usr/include/xlocale.h \
- ../../src/config.h ../../src/arch.h /usr/include/arpa/inet.h \
- /usr/include/netinet/in.h /usr/include/i386-linux-gnu/sys/socket.h \
+ ../../src/config.h ../../src/arch.h ../../src/nvm/test/testing_utils.h \
+ /usr/include/arpa/inet.h /usr/include/netinet/in.h \
+ /usr/include/i386-linux-gnu/sys/socket.h \
  /usr/include/i386-linux-gnu/sys/uio.h \
  /usr/include/i386-linux-gnu/sys/types.h /usr/include/endian.h \
  /usr/include/i386-linux-gnu/bits/endian.h \
@@ -130,6 +131,8 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
 ../../src/config.h:
 
 ../../src/arch.h:
+
+../../src/nvm/test/testing_utils.h:
 
 /usr/include/arpa/inet.h:
 

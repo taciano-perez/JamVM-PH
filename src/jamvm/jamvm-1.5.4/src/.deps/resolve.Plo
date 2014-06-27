@@ -25,7 +25,8 @@ resolve.lo: resolve.c /usr/include/stdc-predef.h /usr/include/stdio.h \
  /usr/include/limits.h /usr/include/i386-linux-gnu/bits/posix1_lim.h \
  /usr/include/i386-linux-gnu/bits/local_lim.h /usr/include/linux/limits.h \
  /usr/include/i386-linux-gnu/bits/posix2_lim.h /usr/include/time.h \
- /usr/include/i386-linux-gnu/bits/time.h config.h arch.h symbol.h excep.h
+ /usr/include/i386-linux-gnu/bits/time.h config.h arch.h \
+ nvm/test/testing_utils.h symbol.h excep.h
 
 /usr/include/stdc-predef.h:
 
@@ -114,6 +115,8 @@ jam.h:
 config.h:
 
 arch.h:
+
+nvm/test/testing_utils.h:
 
 symbol.h:
 

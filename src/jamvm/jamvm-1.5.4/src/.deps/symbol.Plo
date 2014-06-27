@@ -35,7 +35,7 @@ symbol.lo: symbol.c /usr/include/stdc-predef.h /usr/include/stdlib.h \
  /usr/include/i386-linux-gnu/bits/sys_errlist.h \
  /usr/include/i386-linux-gnu/bits/stdio.h \
  /usr/include/i386-linux-gnu/bits/stdio2.h /usr/include/xlocale.h \
- config.h arch.h symbol.h
+ config.h arch.h nvm/test/testing_utils.h symbol.h
 
 /usr/include/stdc-predef.h:
 
@@ -142,5 +142,7 @@ jam.h:
 config.h:
 
 arch.h:
+
+nvm/test/testing_utils.h:
 
 symbol.h:

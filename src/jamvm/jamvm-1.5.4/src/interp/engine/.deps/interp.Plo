@@ -62,8 +62,9 @@ interp.lo: interp.c /usr/include/stdc-predef.h /usr/include/stdio.h \
  /usr/include/i386-linux-gnu/bits/posix2_lim.h \
  /usr/include/i386-linux-gnu/bits/xopen_lim.h \
  /usr/include/i386-linux-gnu/bits/timex.h ../../../src/config.h \
- ../../../src/arch.h ../../../src/thread.h /usr/include/pthread.h \
- /usr/include/sched.h /usr/include/i386-linux-gnu/bits/sched.h \
+ ../../../src/arch.h ../../../src/nvm/test/testing_utils.h \
+ ../../../src/thread.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/i386-linux-gnu/bits/sched.h \
  /usr/include/i386-linux-gnu/bits/setjmp.h /usr/include/setjmp.h \
  /usr/include/i386-linux-gnu/bits/setjmp2.h ../../../src/lock.h \
  ../../../src/thread.h ../../../src/excep.h ../../../src/symbol.h \
@@ -233,6 +234,8 @@ interp.lo: interp.c /usr/include/stdc-predef.h /usr/include/stdio.h \
 ../../../src/config.h:
 
 ../../../src/arch.h:
+
+../../../src/nvm/test/testing_utils.h:
 
 ../../../src/thread.h:
 

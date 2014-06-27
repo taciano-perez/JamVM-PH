@@ -40,9 +40,9 @@ natives.lo: natives.c /usr/include/stdc-predef.h /usr/include/stdio.h \
  /usr/lib/gcc/i686-linux-gnu/4.8/include-fixed/syslimits.h \
  /usr/include/limits.h /usr/include/i386-linux-gnu/bits/posix1_lim.h \
  /usr/include/i386-linux-gnu/bits/local_lim.h /usr/include/linux/limits.h \
- /usr/include/i386-linux-gnu/bits/posix2_lim.h config.h arch.h alloc.h \
- thread.h /usr/include/pthread.h /usr/include/sched.h \
- /usr/include/i386-linux-gnu/bits/sched.h \
+ /usr/include/i386-linux-gnu/bits/posix2_lim.h config.h arch.h \
+ nvm/test/testing_utils.h alloc.h thread.h /usr/include/pthread.h \
+ /usr/include/sched.h /usr/include/i386-linux-gnu/bits/sched.h \
  /usr/include/i386-linux-gnu/bits/setjmp.h /usr/include/setjmp.h \
  /usr/include/i386-linux-gnu/bits/setjmp2.h lock.h natives.h symbol.h \
  excep.h reflect.h
@@ -172,6 +172,8 @@ jam.h:
 config.h:
 
 arch.h:
+
+nvm/test/testing_utils.h:
 
 alloc.h:
 
