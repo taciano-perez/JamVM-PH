@@ -29,6 +29,6 @@
 *.ph
 
 # Eclipse files and folders
-.project
-.cproject
-.settings/
+# .project
+# .cproject
+# .settings/
