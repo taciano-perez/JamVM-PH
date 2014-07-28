@@ -36,11 +36,14 @@
 #define FOUND(ptr1, ptr2) ptr2
 
 HashTable *hash_table;
-char *filename = "utf8.ht";
-char *sep = "\n";
-int persistentHeap;
-FILE *hashFile;
-int fileExists;
+char *FILENAME_UTF8 = "utf8.ht";
+char *SEP_UTF8 = "\n";
+int PERSISTENT_HEAP_UTF8 = FALSE;
+int TESTING_MODE_UTF8 = FALSE;
+FILE *hash_file_utf8;
+int FILE_EXISTS_UTF8 = FALSE;
+int ifa = 0;
+
 
 #define GET_UTF8_CHAR(ptr, c)                         \
 {                                                     \
@@ -99,16 +102,38 @@ int utf8Comp(char *ptr, char *ptr2) {
     return TRUE;
 }
 
-char *findHashedUtf8(char *string, int add_if_absent) {
-    char *interned;
+char *findHashedUtf8Persintent(char *string, int add_if_absent, int class_to_save){
+	    char *interned = NULL;
 
-    /* Add if absent, no scavenge, locked */
-    findHashEntry((*hash_table), string, interned, add_if_absent, FALSE, TRUE);
+	    findHashEntry((*hash_table), string, interned, FALSE, FALSE, FALSE);
 
-    if(persistentHeap == TRUE && add_if_absent == TRUE) {
-    	if (hashFile != NULL) {
-	        fprintf(hashFile, "%s%s", string, sep);
-    	}
+	    if(interned != NULL){
+	    	return interned;
+	    }
+	    unsigned short string_lenght = strlen(string) + 1;
+
+		/* Add if absent, no scavenge, locked */
+	    findHashEntry((*hash_table), string, interned, add_if_absent, FALSE, TRUE);
+	    if(class_to_save){
+	    	if(add_if_absent){
+	    		fwrite(&string_lenght, sizeof(unsigned short), 1, hash_file_utf8);
+	    		fwrite(string, sizeof(char), string_lenght, hash_file_utf8);
+	    		ifa++;
+	    	}
+	    }
+	    return interned;
+}
+
+char *findHashedUtf8(char *string, int add_if_absent, int class_to_save) {
+    char *interned = NULL;
+
+    if(PERSISTENT_HEAP_UTF8 == TRUE){
+    	interned = findHashedUtf8Persintent(string, add_if_absent, class_to_save);
+    }
+    else{
+    	/* Add if absent, no scavenge, locked */
+    	findHashEntry((*hash_table), string, interned, add_if_absent, FALSE, TRUE);
+
     }
 
     return interned;
@@ -116,7 +141,7 @@ char *findHashedUtf8(char *string, int add_if_absent) {
 
 char *copyUtf8(char *string) {
     char *buff = strcpy(sysMalloc(strlen(string) + 1), string);
-    char *found = findHashedUtf8(buff, TRUE);
+    char *found = findHashedUtf8(buff, TRUE, FALSE);
 
     if(found != buff)
         sysFree(buff);
@@ -150,61 +175,77 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
     return buff;
 }
 
-void initialiseUtf8(InitArgs *args) {
-    /* Init hash table, and create lock */
+void initialiseUtf8Persistent(){
 	int countHashEntries = 0;
 
-	if(args->persistent_heap){
-		persistentHeap = args->persistent_heap;
-
-	    hash_table = sysMalloc(sizeof(HashTable));
-		initHashTable((*hash_table), HASHTABSZE, TRUE);
-
-		if(access (filename, F_OK) != -1) fileExists = TRUE;
-		else fileExists = FALSE;
-		int result;
-
-		hashFile = fopen (filename, "a+");
-
-		if(fileExists == TRUE) {
-		    //RE-ADD ALL ENTRIES
-			//FILE EXISTS
-		    char *line = NULL;
-		    size_t len = 0;
-		    ssize_t read;
-
-		    if(hashFile == NULL) exit(EXIT_FAILURE);
-            while ((read = getline(&line, &len, hashFile)) != -1) {
-            	char *interned;
-                findHashEntry((*hash_table), line, interned, TRUE, FALSE, FALSE);
-                if(interned != NULL) {
-                	countHashEntries++;
-                }
-		    }
-            if(line) free(line);
-		    }
-	}else {
-	    hash_table = sysMalloc(sizeof(HashTable));
-	    initHashTable((*hash_table), HASHTABSZE, TRUE);
+	if(access (FILENAME_UTF8, F_OK) != -1) {
+		FILE_EXISTS_UTF8 = TRUE;
 	}
 
-	if(args->testing_mode) {
 
-		if(access (filename, F_OK) != -1) fileExists = TRUE;
-		else fileExists = FALSE;
 
-		log_test_results("initaliseUTF8", fileExists);
+	// Adding entries to hash table since file exists
+	if(FILE_EXISTS_UTF8 == TRUE) {
+		hash_file_utf8 = fopen (FILENAME_UTF8, "rb");
+		if(hash_file_utf8 == NULL) {
+			exit(EXIT_FAILURE);
+		}
+		char *line = NULL;
+		size_t len = 0;
 
+
+		unsigned short string_length = 0;
+		len = fread(&string_length, sizeof(unsigned short), 1, hash_file_utf8);
+
+		while (len == 1) {
+			char *interned = NULL;
+			char *to_add = (char*)malloc(string_length * sizeof(char));
+			int count = fread(to_add, sizeof(char), string_length, hash_file_utf8);
+			do {
+				addHashEntry((*hash_table), to_add, interned);
+				interned = NULL;
+				findHashEntry((*hash_table), to_add, interned, FALSE, FALSE, TRUE);
+			}while(interned == NULL);
+
+			countHashEntries++;
+			len = fread(&string_length, sizeof(unsigned short), 1, hash_file_utf8);
+
+		}
+
+	if(line){
+		free(line);
+	}
+	fclose(hash_file_utf8);
+	}
+	hash_file_utf8 = fopen (FILENAME_UTF8, "a+b");
+	// Unit tests
+	if(TESTING_MODE_UTF8) {
+		log_test_results("initaliseUTF8_fileExists", FILE_EXISTS_UTF8);
 		if(countHashEntries == hash_table->hash_count){
-			log_test_results("recoverUTF8", TRUE);
+			log_test_results("initaliseUTF8_recoverUTF8", TRUE);
 		} else {
-			log_test_results("recoverUTF8", FALSE);
+			log_test_results("initaliseUTF8_recoverUTF8", FALSE);
 		}
 	}
+	hash_file_utf8 = fopen (FILENAME_UTF8, "a+b");
+}
+
+void initialiseUtf8(InitArgs *args) {
+    /* Init hash table, and create lock */
+	hash_table = sysMalloc(sizeof(HashTable));
+	initHashTable((*hash_table), HASHTABSZE, TRUE);
+
+	if(args->persistent_heap){
+		PERSISTENT_HEAP_UTF8 = args->persistent_heap;
+		TESTING_MODE_UTF8 = args->testing_mode;
+		initialiseUtf8Persistent();
+	}
+
 }
 
 #ifndef NO_JNI
 /* Functions used by JNI */
+
 
 int utf8CharLen(unsigned short *unicode, int len) {
     int count = 0;

@@ -369,7 +369,6 @@ int main(int argc, char *argv[]) {
 
     args.main_stack_base = &array_class;
     initVM(&args);
-
    if((system_loader = getSystemClassLoader()) == NULL)
         goto error;
 
@@ -378,7 +377,6 @@ int main(int argc, char *argv[]) {
     for(cpntr = argv[class_arg]; *cpntr; cpntr++)
         if(*cpntr == '.')
             *cpntr = '/';
-
     main_class = findClassFromClassLoader(argv[class_arg], system_loader);
     if(main_class != NULL)
         initClass(main_class);

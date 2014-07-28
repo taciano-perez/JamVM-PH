@@ -954,7 +954,7 @@ extern int utf8Len(char *utf8);
 extern int utf8Hash(char *utf8);
 extern int utf8Comp(char *utf81, char *utf82);
 extern void convertUtf8(char *utf8, unsigned short *buff);
-extern char *findHashedUtf8(char *string, int add_if_absent);
+extern char *findHashedUtf8(char *string, int add_if_absent, int class_to_add);
 extern char *copyUtf8(char *string);
 extern int utf8CharLen(unsigned short *unicode, int len);
 extern char *unicode2Utf8(unsigned short *unicode, int len, char *utf8);
@@ -963,10 +963,13 @@ extern char *slash2dots2buff(char *utf8, char *buff, int buff_len);
 extern void initialiseUtf8(InitArgs *args);
 
 #define findUtf8(string) \
-    findHashedUtf8(string, FALSE)
+    findHashedUtf8(string, FALSE, FALSE)
 
 #define newUtf8(string) \
-    findHashedUtf8(string, TRUE)
+    findHashedUtf8(string, TRUE, FALSE)
+
+#define newUtf8Save(string) \
+    findHashedUtf8(string, TRUE, TRUE)
 
 /* Dll */
 

@@ -113,6 +113,8 @@ static Class *prim_classes[MAX_PRIM_CLASSES];
    we'll get an abstract method error. */
 static char abstract_method[] = {OPC_ABSTRACT_METHOD_ERROR};
 
+int class_to_save;
+
 static Class *addClassToHash(Class *class, Object *class_loader) {
     HashTable *table;
     Class *entry;
@@ -141,12 +143,6 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
 
                 initHashTable((*table), CLASS_INITSZE, TRUE);
 
-				if(table->hash_count == 0) {
-					printf("INITIAL HASHTABLE COUNT IS 0\n");
-				}
-				else {
-					printf("RESUMING JAMVM... HASHTABLE COUNT %d\n", table->hash_count);
-				}
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
 
@@ -165,20 +161,30 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
 }
 
 static void prepareClass(Class *class) {
-    ClassBlock *cb = CLASS_CB(class);
 
-    if(cb->name == SYMBOL(java_lang_Class)) {
-       java_lang_Class = class->class = class;
-       cb->flags |= CLASS_CLASS;
-    } else {
-       if(java_lang_Class == NULL)
-          findSystemClass0(SYMBOL(java_lang_Class));
-       class->class = java_lang_Class;
-    }
+	ClassBlock *cb = CLASS_CB(class);
+
+
+	if(cb->name == SYMBOL(java_lang_Class)) {
+		java_lang_Class = class->class = class;
+		cb->flags |= CLASS_CLASS;
+	} else {
+		if(java_lang_Class == NULL){
+
+			findSystemClass0(SYMBOL(java_lang_Class));
+		}
+		class->class = java_lang_Class;
+	}
 }
 
 Class *defineClass(char *classname, char *data, int offset, int len,
                    Object *class_loader) {
+	if(class_loader != NULL){
+		class_to_save = TRUE;
+	}
+	else{
+		class_to_save = FALSE;
+	}
 
     u2 major_version, minor_version, this_idx, super_idx;
     unsigned char *ptr = (unsigned char *)data + offset;
@@ -191,8 +197,6 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     Class *class, *found;
     Class **interfaces;
 
-    if(strcmp("HelloWorld", classname) == 0) printf("LOADING %s\n", classname);
-
     READ_U4(magic, ptr, len);
 
     if(magic != 0xcafebabe) {
@@ -203,15 +207,20 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     READ_U2(minor_version, ptr, len);
     READ_U2(major_version, ptr, len);
 
+
     if((class = allocClass()) == NULL)
         return NULL;
 
     classblock = CLASS_CB(class);
     READ_U2(cp_count, ptr, len);
 
+
+
     constant_pool = &classblock->constant_pool;
     constant_pool->type = sysMalloc(cp_count);
     constant_pool->info = sysMalloc(cp_count*sizeof(ConstantPoolEntry));
+
+
 
     for(i = 1; i < cp_count; i++) {
         u1 tag;
@@ -265,7 +274,13 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                buff[length] = '\0';
                ptr += length;
 
-               CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
+               //Changed this part to save utf8 entries of classes with classloaders
+               if(class_to_save){
+            	   CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8Save(buff));
+               }
+               else{
+            	   CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
+               }
 
                if(utf8 != buff)
                    sysFree(buff);
@@ -279,6 +294,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                return NULL;
         }
     }
+
 
     /* Set count after constant pool has been initialised -- it is now
        safe to be scanned by GC */
@@ -297,6 +313,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
 
     prepareClass(class);
 
+
+
     if(classblock->name == SYMBOL(java_lang_Object)) {
         READ_U2(super_idx, ptr, len);
         if(super_idx) {
@@ -308,6 +326,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
         READ_TYPE_INDEX(super_idx, constant_pool, CONSTANT_Class, ptr, len);
         classblock->super_name = CP_UTF8(constant_pool, CP_CLASS(constant_pool, super_idx));
     }
+
+
 
     classblock->class_loader = class_loader;
 
@@ -325,6 +345,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
 
     READ_U2(classblock->fields_count, ptr, len);
     classblock->fields = sysMalloc(classblock->fields_count * sizeof(FieldBlock));
+
+
 
     for(i = 0; i < classblock->fields_count; i++) {
         u2 name_idx, type_idx;
@@ -1351,7 +1373,7 @@ void defineBootPackage(char *classname, int index) {
 }
 
 Class *loadSystemClass(char *classname) {
-    int file_len, fname_len = strlen(classname) + 8;
+	int file_len, fname_len = strlen(classname) + 8;
     char buff[max_cp_element_len + fname_len];
     char filename[fname_len];
     Class *class = NULL;
@@ -1403,12 +1425,8 @@ Class *findHashedClass(char *classname, Object *class_loader) {
        have been loaded */
 
     if((name = findUtf8(classname)) == NULL) {
-    	printf("findUtf8 NULL %s\n", classname);
+
         return NULL;
-    } else {
-    	if(strcmp("HelloWorld", classname) == 0) {
-    		printf("FOUND HASHED CLASS %s\n", classname);
-    	}
     }
 
     if(class_loader == NULL) {
@@ -1418,7 +1436,6 @@ Class *findHashedClass(char *classname, Object *class_loader) {
         Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
 
         if(vmdata == NULL) {
-        	printf("NULL VMDATA\n");
             return NULL;
         }
 
@@ -1439,10 +1456,12 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 }
 
 Class *findSystemClass0(char *classname) {
-   Class *class = findHashedClass(classname, NULL);
+	Class *class = findHashedClass(classname, NULL);
 
    if(class == NULL) {
-       class = loadSystemClass(classname);
+
+	   class = loadSystemClass(classname);
+
    }
    if(!exceptionOccurred()) {
       linkClass(class);
@@ -1523,7 +1542,7 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
-    Class *class = findHashedClass(classname, loader);
+	Class *class = findHashedClass(classname, loader);
 
     if(class == NULL) {
         char *dot_name = slash2dots(classname);
@@ -2024,6 +2043,7 @@ out:
     return res;
 }
 
+
 void initialiseClass(InitArgs *args) {
     char *bcp = setBootClassPath(args->bootpath, args->bootpathopt);
     FieldBlock *hashtable = NULL;
@@ -2043,14 +2063,7 @@ void initialiseClass(InitArgs *args) {
 
     initHashTable(boot_packages, PCKG_INITSZE, TRUE);
 
-    //printf("initHashTable boot_packages\n");
-
-    //printf("findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData)) %s\n", SYMBOL(jamvm_java_lang_VMClassLoaderData));
-
     loader_data_class = findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData));
-
-    //printf("loader_data_class %p\n", loader_data_class);
-
     if(loader_data_class != NULL) {
         ldr_new_unloader = findMethod(loader_data_class, SYMBOL(newLibraryUnloader),
                                                          SYMBOL(_J__V));
@@ -2064,6 +2077,7 @@ void initialiseClass(InitArgs *args) {
         exitVM(1);
     }
     ldr_data_tbl_offset = hashtable->u.offset;
+
 
     vm_loader_class = findSystemClass0(SYMBOL(java_lang_VMClassLoader));
     if(vm_loader_class != NULL)
