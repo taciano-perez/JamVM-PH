@@ -102,6 +102,12 @@
                                            ^ special bit
  */
 
+//My variables
+static int IS_PERSISTENT = 0;
+
+static char *FL_filename = "freelist";
+static char *sep = "\n";
+
 #define HEAPADDR 0xaf497000
 
 /* HEAP MEM ADDRESS */
@@ -300,6 +306,7 @@ void initialiseAlloc(InitArgs *args) {
 	unsigned int volatile * const heapMemAddr = (unsigned int *) HEAPADDR;
 
 	if(args->persistent_heap == TRUE){
+		IS_PERSISTENT = 1;
 		fd = open (args->heap_file, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
 		lseek (fd, args->max_heap, SEEK_SET);
 		// Write Dummy Byte
@@ -2016,6 +2023,13 @@ void *gcMalloc(int len) {
 	memset(ret_addr, 0, n-HEADER_SIZE);
 	msync(heapMem, maxHeap, MS_SYNC);
 	unlockVMLock(heap_lock, self);
+
+	if (IS_PERSISTENT){
+		FILE * freeListFile;
+		freeListFile = fopen (FL_filename, "a+");
+		fprintf(freeListFile, "%p%s", ret_addr, sep);
+		fclose(freeListFile);
+	}
 
 	return ret_addr;
 }

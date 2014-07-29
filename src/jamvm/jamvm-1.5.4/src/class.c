@@ -113,7 +113,12 @@ static Class *prim_classes[MAX_PRIM_CLASSES];
    we'll get an abstract method error. */
 static char abstract_method[] = {OPC_ABSTRACT_METHOD_ERROR};
 
+//My variables
+static char *NH_filename = "HW_CLASSES";
+static char *sep = "\n";
+static int 	IS_PERSISTENT = 0;
 int class_to_save;
+
 
 static Class *addClassToHash(Class *class, Object *class_loader) {
     HashTable *table;
@@ -593,6 +598,24 @@ Class *defineClass(char *classname, char *data, int offset, int len,
        return NULL;
 
     classblock->state = CLASS_LOADED;
+
+    //Copy classblock to our mmaped file
+
+    if (IS_PERSISTENT && (!strcoll(classname,"HelloWorld"))){
+      	unsigned int cb_fd,dummy;
+      	char* cbMap;
+
+      	cb_fd = open ("HW_CB", O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+      	lseek (cb_fd, sizeof(ClassBlock), SEEK_SET);
+      	dummy = write(cb_fd,"",1);
+
+      	cbMap = (char*) mmap(NULL, sizeof(ClassBlock), PROT_READ|PROT_WRITE,
+      						MAP_SHARED, cb_fd, 0);
+
+      	memcpy (cbMap, classblock, sizeof(ClassBlock));
+
+      	msync	(cbMap, sizeof(ClassBlock), MS_SYNC);
+    }
 
     if((found = addClassToHash(class, class_loader)) != class) {
         classblock->flags = CLASS_CLASH;
@@ -1583,14 +1606,91 @@ Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
     return class;
 }
 
+Class* findInFile (char* name_to_find){
+	Class *class;
+	FILE *file = fopen (NH_filename, "rt");
+	char *line = NULL;
+	size_t len = 0;
+	size_t read = 0;
+	char *name_to_add;
+	int pointer;
+	int i;
+
+	while ((read = getline(&line, &len, file)) != -1)	{
+		char *name_to_add;
+		name_to_add = malloc(read*sizeof(char));
+		strcpy(name_to_add, line);
+		name_to_add[strlen(name_to_add)-1] = 0;
+
+		if (name_to_add[1] == 'x')
+			continue;
+
+		if (!strcmp(name_to_find,name_to_add)){
+			for (i = 0; i < 3; i++){
+				if ((read = getline(&line, &len, file)) != -1){
+					name_to_add = malloc(read*sizeof(char));
+					strcpy(name_to_add, line);
+					name_to_add[strlen(name_to_add)-1] = 0;
+					pointer = (int) strtoll (name_to_add,NULL,16);
+
+					if (i==0)
+						class = (Class*) pointer;
+					if (i==1)
+						class->lock = (unsigned int) pointer;
+					if (i==2)
+						class->class = (Class *) pointer;
+				}
+			}
+				fclose(file);
+				return class;
+		}
+	}
+	fclose(file);
+	return NULL;
+}
+
+Class *findClassFromClassLoader_persistent(char *classname, Object *loader) {
+	Class *class;
+	if(*classname == '[')
+		return findArrayClassFromClassLoader(classname, loader);
+
+	if(loader != NULL){
+		if(access (NH_filename, F_OK) != -1){
+			class = findInFile(classname);
+			if (class != NULL){
+				return class;
+			}
+		}
+
+		class = findNonArrayClassFromClassLoader(classname, loader);
+		FILE * nonHashedFile;
+		nonHashedFile = fopen (NH_filename, "a+");
+
+		fprintf(nonHashedFile, "%s%s", classname, sep);
+		fprintf(nonHashedFile, "%p%s", class, sep);
+		fprintf(nonHashedFile, "%u%s", class->lock, sep);
+		fprintf(nonHashedFile, "%p%s", class->class, sep);
+
+		fclose(nonHashedFile);
+		return class;
+	}
+
+	return findSystemClass0(classname);
+}
+
 Class *findClassFromClassLoader(char *classname, Object *loader) {
-    if(*classname == '[')
-        return findArrayClassFromClassLoader(classname, loader);
+	if (IS_PERSISTENT)
+		return findClassFromClassLoader_persistent(classname, loader);
+	else{
 
-    if(loader != NULL)
-        return findNonArrayClassFromClassLoader(classname, loader);
+		if(*classname == '[')
+			return findArrayClassFromClassLoader(classname, loader);
 
-    return findSystemClass0(classname);
+		if(loader != NULL)
+			return findNonArrayClassFromClassLoader(classname, loader);
+
+		return findSystemClass0(classname);
+	}
 }
 
 Object *getSystemClassLoader() {
@@ -2049,6 +2149,10 @@ void initialiseClass(InitArgs *args) {
     FieldBlock *hashtable = NULL;
     Class *loader_data_class;
     Class *vm_loader_class;
+
+    if(args->persistent_heap == TRUE){
+    		IS_PERSISTENT = 1;
+    }
 
     if(!(bcp && parseBootClassPath(bcp))) {
         jam_fprintf(stderr, "bootclasspath is empty!\n");
