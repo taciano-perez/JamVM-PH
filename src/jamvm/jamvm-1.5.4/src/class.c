@@ -599,24 +599,6 @@ Class *defineClass(char *classname, char *data, int offset, int len,
 
     classblock->state = CLASS_LOADED;
 
-    //Copy classblock to our mmaped file
-
-    if (IS_PERSISTENT && (!strcoll(classname,"HelloWorld"))){
-      	unsigned int cb_fd,dummy;
-      	char* cbMap;
-
-      	cb_fd = open ("HW_CB", O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
-      	lseek (cb_fd, sizeof(ClassBlock), SEEK_SET);
-      	dummy = write(cb_fd,"",1);
-
-      	cbMap = (char*) mmap(NULL, sizeof(ClassBlock), PROT_READ|PROT_WRITE,
-      						MAP_SHARED, cb_fd, 0);
-
-      	memcpy (cbMap, classblock, sizeof(ClassBlock));
-
-      	msync	(cbMap, sizeof(ClassBlock), MS_SYNC);
-    }
-
     if((found = addClassToHash(class, class_loader)) != class) {
         classblock->flags = CLASS_CLASH;
         if(class_loader != NULL) {
