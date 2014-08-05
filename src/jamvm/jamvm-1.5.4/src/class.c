@@ -118,11 +118,17 @@ static char *NH_filename = "HW_CLASSES";
 static char *sep = "\n";
 static int 	IS_PERSISTENT = 0;
 int class_to_save;
+char *FILENAME_CLASSES = "classes.ht";
+int PERSISTENT_HEAP_CLASSES = FALSE;
+int TESTING_MODE_CLASSES = FALSE;
+FILE *hash_file_classes;
+int FILE_EXISTS_CLASSES = FALSE;
 
 
 static Class *addClassToHash(Class *class, Object *class_loader) {
     HashTable *table;
     Class *entry;
+    int count_hash_entries= 0; //Testing variable
 
 #define HASH(ptr) utf8Hash(CLASS_CB((Class *)ptr)->name)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2) && \
@@ -143,10 +149,50 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                     objectUnlock(class_loader);
                     return NULL;
                 }
-
                 table = sysMalloc(sizeof(HashTable));
 
                 initHashTable((*table), CLASS_INITSZE, TRUE);
+
+                //NVM MODIFICATION
+                //Initializing table from file if it exists
+                if(IS_PERSISTENT){
+                	if(access (FILENAME_CLASSES, F_OK) != -1) {
+                		FILE_EXISTS_CLASSES = TRUE;
+                	}
+                	if(FILE_EXISTS_CLASSES == TRUE) {
+                		hash_file_classes = fopen (FILENAME_CLASSES, "rb");
+                		if(hash_file_classes == NULL) {
+                			printf("ERROR: error trying to open classes hash table file\n");
+                			exit(EXIT_FAILURE);
+                		}
+                		size_t len = 0;
+                		Class *interned = NULL;
+                		Class *to_add = (Class*)malloc(sizeof(Class*));
+                		len = fread(&to_add, sizeof(Class*), 1, hash_file_classes);
+                		while (len == 1) {
+                			do {
+                				addHashEntry((*table), to_add, interned);
+                				interned = NULL;
+                				findHashEntry((*table), to_add, interned, FALSE, FALSE, TRUE);
+                			}while(interned == NULL);
+                			count_hash_entries++;
+                			len = fread(&to_add, sizeof(Class*), 1, hash_file_classes);
+                		}
+                	}
+                }
+                //END OF MODIFICATION
+
+                //UNIT TESTS
+                if(TESTING_MODE_CLASSES) {
+                	log_test_results("initaliseClasses_fileExists", FILE_EXISTS_CLASSES);
+                	if(count_hash_entries == table->hash_count){
+                		log_test_results("initaliseClasses_recoverCLASSES", TRUE);
+                	} else {
+                		log_test_results("initaliseClasses_recoverCLASSES", FALSE);
+                	}
+                }
+
+
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
@@ -157,6 +203,22 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
 
         table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
     }
+
+    //NVM MODIFICATION
+    //Adding entry to file if needed
+    if(IS_PERSISTENT){
+    	if(class_loader != NULL){
+    		entry = NULL;
+    		findOnlyHashEntry((*table), class, entry, TRUE);
+    		if(entry == NULL){
+    			hash_file_classes = fopen (FILENAME_CLASSES, "a+b");
+    			fwrite(&class, sizeof(Class*), 1, hash_file_classes);
+    			fclose(hash_file_classes);
+    		}
+    	}
+    }
+    //END OF MODIFICATION
+
 
     /* Add if absent, no scavenge, locked */
     findHashEntry((*table), class, entry, TRUE, FALSE, TRUE);
@@ -1661,9 +1723,10 @@ Class *findClassFromClassLoader_persistent(char *classname, Object *loader) {
 }
 
 Class *findClassFromClassLoader(char *classname, Object *loader) {
-	if (IS_PERSISTENT)
+	//XXX uncomment for different approach
+	/*if (IS_PERSISTENT)
 		return findClassFromClassLoader_persistent(classname, loader);
-	else{
+	else{*/
 
 		if(*classname == '[')
 			return findArrayClassFromClassLoader(classname, loader);
@@ -1672,7 +1735,7 @@ Class *findClassFromClassLoader(char *classname, Object *loader) {
 			return findNonArrayClassFromClassLoader(classname, loader);
 
 		return findSystemClass0(classname);
-	}
+	//}
 }
 
 Object *getSystemClassLoader() {
@@ -2133,7 +2196,8 @@ void initialiseClass(InitArgs *args) {
     Class *vm_loader_class;
 
     if(args->persistent_heap == TRUE){
-    		IS_PERSISTENT = 1;
+    		IS_PERSISTENT = TRUE;
+    		TESTING_MODE_CLASSES = TRUE;
     }
 
     if(!(bcp && parseBootClassPath(bcp))) {
