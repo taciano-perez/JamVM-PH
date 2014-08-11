@@ -210,15 +210,177 @@ static void prepareClass(Class *class) {
 		class->class = java_lang_Class;
 	}
 }
+//NVM method to check if a class is already on the hash table
+Class *searchClass(char *classname, char *data, int offset, int len, Object *class_loader){
+	Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
+	if(vmdata == NULL){
+		return NULL;
+	}
+	u2 major_version, minor_version, this_idx, super_idx;
+	unsigned char *ptr = (unsigned char *)data + offset;
+	int cp_count, intf_count, i;
+	u2 attr_count;
+	u4 magic;
+
+	ConstantPool *constant_pool;
+	ClassBlock *classblock;
+	Class *class, *found;
+	Class **interfaces;
+
+	READ_U4(magic, ptr, len);
+
+	if(magic != 0xcafebabe) {
+		signalException(java_lang_ClassFormatError, "bad magic");
+		return NULL;
+	}
+
+	READ_U2(minor_version, ptr, len);
+	READ_U2(major_version, ptr, len);
+
+
+	if((class = allocClass()) == NULL)
+		return NULL;
+
+	classblock = CLASS_CB(class);
+	READ_U2(cp_count, ptr, len);
+
+
+
+	constant_pool = &classblock->constant_pool;
+	constant_pool->type = sysMalloc(cp_count);
+	constant_pool->info = sysMalloc(cp_count*sizeof(ConstantPoolEntry));
+
+
+
+	for(i = 1; i < cp_count; i++) {
+		u1 tag;
+
+		READ_U1(tag, ptr, len);
+		CP_TYPE(constant_pool,i) = tag;
+
+		switch(tag) {
+		case CONSTANT_Class:
+		case CONSTANT_String:
+			READ_INDEX(CP_INFO(constant_pool,i), ptr, len);
+			break;
+
+		case CONSTANT_Fieldref:
+		case CONSTANT_Methodref:
+		case CONSTANT_NameAndType:
+		case CONSTANT_InterfaceMethodref:
+		{
+			u2 idx1, idx2;
+
+			READ_INDEX(idx1, ptr, len);
+			READ_INDEX(idx2, ptr, len);
+			CP_INFO(constant_pool,i) = (idx2<<16)+idx1;
+			break;
+		}
+
+		case CONSTANT_Float:
+		case CONSTANT_Integer:
+			READ_U4(CP_INFO(constant_pool,i), ptr, len);
+			break;
+
+		case CONSTANT_Long:
+			READ_U8(*(u8 *)&(CP_INFO(constant_pool,i)), ptr, len);
+			CP_TYPE(constant_pool,++i) = 0;
+			break;
+
+		case CONSTANT_Double:
+			READ_DBL(*(u8 *)&(CP_INFO(constant_pool,i)), ptr, len);
+			CP_TYPE(constant_pool,++i) = 0;
+			break;
+
+		case CONSTANT_Utf8:
+		{
+			int length;
+			char *buff, *utf8;
+
+			READ_U2(length, ptr, len);
+			buff = sysMalloc(length+1);
+
+			memcpy(buff, ptr, length);
+			buff[length] = '\0';
+			ptr += length;
+
+			//Changed this part to save utf8 entries of classes with classloaders
+			if(class_to_save){
+				CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8Save(buff));
+			}
+			else{
+				CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
+			}
+
+			if(utf8 != buff)
+				sysFree(buff);
+
+			break;
+		}
+
+		default:
+			signalException(java_lang_ClassFormatError,
+					"bad constant pool tag");
+			return NULL;
+		}
+	}
+
+
+	/* Set count after constant pool has been initialised -- it is now
+	       safe to be scanned by GC */
+	classblock->constant_pool_count = cp_count;
+
+	READ_U2(classblock->access_flags, ptr, len);
+
+	READ_TYPE_INDEX(this_idx, constant_pool, CONSTANT_Class, ptr, len);
+	classblock->name = CP_UTF8(constant_pool, CP_CLASS(constant_pool, this_idx));
+
+	// Search class on classes hash table
+	HashTable *classes_table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
+	Class *result = NULL;
+	findHashEntry((*classes_table), class, result, FALSE, FALSE, TRUE);
+
+	// Unit tests
+	if(testing_mode_classes) {
+		FILE *test_output = fopen("testsoutput.txt", "a+");
+		fprintf(test_output, (const char*)classname);
+		fprintf(test_output, "\n");
+		if(result == NULL){
+			log_test_results("searchClass_foundClass", FALSE);
+		}
+		else{
+			log_test_results("searchClass_foundClass", TRUE);
+		}
+		fclose(test_output);
+	}
+	return result;
+
+}
 
 Class *defineClass(char *classname, char *data, int offset, int len,
                    Object *class_loader) {
-	if(class_loader != NULL){
-		class_to_save = TRUE;
+
+	int reload = FALSE;
+	Class *result = NULL;
+
+	if(is_persistent_classes){
+		if(class_loader != NULL){
+			class_to_save = TRUE;
+			result = searchClass(classname, data, offset, len, class_loader);
+			if(result == NULL){
+				reload = FALSE;
+			}
+			else{
+				reload = TRUE;
+			}
+		}
+		else{
+			class_to_save = FALSE;
+			reload = FALSE;
+		}
 	}
-	else{
-		class_to_save = FALSE;
-	}
+
+
 
     u2 major_version, minor_version, this_idx, super_idx;
     unsigned char *ptr = (unsigned char *)data + offset;
@@ -241,9 +403,13 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     READ_U2(minor_version, ptr, len);
     READ_U2(major_version, ptr, len);
 
-
-    if((class = allocClass()) == NULL)
-        return NULL;
+    if(reload == TRUE){
+    	class = result;
+    }
+    else{
+    	if((class = allocClass()) == NULL)
+    		return NULL;
+    }
 
     classblock = CLASS_CB(class);
     READ_U2(cp_count, ptr, len);
