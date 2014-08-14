@@ -1,5 +1,5 @@
 public class HelloWorld {
-static int myVar = 0;
+static int myVar;
 public static void main(String[] args) {
    System.out.println("HI " + myVar);
    myVar++;

@@ -38,11 +38,10 @@
 HashTable *hash_table;
 char *FILENAME_UTF8 = "utf8.ht";
 char *SEP_UTF8 = "\n";
-int PERSISTENT_HEAP_UTF8 = FALSE;
-int TESTING_MODE_UTF8 = FALSE;
+int persistent_heap_utf8 = FALSE;
+int testing_mode_utf8 = FALSE;
 FILE *hash_file_utf8;
-int FILE_EXISTS_UTF8 = FALSE;
-int ifa = 0;
+int file_exists_utf8 = FALSE;
 
 
 #define GET_UTF8_CHAR(ptr, c)                         \
@@ -118,7 +117,6 @@ char *findHashedUtf8Persintent(char *string, int add_if_absent, int class_to_sav
 	    	if(add_if_absent){
 	    		fwrite(&string_lenght, sizeof(unsigned short), 1, hash_file_utf8);
 	    		fwrite(string, sizeof(char), string_lenght, hash_file_utf8);
-	    		ifa++;
 	    	}
 	    }
 	    return interned;
@@ -127,7 +125,7 @@ char *findHashedUtf8Persintent(char *string, int add_if_absent, int class_to_sav
 char *findHashedUtf8(char *string, int add_if_absent, int class_to_save) {
     char *interned = NULL;
 
-    if(PERSISTENT_HEAP_UTF8 == TRUE){
+    if(persistent_heap_utf8 == TRUE){
     	interned = findHashedUtf8Persintent(string, add_if_absent, class_to_save);
     }
     else{
@@ -179,18 +177,17 @@ void initialiseUtf8Persistent(){
 	int countHashEntries = 0;
 
 	if(access (FILENAME_UTF8, F_OK) != -1) {
-		FILE_EXISTS_UTF8 = TRUE;
+		file_exists_utf8 = TRUE;
 	}
 
 
 
 	// Adding entries to hash table since file exists
-	if(FILE_EXISTS_UTF8 == TRUE) {
+	if(file_exists_utf8 == TRUE) {
 		hash_file_utf8 = fopen (FILENAME_UTF8, "rb");
 		if(hash_file_utf8 == NULL) {
 			exit(EXIT_FAILURE);
 		}
-		char *line = NULL;
 		size_t len = 0;
 
 
@@ -212,15 +209,12 @@ void initialiseUtf8Persistent(){
 
 		}
 
-	if(line){
-		free(line);
-	}
 	fclose(hash_file_utf8);
 	}
 	hash_file_utf8 = fopen (FILENAME_UTF8, "a+b");
 	// Unit tests
-	if(TESTING_MODE_UTF8) {
-		log_test_results("initaliseUTF8_fileExists", FILE_EXISTS_UTF8);
+	if(testing_mode_utf8) {
+		log_test_results("initaliseUTF8_fileExists", file_exists_utf8);
 		if(countHashEntries == hash_table->hash_count){
 			log_test_results("initaliseUTF8_recoverUTF8", TRUE);
 		} else {
@@ -236,8 +230,8 @@ void initialiseUtf8(InitArgs *args) {
 	initHashTable((*hash_table), HASHTABSZE, TRUE);
 
 	if(args->persistent_heap){
-		PERSISTENT_HEAP_UTF8 = args->persistent_heap;
-		TESTING_MODE_UTF8 = args->testing_mode;
+		persistent_heap_utf8 = args->persistent_heap;
+		testing_mode_utf8 = args->testing_mode;
 		initialiseUtf8Persistent();
 	}
 

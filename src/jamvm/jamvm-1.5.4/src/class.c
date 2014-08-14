@@ -114,10 +114,19 @@ static Class *prim_classes[MAX_PRIM_CLASSES];
 static char abstract_method[] = {OPC_ABSTRACT_METHOD_ERROR};
 
 //My variables
-static char *NH_filename = "HW_CLASSES";
-static char *sep = "\n";
-static int 	IS_PERSISTENT = 0;
+static char *NH_FILENAME = "HW_CLASSES";
+static char *SEP = "\n";
+static int 	is_persistent_classes = FALSE;
 int class_to_save;
+char *FILENAME_CLASSES_HT = "classes.ht";
+char *FILENAME_CLASSES_NAMES = "classes.cn";
+int testing_mode_classes = FALSE;
+FILE *hash_file_classes;
+FILE *name_file_classes;
+int pointer_file_exists_classes = FALSE;
+int name_file_exists_classes = FALSE;
+int classes_ht_initialized = FALSE;
+
 
 
 static Class *addClassToHash(Class *class, Object *class_loader) {
@@ -125,8 +134,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
     Class *entry;
 
 #define HASH(ptr) utf8Hash(CLASS_CB((Class *)ptr)->name)
-#define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2) && \
-            CLASS_CB((Class *)ptr1)->name == CLASS_CB((Class *)ptr2)->name
+#define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2)
 
     if(class_loader == NULL) {
         table = &boot_classes;
@@ -143,7 +151,6 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                     objectUnlock(class_loader);
                     return NULL;
                 }
-
                 table = sysMalloc(sizeof(HashTable));
 
                 initHashTable((*table), CLASS_INITSZE, TRUE);
@@ -157,6 +164,28 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
 
         table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
     }
+
+    //NVM MODIFICATION
+    //Adding entry to file if needed
+    if(is_persistent_classes){
+    	if(class_loader != NULL){
+    		entry = NULL;
+    		findOnlyHashEntry((*table), class, entry, TRUE);
+    		if(entry == NULL){
+    			hash_file_classes = fopen (FILENAME_CLASSES_HT, "a+b");
+    			name_file_classes = fopen (FILENAME_CLASSES_NAMES, "a+b");
+    			unsigned short string_lenght = strlen(CLASS_CB((Class*)class)->name) + 1;
+    			fwrite(&string_lenght, sizeof(unsigned short), 1, name_file_classes);
+    			fwrite(CLASS_CB((Class*)class)->name, sizeof(char), string_lenght, name_file_classes);
+    			fwrite(&class, sizeof(Class*), 1, hash_file_classes);
+    			fclose(hash_file_classes);
+    			fclose(name_file_classes);
+    			classes_ht_initialized = TRUE;
+    		}
+    	}
+    }
+    //END OF MODIFICATION
+
 
     /* Add if absent, no scavenge, locked */
     findHashEntry((*table), class, entry, TRUE, FALSE, TRUE);
@@ -181,15 +210,177 @@ static void prepareClass(Class *class) {
 		class->class = java_lang_Class;
 	}
 }
+//NVM method to check if a class is already on the hash table
+Class *searchClass(char *classname, char *data, int offset, int len, Object *class_loader){
+	Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
+	if(vmdata == NULL){
+		return NULL;
+	}
+	u2 major_version, minor_version, this_idx, super_idx;
+	unsigned char *ptr = (unsigned char *)data + offset;
+	int cp_count, intf_count, i;
+	u2 attr_count;
+	u4 magic;
+
+	ConstantPool *constant_pool;
+	ClassBlock *classblock;
+	Class *class, *found;
+	Class **interfaces;
+
+	READ_U4(magic, ptr, len);
+
+	if(magic != 0xcafebabe) {
+		signalException(java_lang_ClassFormatError, "bad magic");
+		return NULL;
+	}
+
+	READ_U2(minor_version, ptr, len);
+	READ_U2(major_version, ptr, len);
+
+
+	if((class = allocClass()) == NULL)
+		return NULL;
+
+	classblock = CLASS_CB(class);
+	READ_U2(cp_count, ptr, len);
+
+
+
+	constant_pool = &classblock->constant_pool;
+	constant_pool->type = sysMalloc(cp_count);
+	constant_pool->info = sysMalloc(cp_count*sizeof(ConstantPoolEntry));
+
+
+
+	for(i = 1; i < cp_count; i++) {
+		u1 tag;
+
+		READ_U1(tag, ptr, len);
+		CP_TYPE(constant_pool,i) = tag;
+
+		switch(tag) {
+		case CONSTANT_Class:
+		case CONSTANT_String:
+			READ_INDEX(CP_INFO(constant_pool,i), ptr, len);
+			break;
+
+		case CONSTANT_Fieldref:
+		case CONSTANT_Methodref:
+		case CONSTANT_NameAndType:
+		case CONSTANT_InterfaceMethodref:
+		{
+			u2 idx1, idx2;
+
+			READ_INDEX(idx1, ptr, len);
+			READ_INDEX(idx2, ptr, len);
+			CP_INFO(constant_pool,i) = (idx2<<16)+idx1;
+			break;
+		}
+
+		case CONSTANT_Float:
+		case CONSTANT_Integer:
+			READ_U4(CP_INFO(constant_pool,i), ptr, len);
+			break;
+
+		case CONSTANT_Long:
+			READ_U8(*(u8 *)&(CP_INFO(constant_pool,i)), ptr, len);
+			CP_TYPE(constant_pool,++i) = 0;
+			break;
+
+		case CONSTANT_Double:
+			READ_DBL(*(u8 *)&(CP_INFO(constant_pool,i)), ptr, len);
+			CP_TYPE(constant_pool,++i) = 0;
+			break;
+
+		case CONSTANT_Utf8:
+		{
+			int length;
+			char *buff, *utf8;
+
+			READ_U2(length, ptr, len);
+			buff = sysMalloc(length+1);
+
+			memcpy(buff, ptr, length);
+			buff[length] = '\0';
+			ptr += length;
+
+			//Changed this part to save utf8 entries of classes with classloaders
+			if(class_to_save){
+				CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8Save(buff));
+			}
+			else{
+				CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
+			}
+
+			if(utf8 != buff)
+				sysFree(buff);
+
+			break;
+		}
+
+		default:
+			signalException(java_lang_ClassFormatError,
+					"bad constant pool tag");
+			return NULL;
+		}
+	}
+
+
+	/* Set count after constant pool has been initialised -- it is now
+	       safe to be scanned by GC */
+	classblock->constant_pool_count = cp_count;
+
+	READ_U2(classblock->access_flags, ptr, len);
+
+	READ_TYPE_INDEX(this_idx, constant_pool, CONSTANT_Class, ptr, len);
+	classblock->name = CP_UTF8(constant_pool, CP_CLASS(constant_pool, this_idx));
+
+	// Search class on classes hash table
+	HashTable *classes_table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
+	Class *result = NULL;
+	findHashEntry((*classes_table), class, result, FALSE, FALSE, TRUE);
+
+	// Unit tests
+	if(testing_mode_classes) {
+		FILE *test_output = fopen("testsoutput.txt", "a+");
+		fprintf(test_output, (const char*)classname);
+		fprintf(test_output, "\n");
+		if(result == NULL){
+			log_test_results("searchClass_foundClass", FALSE);
+		}
+		else{
+			log_test_results("searchClass_foundClass", TRUE);
+		}
+		fclose(test_output);
+	}
+	return result;
+
+}
 
 Class *defineClass(char *classname, char *data, int offset, int len,
                    Object *class_loader) {
-	if(class_loader != NULL){
-		class_to_save = TRUE;
+
+	int reload = FALSE;
+	Class *result = NULL;
+
+	if(is_persistent_classes){
+		if(class_loader != NULL){
+			class_to_save = TRUE;
+			result = searchClass(classname, data, offset, len, class_loader);
+			if(result == NULL){
+				reload = FALSE;
+			}
+			else{
+				reload = TRUE;
+			}
+		}
+		else{
+			class_to_save = FALSE;
+			reload = FALSE;
+		}
 	}
-	else{
-		class_to_save = FALSE;
-	}
+
+
 
     u2 major_version, minor_version, this_idx, super_idx;
     unsigned char *ptr = (unsigned char *)data + offset;
@@ -212,9 +403,13 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     READ_U2(minor_version, ptr, len);
     READ_U2(major_version, ptr, len);
 
-
-    if((class = allocClass()) == NULL)
-        return NULL;
+    if(reload == TRUE){
+    	class = result;
+    }
+    else{
+    	if((class = allocClass()) == NULL)
+    		return NULL;
+    }
 
     classblock = CLASS_CB(class);
     READ_U2(cp_count, ptr, len);
@@ -598,24 +793,6 @@ Class *defineClass(char *classname, char *data, int offset, int len,
        return NULL;
 
     classblock->state = CLASS_LOADED;
-
-    //Copy classblock to our mmaped file
-
-    if (IS_PERSISTENT && (!strcoll(classname,"HelloWorld"))){
-      	unsigned int cb_fd,dummy;
-      	char* cbMap;
-
-      	cb_fd = open ("HW_CB", O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
-      	lseek (cb_fd, sizeof(ClassBlock), SEEK_SET);
-      	dummy = write(cb_fd,"",1);
-
-      	cbMap = (char*) mmap(NULL, sizeof(ClassBlock), PROT_READ|PROT_WRITE,
-      						MAP_SHARED, cb_fd, 0);
-
-      	memcpy (cbMap, classblock, sizeof(ClassBlock));
-
-      	msync	(cbMap, sizeof(ClassBlock), MS_SYNC);
-    }
 
     if((found = addClassToHash(class, class_loader)) != class) {
         classblock->flags = CLASS_CLASH;
@@ -1439,6 +1616,132 @@ void addInitiatingLoaderToClass(Object *class_loader, Class *class) {
         addClassToHash(class, class_loader);
 }
 
+//NVM method to initialize the classes hash table
+void initializeClassesHT(Object *class_loader){
+
+#undef COMPARE
+
+#define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2)
+
+	int count_hash_entries = 0; //Testing variable
+	int count_name_entries = 0; //Testing variable
+
+	Object *vmdata = allocObject(ldr_new_unloader->class);
+	HashTable *table = sysMalloc(sizeof(HashTable));
+	initHashTable((*table), CLASS_INITSZE, TRUE);
+
+	INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
+	INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
+
+	if(access (FILENAME_CLASSES_HT, F_OK) != -1) {
+		pointer_file_exists_classes = TRUE;
+	}
+	if(access (FILENAME_CLASSES_NAMES, F_OK) != -1) {
+		name_file_exists_classes = TRUE;
+	}
+	if((pointer_file_exists_classes == TRUE) && (name_file_exists_classes == TRUE)) {
+		hash_file_classes = fopen (FILENAME_CLASSES_HT, "rb");
+		name_file_classes = fopen (FILENAME_CLASSES_NAMES, "rb");
+		if((hash_file_classes == NULL) || (name_file_classes == NULL)) {
+			printf("ERROR: error trying to open classes hash table context files\n");
+			exit(EXIT_FAILURE);
+		}
+		size_t len_pointer = 0;
+		size_t len_string = 0;
+		Class *interned = NULL;
+		Class *to_add = (Class*)malloc(sizeof(Class*));
+		len_pointer = fread(&to_add, sizeof(Class*), 1, hash_file_classes);
+		while (len_pointer == 1) {
+			do {
+
+				unsigned short string_length = 0;
+				len_string = fread(&string_length, sizeof(unsigned short), 1, name_file_classes);
+
+				char *class_name = (char*)malloc(string_length * sizeof(char));
+				int count = fread(class_name, sizeof(char), string_length, name_file_classes);
+
+				if(count == string_length){
+					count_name_entries++;
+				}
+				else{
+					printf("ERROR: error trying to read class name from classname file\n");
+					exit(EXIT_FAILURE);
+				}
+
+				//addHashEntry() adapted
+				int hash = utf8Hash(class_name);
+				int i;
+
+				Thread *self;
+				self = threadSelf();
+				lockHashTable0(&(*table), self);
+
+				i = hash & ((*table).hash_size - 1);
+
+				for(;;) {
+					interned = (*table).hash_table[i].data;
+					if((interned == NULL) || (COMPARE(to_add, interned, hash, (*table).hash_table[i].hash)))
+						break;
+
+					i = (i+1) & ((*table).hash_size - 1);
+				}
+				(*table).hash_table[i].hash = hash;
+				interned = (*table).hash_table[i].data = PREPARE(to_add);
+				(*table).hash_count++;
+
+				if(((*table).hash_count * 4) > ((*table).hash_size * 3)) {
+					resizeHash(&(*table), (*table).hash_size * 2);
+				}
+
+				unlockHashTable0(&(*table), self);
+				//End of addHashEntry()
+
+				interned = NULL;
+
+				//findOnlyHashEntry() adapted
+				hash = utf8Hash(class_name);
+
+				self = threadSelf();
+				lockHashTable0(&(*table), self);
+
+				i = hash & ((*table).hash_size - 1);
+
+				for(;;) {
+					interned = (*table).hash_table[i].data;
+					if((interned == NULL) || (COMPARE(to_add, interned, hash, (*table).hash_table[i].hash)))
+						break;
+
+					i = (i+1) & ((*table).hash_size - 1);
+				}
+
+				unlockHashTable0(&(*table), self);
+				//End of finfOnlyHashEntry()
+
+			}while(interned == NULL);
+			count_hash_entries++;
+			len_pointer = fread(&to_add, sizeof(Class*), 1, hash_file_classes);
+		}
+		fclose(hash_file_classes);
+		fclose(name_file_classes);
+	}
+	//UNIT TESTS
+	if(testing_mode_classes) {
+		log_test_results("initaliseClasses_fileExists", pointer_file_exists_classes && name_file_exists_classes);
+		if(count_hash_entries == table->hash_count){
+			log_test_results("initaliseClasses_recoverClassesPOINTERS", TRUE);
+		} else {
+			log_test_results("initaliseClasses_recoverClassesPOINTERS", FALSE);
+		}
+		if(count_name_entries == count_hash_entries){
+			log_test_results("initaliseClasses_recoverClassesNAMES", TRUE);
+		} else {
+			log_test_results("initaliseClasses_recoverClassesNAMES", FALSE);
+		}
+	}
+
+}
+
+
 Class *findHashedClass(char *classname, Object *class_loader) {
     HashTable *table;
     Class *class;
@@ -1456,7 +1759,15 @@ Class *findHashedClass(char *classname, Object *class_loader) {
         table = &boot_classes;
     }
     else {
-        Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
+    	if(is_persistent_classes){
+    		if(classes_ht_initialized == FALSE){
+    			initializeClassesHT(class_loader);
+    			classes_ht_initialized = TRUE;
+    		}
+    	}
+    	Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
+
+
 
         if(vmdata == NULL) {
             return NULL;
@@ -1608,7 +1919,7 @@ Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
 
 Class* findInFile (char* name_to_find){
 	Class *class;
-	FILE *file = fopen (NH_filename, "rt");
+	FILE *file = fopen (NH_FILENAME, "rt");
 	char *line = NULL;
 	size_t len = 0;
 	size_t read = 0;
@@ -1655,7 +1966,7 @@ Class *findClassFromClassLoader_persistent(char *classname, Object *loader) {
 		return findArrayClassFromClassLoader(classname, loader);
 
 	if(loader != NULL){
-		if(access (NH_filename, F_OK) != -1){
+		if(access (NH_FILENAME, F_OK) != -1){
 			class = findInFile(classname);
 			if (class != NULL){
 				return class;
@@ -1664,12 +1975,12 @@ Class *findClassFromClassLoader_persistent(char *classname, Object *loader) {
 
 		class = findNonArrayClassFromClassLoader(classname, loader);
 		FILE * nonHashedFile;
-		nonHashedFile = fopen (NH_filename, "a+");
+		nonHashedFile = fopen (NH_FILENAME, "a+");
 
-		fprintf(nonHashedFile, "%s%s", classname, sep);
-		fprintf(nonHashedFile, "%p%s", class, sep);
-		fprintf(nonHashedFile, "%u%s", class->lock, sep);
-		fprintf(nonHashedFile, "%p%s", class->class, sep);
+		fprintf(nonHashedFile, "%s%s", classname, SEP);
+		fprintf(nonHashedFile, "%p%s", class, SEP);
+		fprintf(nonHashedFile, "%u%s", class->lock, SEP);
+		fprintf(nonHashedFile, "%p%s", class->class, SEP);
 
 		fclose(nonHashedFile);
 		return class;
@@ -1679,9 +1990,10 @@ Class *findClassFromClassLoader_persistent(char *classname, Object *loader) {
 }
 
 Class *findClassFromClassLoader(char *classname, Object *loader) {
-	if (IS_PERSISTENT)
+	//XXX uncomment for different approach
+	/*if (is_persistent_classes)
 		return findClassFromClassLoader_persistent(classname, loader);
-	else{
+	else{*/
 
 		if(*classname == '[')
 			return findArrayClassFromClassLoader(classname, loader);
@@ -1690,7 +2002,7 @@ Class *findClassFromClassLoader(char *classname, Object *loader) {
 			return findNonArrayClassFromClassLoader(classname, loader);
 
 		return findSystemClass0(classname);
-	}
+	//}
 }
 
 Object *getSystemClassLoader() {
@@ -2151,7 +2463,8 @@ void initialiseClass(InitArgs *args) {
     Class *vm_loader_class;
 
     if(args->persistent_heap == TRUE){
-    		IS_PERSISTENT = 1;
+    		is_persistent_classes = TRUE;
+    		testing_mode_classes = TRUE;
     }
 
     if(!(bcp && parseBootClassPath(bcp))) {
