@@ -1067,8 +1067,6 @@ void prepareFields(Class *class) {
         			    	fb->u.static_value.l = value;
         			    }
 
-
-
         				len = fread(&string_length, sizeof(unsigned short), 1, statics_file_classes);
 
         			}
@@ -1085,7 +1083,12 @@ void prepareFields(Class *class) {
         				fwrite(&value, sizeof(long long), 1, statics_file_classes);
         				fclose(statics_file_classes);
 
-        				printf("Added entries to field file for variable: %s\n", fb->name);
+        				if(testing_mode_classes){
+        					log_level = DEBUG;
+        					char log[100];
+        					sprintf(log,"Added entries to field file for variable: %s", fb->name);
+        					log(log_level, log);
+        				}
 
         			}
 
