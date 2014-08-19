@@ -196,7 +196,7 @@ void initialiseUtf8Persistent(){
 
 		while (len == 1) {
 			char *interned = NULL;
-			char *to_add = (char*)malloc(string_length * sizeof(char));
+			char *to_add = (char*)sysMalloc(string_length * sizeof(char));
 			int count = fread(to_add, sizeof(char), string_length, hash_file_utf8);
 			do {
 				addHashEntry((*hash_table), to_add, interned);

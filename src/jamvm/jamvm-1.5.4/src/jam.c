@@ -23,11 +23,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
 #include "jam.h"
 #include "class.h"
 #include "symbol.h"
 #include "excep.h"
+
+ LogLevel log_level;
 
 #ifdef USE_ZIP
 #define BCP_MESSAGE "<jar/zip files and directories separated by :>"
@@ -363,6 +368,9 @@ int main(int argc, char *argv[]) {
     int i;
 
     initialise_tests_file();
+    initialise_log_file();
+    log_level = INFO;
+    log(log_level, "Starting JamVM main()");
 
     setDefaultInitArgs(&args);
     class_arg = parseCommandLine(argc, argv, &args);
@@ -404,8 +412,12 @@ int main(int argc, char *argv[]) {
                 break;
 
         /* Call the main method */
-        if(i == argc)
-            executeStaticMethod(main_class, mb, array);
+        if(i == argc){
+        	log_level = INFO;
+        	log(log_level, "Starting Java main()");
+
+        	executeStaticMethod(main_class, mb, array);
+        }
     }
 
 error:
@@ -416,6 +428,72 @@ error:
 
     /* Wait for all but daemon threads to die */
     mainThreadWaitToExitVM();
+
+    /* XXX NVM Modification - Saving fields context for each file in fields folder */
+
+    if(args.testing_mode == TRUE){
+    	log_level = TRACE;
+    	log(log_level, "Saving fields context before exit()")
+    }
+
+    if(args.persistent_heap == TRUE){
+    	DIR *dp;
+    	struct dirent *ep;
+    	FILE *field_file;
+    	unsigned short string_length;
+    	long long *pointer, pointer_to_value;
+    	long long value = 0;
+    	size_t len;
+
+    	dp = opendir ("fields");
+    	if (dp != NULL) {
+    		while (ep = readdir (dp)) {
+    			if(strcmp(ep->d_name, ".") != 0 && strcmp(ep->d_name, "..") != 0){
+    				// Calloc the size of file name plus "fields/" (7) plus /0 (1)
+    				char *file_name = (char*)calloc(1, sizeof(ep->d_name) + 8);
+    				strcat(file_name, "fields/");
+    				strcat(file_name, ep->d_name);
+
+    				if(args.testing_mode == TRUE){
+    					log_level = DEBUG;
+    					char log[100];
+    					sprintf(log, "Saving context from %s file", file_name);
+    					log(log_level, log);
+    				}
+
+    				field_file = fopen(file_name, "r+b");
+
+    				len = fread(&string_length, sizeof(unsigned short), 1, field_file);
+
+
+    				while (len == 1) {
+    					char *var_name = (char*)calloc(1, (string_length * sizeof(char)) + 1);
+    					fread(var_name, sizeof(char), string_length, field_file);
+    					var_name[string_length] = 0;
+    					fread(&pointer, sizeof(long long*), 1, field_file);
+    					pointer_to_value = &value;
+    					memcpy(pointer_to_value, pointer, sizeof(long long));
+    					fwrite(&value, sizeof(long long), 1, field_file);
+
+    					if(args.testing_mode == TRUE){
+    						log_level = DEBUG;
+    						char log[100];
+    						sprintf(log, "Variable %s has value %d before exit", var_name, value);
+    						log(log_level, log);
+    					}
+
+    					len = fread(&string_length, sizeof(unsigned short), 1, field_file);
+    				}
+
+    			}
+
+    		}
+    		closedir (dp);
+    	} else
+    		printf ("Couldn't open fields folder\n");
+    }
+    /* END OF MODIFICATION */
+
     exitVM(status);
 
    /* Keep the compiler happy */

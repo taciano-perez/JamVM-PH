@@ -33,6 +33,7 @@
 
 /* NVM specific includes */
 #include "nvm/test/testing_utils.h"
+#include "nvm/utils/logger.h"
 
 #ifndef TRUE
 #define         TRUE    1
