@@ -1010,6 +1010,7 @@ void prepareFields(Class *class) {
         if(fb->access_flags & ACC_STATIC){
         	fb->u.static_value.l = 0;
 
+
         	//XXX NVM MODIFICATION
         	if(is_persistent_classes){
         		if(CLASS_CB(class)->class_loader != NULL){
@@ -1027,44 +1028,70 @@ void prepareFields(Class *class) {
         			}
 
         			// FIELD FILE STRUCTURE
-        			// HEADER (number of chars) | VAR NAME | POINTER TO VALUE | VALUE
+        			// HEADER (number of chars) | VAR NAME | POINTER TO VALUE | PRIMITIVE BOOL | VALUE
 
         			// Reading field file
         			statics_file_classes = fopen(file_name, "r+b");
         			size_t len = 0;
         			unsigned short string_length;
         			long long *pointer;
+        			void *pnt;
         			long long value = 0;
         			int reload_variable = FALSE;
+        			int primitive = FALSE;
 
         			len = fread(&string_length, sizeof(unsigned short), 1, statics_file_classes);
+
+        			if(testing_mode_classes){
+        				log_level = DEBUG;
+        				char log[100];
+        				sprintf(log, "Variable: %s", fb->name);
+        				log(log_level, log);
+        			}
 
         			while (len == 1) {
         				char *var_name = (char*)calloc(1, (string_length * sizeof(char)) + 1);
         				fread(var_name, sizeof(char), string_length, statics_file_classes);
         			    var_name[string_length] = 0;
 
-        			    if(testing_mode_classes){
-        			    	log_level = DEBUG;
-        			    	char log[100];
-        			    	sprintf(log, "Variable: %s", var_name);
-        			    	log(log_level, log);
-        			    }
 
         			    if(strcmp(var_name, fb->name) == 0){
         			    	reload_variable = TRUE;
         			    	pointer = &(fb->u.static_value.l);
-        			    	fwrite(&pointer, sizeof(long long*), 1, statics_file_classes);
-        			    	fread(&value, sizeof(long long), 1, statics_file_classes);
+        			    	fwrite(&pointer, sizeof(void *), 1, statics_file_classes);
+        			    	fread(&primitive, sizeof(int), 1, statics_file_classes);
+        			    	if(primitive == TRUE){
+        			    		fread(&value, sizeof(long long), 1, statics_file_classes);
+        			    		fb->u.static_value.l = value;
+        			    	}
+        			    	else{
+        			    		fread(&pnt, sizeof(void *), 1, statics_file_classes);
+        			    		fb->u.static_value.p = pnt;
+        			    	}
 
         			    	if(testing_mode_classes){
         			    		log_level = DEBUG;
         			    		char log[100];
-        			    		sprintf(log, "Found match in field file for variable %s. Assigning value %d", var_name, value);
+        			    		if(primitive == TRUE){
+        			    			sprintf(log, "Found match in field file for variable %s. Assigning value %x", var_name, value);
+        			    		}
+        			    		else{
+        			    			sprintf(log, "Found match in field file for variable %s. Assigning value %x", var_name, pnt);
+        			    		}
         			    		log(log_level, log);
         			    	}
 
-        			    	fb->u.static_value.l = value;
+        			    	break;
+        			    }
+        			    else{
+        			    	fread(&pointer, sizeof(void *), 1, statics_file_classes);
+        			    	fread(&primitive, sizeof(int), 1, statics_file_classes);
+        			    	if(primitive == TRUE){
+        			    		fread(&value, sizeof(long long), 1, statics_file_classes);
+        			    	}
+        			    	else{
+        			    		fread(&pnt, sizeof(void *), 1, statics_file_classes);
+        			    	}
         			    }
 
         				len = fread(&string_length, sizeof(unsigned short), 1, statics_file_classes);
@@ -1072,15 +1099,30 @@ void prepareFields(Class *class) {
         			}
         			fclose(statics_file_classes);
 
+        			// Primitive types are 1 char long
+        			if((strlen(fb->type) == 1) && (fb->type[0] != '[')){
+        				primitive = TRUE;
+        			}
+        			else{
+        				primitive = FALSE;
+        			}
+
+
         			// Adding entry to field file
         			if(reload_variable == FALSE){
-        				statics_file_classes = fopen(file_name, "r+b");
+        				statics_file_classes = fopen(file_name, "a+b");
         				string_length = strlen(fb->name);
         				fwrite(&string_length, sizeof(unsigned short), 1, statics_file_classes);
         				fwrite(fb->name, sizeof(char), string_length, statics_file_classes);
         				pointer = &(fb->u.static_value.l);
-        				fwrite(&pointer, sizeof(long long*), 1, statics_file_classes);
-        				fwrite(&value, sizeof(long long), 1, statics_file_classes);
+        				fwrite(&pointer, sizeof(void *), 1, statics_file_classes);
+        				fwrite(&primitive, sizeof(int), 1, statics_file_classes);
+        				if(primitive == TRUE){
+        					fwrite(&value, sizeof(long long), 1, statics_file_classes);
+        				}
+        				else{
+        					fwrite(&value, sizeof(void *), 1, statics_file_classes);
+        				}
         				fclose(statics_file_classes);
 
         				if(testing_mode_classes){

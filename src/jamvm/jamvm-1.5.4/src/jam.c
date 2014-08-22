@@ -441,8 +441,11 @@ error:
     	struct dirent *ep;
     	FILE *field_file;
     	unsigned short string_length;
-    	long long *pointer, pointer_to_value;
+    	void *pnt;
+    	unsigned int pointer_to_heap;
+    	void *pointer_to_value;
     	long long value = 0;
+    	int primitive = TRUE;
     	size_t len;
 
     	dp = opendir ("fields");
@@ -470,15 +473,28 @@ error:
     					char *var_name = (char*)calloc(1, (string_length * sizeof(char)) + 1);
     					fread(var_name, sizeof(char), string_length, field_file);
     					var_name[string_length] = 0;
-    					fread(&pointer, sizeof(long long*), 1, field_file);
-    					pointer_to_value = &value;
-    					memcpy(pointer_to_value, pointer, sizeof(long long));
-    					fwrite(&value, sizeof(long long), 1, field_file);
+    					fread(&pnt, sizeof(void *), 1, field_file);
+    					fread(&primitive, sizeof(int), 1, field_file);
+    					if(primitive == TRUE){
+    						pointer_to_value = &value;
+    						memcpy(pointer_to_value, pnt, sizeof(void *));
+    						fwrite(&value, sizeof(long long), 1, field_file);
+    					}
+    					else{
+    						pointer_to_value = &pointer_to_heap;
+    						memcpy(pointer_to_value, pnt, sizeof(long long));
+    						fwrite(&pointer_to_heap, sizeof(void *), 1, field_file);
+    					}
 
     					if(args.testing_mode == TRUE){
     						log_level = DEBUG;
     						char log[100];
-    						sprintf(log, "Variable %s has value %d before exit", var_name, value);
+    						if(primitive == TRUE){
+    							sprintf(log, "Variable %s has value %x before exit", var_name, value);
+    						}
+    						else{
+    							sprintf(log, "Variable %s has value %x before exit", var_name, pointer_to_heap);
+    						}
     						log(log_level, log);
     					}
 
