@@ -35,6 +35,7 @@
 #include "nvm/test/testing_utils.h"
 #include "nvm/utils/logger.h"
 
+/* HEAP MEM ADDRESS */
 #define HEAPADDR 0xaf497000
 
 #ifndef TRUE

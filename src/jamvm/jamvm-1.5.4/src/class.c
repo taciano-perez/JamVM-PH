@@ -314,7 +314,13 @@ Class *searchClass(char *classname, char *data, int offset, int len, Object *cla
 			ptr += length;
 
 
-		    CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
+			//XXX NVM MODIFICATION - save utf8 entries of classes with classloaders
+			if(class_to_save){
+				CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8Save(buff));
+			}
+			else{
+				CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
+			}
 
 
 			if(utf8 != buff)

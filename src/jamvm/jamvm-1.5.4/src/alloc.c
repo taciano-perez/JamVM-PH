@@ -110,8 +110,6 @@ static char *sep = "\n";
 
 
 
-/* HEAP MEM ADDRESS */
-
 static int verbosegc;
 static int compact_override;
 static int compact_value;
