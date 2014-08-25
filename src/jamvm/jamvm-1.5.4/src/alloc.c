@@ -108,7 +108,7 @@ static int IS_PERSISTENT = 0;
 static char *FL_filename = "freelist";
 static char *sep = "\n";
 
-#define HEAPADDR 0xaf497000
+
 
 /* HEAP MEM ADDRESS */
 

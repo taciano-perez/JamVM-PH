@@ -1054,12 +1054,15 @@ void prepareFields(Class *class) {
         				fread(var_name, sizeof(char), string_length, statics_file_classes);
         			    var_name[string_length] = 0;
 
-
+        			    // Found match, reassign value
         			    if(strcmp(var_name, fb->name) == 0){
         			    	reload_variable = TRUE;
+
         			    	pointer = &(fb->u.static_value.l);
         			    	fwrite(&pointer, sizeof(void *), 1, statics_file_classes);
+
         			    	fread(&primitive, sizeof(int), 1, statics_file_classes);
+
         			    	if(primitive == TRUE){
         			    		fread(&value, sizeof(long long), 1, statics_file_classes);
         			    		fb->u.static_value.l = value;
@@ -1081,11 +1084,16 @@ void prepareFields(Class *class) {
         			    		log(log_level, log);
         			    	}
 
+        			    	// Stop reading the file
         			    	break;
         			    }
         			    else{
+
+        			    	// Continue to advance the read pointer
         			    	fread(&pointer, sizeof(void *), 1, statics_file_classes);
+
         			    	fread(&primitive, sizeof(int), 1, statics_file_classes);
+
         			    	if(primitive == TRUE){
         			    		fread(&value, sizeof(long long), 1, statics_file_classes);
         			    	}
@@ -1094,9 +1102,11 @@ void prepareFields(Class *class) {
         			    	}
         			    }
 
+        			    // Read next file entry
         				len = fread(&string_length, sizeof(unsigned short), 1, statics_file_classes);
 
         			}
+
         			fclose(statics_file_classes);
 
         			// Primitive types are 1 char long
@@ -1111,12 +1121,17 @@ void prepareFields(Class *class) {
         			// Adding entry to field file
         			if(reload_variable == FALSE){
         				statics_file_classes = fopen(file_name, "a+b");
+
         				string_length = strlen(fb->name);
         				fwrite(&string_length, sizeof(unsigned short), 1, statics_file_classes);
+
         				fwrite(fb->name, sizeof(char), string_length, statics_file_classes);
+
         				pointer = &(fb->u.static_value.l);
         				fwrite(&pointer, sizeof(void *), 1, statics_file_classes);
+
         				fwrite(&primitive, sizeof(int), 1, statics_file_classes);
+
         				if(primitive == TRUE){
         					fwrite(&value, sizeof(long long), 1, statics_file_classes);
         				}

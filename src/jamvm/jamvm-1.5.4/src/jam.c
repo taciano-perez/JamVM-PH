@@ -25,6 +25,7 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <dirent.h>
 
 #include "jam.h"
@@ -452,11 +453,13 @@ error:
     	if (dp != NULL) {
     		while (ep = readdir (dp)) {
     			if(strcmp(ep->d_name, ".") != 0 && strcmp(ep->d_name, "..") != 0){
-    				// Calloc the size of file name plus "fields/" (7) plus /0 (1)
+
+    				/* Calloc the size of file name plus "fields/" (7) plus /0 (1) */
     				char *file_name = (char*)calloc(1, sizeof(ep->d_name) + 8);
     				strcat(file_name, "fields/");
     				strcat(file_name, ep->d_name);
 
+    				/* Logging debug */
     				if(args.testing_mode == TRUE){
     					log_level = DEBUG;
     					char log[100];
@@ -468,13 +471,16 @@ error:
 
     				len = fread(&string_length, sizeof(unsigned short), 1, field_file);
 
-
+    				/* Reading variables from file */
     				while (len == 1) {
     					char *var_name = (char*)calloc(1, (string_length * sizeof(char)) + 1);
     					fread(var_name, sizeof(char), string_length, field_file);
     					var_name[string_length] = 0;
+
     					fread(&pnt, sizeof(void *), 1, field_file);
+
     					fread(&primitive, sizeof(int), 1, field_file);
+
     					if(primitive == TRUE){
     						pointer_to_value = &value;
     						memcpy(pointer_to_value, pnt, sizeof(void *));
@@ -486,6 +492,7 @@ error:
     						fwrite(&pointer_to_heap, sizeof(void *), 1, field_file);
     					}
 
+    					/* Logging debug */
     					if(args.testing_mode == TRUE){
     						log_level = DEBUG;
     						char log[100];
@@ -498,6 +505,7 @@ error:
     						log(log_level, log);
     					}
 
+    					/* Read next file entry */
     					len = fread(&string_length, sizeof(unsigned short), 1, field_file);
     				}
 
@@ -505,8 +513,28 @@ error:
 
     		}
     		closedir (dp);
-    	} else
+    	} else{
     		printf ("Couldn't open fields folder\n");
+    	}
+
+    	/* Sync Heap before exit */
+    	int sync_success = msync(HEAPADDR, args.max_heap, MS_SYNC);
+
+    	/* Logging Info */
+    	if(args.testing_mode == TRUE){
+    		log_level = INFO;
+    		log(log_level, "Heap synced");
+
+    		/* Unit tests */
+    		if(sync_success == 0){
+    			log_test_results("heapSyncAtExit", TRUE);
+    		}
+    		else{
+    			log_test_results("heapSyncAtExit", FALSE);
+    		}
+
+    	}
+
     }
     /* END OF MODIFICATION */
 

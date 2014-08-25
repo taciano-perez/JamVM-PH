@@ -31,9 +31,11 @@
 /* Architecture dependent definitions */
 #include "arch.h"
 
-/* NVM specific includes */
+/* NVM specific includes and defines */
 #include "nvm/test/testing_utils.h"
 #include "nvm/utils/logger.h"
+
+#define HEAPADDR 0xaf497000
 
 #ifndef TRUE
 #define         TRUE    1
