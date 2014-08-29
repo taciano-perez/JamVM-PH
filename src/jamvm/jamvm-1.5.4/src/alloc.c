@@ -108,9 +108,7 @@ static int IS_PERSISTENT = 0;
 static char *FL_filename = "freelist";
 static char *sep = "\n";
 
-#define HEAPADDR 0xaf497000
 
-/* HEAP MEM ADDRESS */
 
 static int verbosegc;
 static int compact_override;
@@ -2030,6 +2028,7 @@ void *gcMalloc(int len) {
 		fprintf(freeListFile, "%p%s", ret_addr, sep);
 		fclose(freeListFile);
 	}
+
 
 	return ret_addr;
 }

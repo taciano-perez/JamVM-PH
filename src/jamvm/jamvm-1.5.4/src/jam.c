@@ -23,11 +23,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <dirent.h>
 
 #include "jam.h"
 #include "class.h"
 #include "symbol.h"
 #include "excep.h"
+
+ LogLevel log_level;
 
 #ifdef USE_ZIP
 #define BCP_MESSAGE "<jar/zip files and directories separated by :>"
@@ -363,6 +369,9 @@ int main(int argc, char *argv[]) {
     int i;
 
     initialise_tests_file();
+    initialise_log_file();
+    log_level = INFO;
+    log(log_level, "Starting JamVM main()");
 
     setDefaultInitArgs(&args);
     class_arg = parseCommandLine(argc, argv, &args);
@@ -404,8 +413,12 @@ int main(int argc, char *argv[]) {
                 break;
 
         /* Call the main method */
-        if(i == argc)
-            executeStaticMethod(main_class, mb, array);
+        if(i == argc){
+        	log_level = INFO;
+        	log(log_level, "Starting Java main()");
+
+        	executeStaticMethod(main_class, mb, array);
+        }
     }
 
 error:
@@ -416,6 +429,115 @@ error:
 
     /* Wait for all but daemon threads to die */
     mainThreadWaitToExitVM();
+
+    /* XXX NVM Modification - Saving fields context for each file in fields folder */
+
+    if(args.testing_mode == TRUE){
+    	log_level = TRACE;
+    	log(log_level, "Saving fields context before exit()")
+    }
+
+    if(args.persistent_heap == TRUE){
+    	DIR *dp;
+    	struct dirent *ep;
+    	FILE *field_file;
+    	unsigned short string_length;
+    	void *pnt;
+    	unsigned int pointer_to_heap;
+    	void *pointer_to_value;
+    	long long value = 0;
+    	int primitive = TRUE;
+    	size_t len;
+
+    	dp = opendir ("fields");
+    	if (dp != NULL) {
+    		while (ep = readdir (dp)) {
+    			if(strcmp(ep->d_name, ".") != 0 && strcmp(ep->d_name, "..") != 0){
+
+    				/* Calloc the size of file name plus "fields/" (7) plus /0 (1) */
+    				char *file_name = (char*)calloc(1, sizeof(ep->d_name) + 8);
+    				strcat(file_name, "fields/");
+    				strcat(file_name, ep->d_name);
+
+    				/* Logging debug */
+    				if(args.testing_mode == TRUE){
+    					log_level = DEBUG;
+    					char log[100];
+    					sprintf(log, "Saving context from %s file", file_name);
+    					log(log_level, log);
+    				}
+
+    				field_file = fopen(file_name, "r+b");
+
+    				len = fread(&string_length, sizeof(unsigned short), 1, field_file);
+
+    				/* Reading variables from file */
+    				while (len == 1) {
+    					char *var_name = (char*)calloc(1, (string_length * sizeof(char)) + 1);
+    					fread(var_name, sizeof(char), string_length, field_file);
+    					var_name[string_length] = 0;
+
+    					fread(&pnt, sizeof(void *), 1, field_file);
+
+    					fread(&primitive, sizeof(int), 1, field_file);
+
+    					if(primitive == TRUE){
+    						pointer_to_value = &value;
+    						memcpy(pointer_to_value, pnt, sizeof(void *));
+    						fwrite(&value, sizeof(long long), 1, field_file);
+    					}
+    					else{
+    						pointer_to_value = &pointer_to_heap;
+    						memcpy(pointer_to_value, pnt, sizeof(long long));
+    						fwrite(&pointer_to_heap, sizeof(void *), 1, field_file);
+    					}
+
+    					/* Logging debug */
+    					if(args.testing_mode == TRUE){
+    						log_level = DEBUG;
+    						char log[100];
+    						if(primitive == TRUE){
+    							sprintf(log, "Variable %s has value %x before exit", var_name, value);
+    						}
+    						else{
+    							sprintf(log, "Variable %s has value %x before exit", var_name, pointer_to_heap);
+    						}
+    						log(log_level, log);
+    					}
+
+    					/* Read next file entry */
+    					len = fread(&string_length, sizeof(unsigned short), 1, field_file);
+    				}
+
+    			}
+
+    		}
+    		closedir (dp);
+    	} else{
+    		printf ("Couldn't open fields folder\n");
+    	}
+
+    	/* Sync Heap before exit */
+    	int sync_success = msync(HEAPADDR, args.max_heap, MS_SYNC);
+
+    	/* Logging Info */
+    	if(args.testing_mode == TRUE){
+    		log_level = INFO;
+    		log(log_level, "Heap synced");
+
+    		/* Unit tests */
+    		if(sync_success == 0){
+    			log_test_results("heapSyncAtExit", TRUE);
+    		}
+    		else{
+    			log_test_results("heapSyncAtExit", FALSE);
+    		}
+
+    	}
+
+    }
+    /* END OF MODIFICATION */
+
     exitVM(status);
 
    /* Keep the compiler happy */

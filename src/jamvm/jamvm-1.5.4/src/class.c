@@ -29,6 +29,10 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 
 #include "jam.h"
 #include "sig.h"
@@ -123,9 +127,14 @@ char *FILENAME_CLASSES_NAMES = "classes.cn";
 int testing_mode_classes = FALSE;
 FILE *hash_file_classes;
 FILE *name_file_classes;
+FILE *statics_file_classes;
 int pointer_file_exists_classes = FALSE;
 int name_file_exists_classes = FALSE;
 int classes_ht_initialized = FALSE;
+int statics_file_initialized = FALSE;
+LogLevel log_level;
+
+struct stat st = {0};
 
 
 
@@ -304,13 +313,15 @@ Class *searchClass(char *classname, char *data, int offset, int len, Object *cla
 			buff[length] = '\0';
 			ptr += length;
 
-			//Changed this part to save utf8 entries of classes with classloaders
+
+			//XXX NVM MODIFICATION - save utf8 entries of classes with classloaders
 			if(class_to_save){
 				CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8Save(buff));
 			}
 			else{
 				CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
 			}
+
 
 			if(utf8 != buff)
 				sysFree(buff);
@@ -342,16 +353,12 @@ Class *searchClass(char *classname, char *data, int offset, int len, Object *cla
 
 	// Unit tests
 	if(testing_mode_classes) {
-		FILE *test_output = fopen("testsoutput.txt", "a+");
-		fprintf(test_output, (const char*)classname);
-		fprintf(test_output, "\n");
 		if(result == NULL){
 			log_test_results("searchClass_foundClass", FALSE);
 		}
 		else{
 			log_test_results("searchClass_foundClass", TRUE);
 		}
-		fclose(test_output);
 	}
 	return result;
 
@@ -360,9 +367,12 @@ Class *searchClass(char *classname, char *data, int offset, int len, Object *cla
 Class *defineClass(char *classname, char *data, int offset, int len,
                    Object *class_loader) {
 
+	//NVM Variables
 	int reload = FALSE;
 	Class *result = NULL;
 
+
+	//NVM MODIFICATION
 	if(is_persistent_classes){
 		if(class_loader != NULL){
 			class_to_save = TRUE;
@@ -379,6 +389,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
 			reload = FALSE;
 		}
 	}
+	//END OF MODIFICATION
 
 
 
@@ -403,6 +414,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     READ_U2(minor_version, ptr, len);
     READ_U2(major_version, ptr, len);
 
+
+    //NVM MOFICIATION (FIRST IF CLAUSE. ELSE IS VOLATILE FLUX)
     if(reload == TRUE){
     	class = result;
     }
@@ -410,6 +423,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     	if((class = allocClass()) == NULL)
     		return NULL;
     }
+    //END OF MODIFICATION
+
 
     classblock = CLASS_CB(class);
     READ_U2(cp_count, ptr, len);
@@ -474,6 +489,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                buff[length] = '\0';
                ptr += length;
 
+               //NVM MODIFICATION
                //Changed this part to save utf8 entries of classes with classloaders
                if(class_to_save){
             	   CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8Save(buff));
@@ -481,6 +497,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                else{
             	   CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
                }
+               //END OF MODIFICATION
 
                if(utf8 != buff)
                    sysFree(buff);
@@ -526,6 +543,51 @@ Class *defineClass(char *classname, char *data, int offset, int len,
         READ_TYPE_INDEX(super_idx, constant_pool, CONSTANT_Class, ptr, len);
         classblock->super_name = CP_UTF8(constant_pool, CP_CLASS(constant_pool, super_idx));
     }
+
+    // XXX NVM MODIFICATION
+    if(is_persistent_classes){
+    	if(class_loader != NULL){
+    		int file_exists;
+    		//Check if fields folder exists, if not create it
+    		if (stat("fields", &st) == -1) {
+    			mkdir("fields", 0700);
+    		}
+    		//Malloc the size of the classname plus fields/ (7) plus .fld (4) plus \0 (1)
+    		char *file_name = (char*)calloc(1, sizeof(classblock->name)+12);
+    		strcat(file_name,"fields/");
+    		strcat(file_name, classblock->name);
+    		strcat(file_name, ".fld\0");
+
+    		if(access(file_name, F_OK) == -1) {
+
+    			if(testing_mode_classes){
+    				log_level = DEBUG;
+    				char log[100];
+    				sprintf(log, "Creating field file: %s", file_name);
+    				log(log_level, log);
+    			}
+
+    			statics_file_classes = fopen(file_name, "wr+b");
+    			fclose(statics_file_classes);
+    		}
+
+
+
+    		//Unit Tests
+    		if(testing_mode_classes){
+    			if(access(file_name, F_OK) != -1) {
+    				file_exists = TRUE;
+    			}
+    			else{
+    				file_exists = FALSE;
+    			}
+    			log_test_results("defineClass_fileExists", file_exists);
+    		}
+    	}
+    }
+    //END OF MODIFICATION
+
+
 
 
 
@@ -951,8 +1013,157 @@ void prepareFields(Class *class) {
     for(i = 0; i < cb->fields_count; i++) {
         FieldBlock *fb = &cb->fields[i];
 
-        if(fb->access_flags & ACC_STATIC)
-            fb->u.static_value.l = 0;
+        if(fb->access_flags & ACC_STATIC){
+        	fb->u.static_value.l = 0;
+
+
+        	//XXX NVM MODIFICATION
+        	if(is_persistent_classes){
+        		if(CLASS_CB(class)->class_loader != NULL){
+        			// Calloc the size of the classname plus fields/ (7) plus .fld (4) plus \0 (1)
+        			char *file_name = (char*)calloc(1, strlen(CLASS_CB(class)->name) + 12);
+        			strcat(file_name,"fields/");
+        			strcat(file_name, CLASS_CB(class)->name);
+        			strcat(file_name, ".fld\0");
+
+        			if(testing_mode_classes){
+        				log_level = DEBUG;
+        				char log[100];
+        				sprintf(log, "Initializing variable from field file: %s", file_name);
+        				log(log_level, log);
+        			}
+
+        			// FIELD FILE STRUCTURE
+        			// HEADER (number of chars) | VAR NAME | POINTER TO VALUE | PRIMITIVE BOOL | VALUE
+
+        			// Reading field file
+        			statics_file_classes = fopen(file_name, "r+b");
+        			size_t len = 0;
+        			unsigned short string_length;
+        			long long *pointer;
+        			void *pnt;
+        			long long value = 0;
+        			int reload_variable = FALSE;
+        			int primitive = FALSE;
+
+        			len = fread(&string_length, sizeof(unsigned short), 1, statics_file_classes);
+
+        			if(testing_mode_classes){
+        				log_level = DEBUG;
+        				char log[100];
+        				sprintf(log, "Variable: %s", fb->name);
+        				log(log_level, log);
+        			}
+
+        			while (len == 1) {
+        				char *var_name = (char*)calloc(1, (string_length * sizeof(char)) + 1);
+        				fread(var_name, sizeof(char), string_length, statics_file_classes);
+        			    var_name[string_length] = 0;
+
+        			    // Found match, reassign value
+        			    if(strcmp(var_name, fb->name) == 0){
+        			    	reload_variable = TRUE;
+
+        			    	pointer = &(fb->u.static_value.l);
+        			    	fwrite(&pointer, sizeof(void *), 1, statics_file_classes);
+
+        			    	fread(&primitive, sizeof(int), 1, statics_file_classes);
+
+        			    	if(primitive == TRUE){
+        			    		fread(&value, sizeof(long long), 1, statics_file_classes);
+        			    		fb->u.static_value.l = value;
+        			    	}
+        			    	else{
+        			    		fread(&pnt, sizeof(void *), 1, statics_file_classes);
+        			    		fb->u.static_value.p = pnt;
+        			    	}
+
+        			    	if(testing_mode_classes){
+        			    		log_level = DEBUG;
+        			    		char log[100];
+        			    		if(primitive == TRUE){
+        			    			sprintf(log, "Found match in field file for variable %s. Assigning value %x", var_name, value);
+        			    		}
+        			    		else{
+        			    			sprintf(log, "Found match in field file for variable %s. Assigning value %x", var_name, pnt);
+        			    		}
+        			    		log(log_level, log);
+        			    	}
+
+        			    	// Stop reading the file
+        			    	break;
+        			    }
+        			    else{
+
+        			    	// Continue to advance the read pointer
+        			    	fread(&pointer, sizeof(void *), 1, statics_file_classes);
+
+        			    	fread(&primitive, sizeof(int), 1, statics_file_classes);
+
+        			    	if(primitive == TRUE){
+        			    		fread(&value, sizeof(long long), 1, statics_file_classes);
+        			    	}
+        			    	else{
+        			    		fread(&pnt, sizeof(void *), 1, statics_file_classes);
+        			    	}
+        			    }
+
+        			    // Read next file entry
+        				len = fread(&string_length, sizeof(unsigned short), 1, statics_file_classes);
+
+        			}
+
+        			fclose(statics_file_classes);
+
+        			// Primitive types are 1 char long
+        			if((strlen(fb->type) == 1) && (fb->type[0] != '[')){
+        				primitive = TRUE;
+        			}
+        			else{
+        				primitive = FALSE;
+        			}
+
+
+        			// Adding entry to field file
+        			if(reload_variable == FALSE){
+        				statics_file_classes = fopen(file_name, "a+b");
+
+        				string_length = strlen(fb->name);
+        				fwrite(&string_length, sizeof(unsigned short), 1, statics_file_classes);
+
+        				fwrite(fb->name, sizeof(char), string_length, statics_file_classes);
+
+        				pointer = &(fb->u.static_value.l);
+        				fwrite(&pointer, sizeof(void *), 1, statics_file_classes);
+
+        				fwrite(&primitive, sizeof(int), 1, statics_file_classes);
+
+        				if(primitive == TRUE){
+        					fwrite(&value, sizeof(long long), 1, statics_file_classes);
+        				}
+        				else{
+        					fwrite(&value, sizeof(void *), 1, statics_file_classes);
+        				}
+        				fclose(statics_file_classes);
+
+        				if(testing_mode_classes){
+        					log_level = DEBUG;
+        					char log[100];
+        					sprintf(log,"Added entries to field file for variable: %s", fb->name);
+        					log(log_level, log);
+        				}
+
+        			}
+
+        			// UNIT TESTS
+        			if(testing_mode_classes){
+        				log_test_results("pepareFields_reloadVariable", reload_variable);
+        			}
+        		}
+        	}
+        	// END OF MODIFICATION
+        }
+
         else {
             FieldBlock **list;
 
@@ -1626,13 +1837,16 @@ void initializeClassesHT(Object *class_loader){
 	int count_hash_entries = 0; //Testing variable
 	int count_name_entries = 0; //Testing variable
 
-	Object *vmdata = allocObject(ldr_new_unloader->class);
-	HashTable *table = sysMalloc(sizeof(HashTable));
-	initHashTable((*table), CLASS_INITSZE, TRUE);
-
-	INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
-	INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
-
+	Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
+	HashTable *table;
+	if(vmdata == NULL){
+		vmdata = allocObject(ldr_new_unloader->class);
+		table = calloc(1, sizeof(HashTable));
+		initHashTable((*table), CLASS_INITSZE, TRUE);
+	}
+	else{
+		INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
+	}
 	if(access (FILENAME_CLASSES_HT, F_OK) != -1) {
 		pointer_file_exists_classes = TRUE;
 	}
@@ -1640,8 +1854,8 @@ void initializeClassesHT(Object *class_loader){
 		name_file_exists_classes = TRUE;
 	}
 	if((pointer_file_exists_classes == TRUE) && (name_file_exists_classes == TRUE)) {
-		hash_file_classes = fopen (FILENAME_CLASSES_HT, "rb");
-		name_file_classes = fopen (FILENAME_CLASSES_NAMES, "rb");
+		hash_file_classes = fopen (FILENAME_CLASSES_HT, "r+b");
+		name_file_classes = fopen (FILENAME_CLASSES_NAMES, "r+b");
 		if((hash_file_classes == NULL) || (name_file_classes == NULL)) {
 			printf("ERROR: error trying to open classes hash table context files\n");
 			exit(EXIT_FAILURE);
@@ -1649,7 +1863,7 @@ void initializeClassesHT(Object *class_loader){
 		size_t len_pointer = 0;
 		size_t len_string = 0;
 		Class *interned = NULL;
-		Class *to_add = (Class*)malloc(sizeof(Class*));
+		Class *to_add = (Class*)calloc(1, sizeof(Class*));
 		len_pointer = fread(&to_add, sizeof(Class*), 1, hash_file_classes);
 		while (len_pointer == 1) {
 			do {
@@ -1657,7 +1871,7 @@ void initializeClassesHT(Object *class_loader){
 				unsigned short string_length = 0;
 				len_string = fread(&string_length, sizeof(unsigned short), 1, name_file_classes);
 
-				char *class_name = (char*)malloc(string_length * sizeof(char));
+				char *class_name = (char*)calloc(1, string_length * sizeof(char));
 				int count = fread(class_name, sizeof(char), string_length, name_file_classes);
 
 				if(count == string_length){
@@ -1929,7 +2143,7 @@ Class* findInFile (char* name_to_find){
 
 	while ((read = getline(&line, &len, file)) != -1)	{
 		char *name_to_add;
-		name_to_add = malloc(read*sizeof(char));
+		name_to_add = calloc(1 ,read*sizeof(char));
 		strcpy(name_to_add, line);
 		name_to_add[strlen(name_to_add)-1] = 0;
 
@@ -1939,7 +2153,7 @@ Class* findInFile (char* name_to_find){
 		if (!strcmp(name_to_find,name_to_add)){
 			for (i = 0; i < 3; i++){
 				if ((read = getline(&line, &len, file)) != -1){
-					name_to_add = malloc(read*sizeof(char));
+					name_to_add = calloc(1, read*sizeof(char));
 					strcpy(name_to_add, line);
 					name_to_add[strlen(name_to_add)-1] = 0;
 					pointer = (int) strtoll (name_to_add,NULL,16);
