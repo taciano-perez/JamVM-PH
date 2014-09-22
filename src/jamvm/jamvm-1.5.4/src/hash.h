@@ -32,14 +32,15 @@ typedef struct hash_table {
     int hash_count;
     VMLock lock;
 } HashTable;
-
-extern void resizeHash(HashTable *table, int new_size);
+// XXX NVM CHANGE Z 10.01.01
+extern void resizeHash(HashTable *table, int new_size, char* name, int create_file);
 extern void lockHashTable0(HashTable *table, Thread *self);
 extern void unlockHashTable0(HashTable *table, Thread *self);
 
-#define initHashTable(table, initial_size, create_lock)                            \
+// XXX NVM CHANGE Z 10.02
+#define initHashTable(table, initial_size, create_lock, name, create_file)         \
 {                                                                                  \
-    table.hash_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*initial_size);    \
+    table.hash_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*initial_size, name, create_file);    \
     memset(table.hash_table, 0, sizeof(HashEntry)*initial_size);                   \
     table.hash_size = initial_size;                                                \
     table.hash_count = 0;                                                          \
@@ -56,7 +57,8 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
 #define hashTableCount(table)                                                      \
     table.hash_count
 
-#define findHashEntry(table, ptr, ptr2, add_if_absent, scavenge, locked)           \
+// XXX NVM CHANGE Z 10.00
+#define findHashEntry(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)           \
 {                                                                                  \
     int hash = HASH(ptr);                                                          \
     int i;                                                                         \
@@ -81,11 +83,11 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
         ptr2 = FOUND(ptr, ptr2);                                                   \
     } else                                                                         \
         if(add_if_absent) {                                                        \
-            table.hash_table[i].hash = hash;									   \
+            table.hash_table[i].hash = hash;                                       \
             ptr2 = table.hash_table[i].data = PREPARE(ptr);                        \
                                                                                    \
             if(ptr2) {                                                             \
-            	table.hash_count++;												   \
+                table.hash_count++;                                                \
                 if((table.hash_count * 4) > (table.hash_size * 3)) {               \
                     int new_size;                                                  \
                     if(scavenge) {                                                 \
@@ -108,7 +110,7 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
                     } else                                                         \
                         new_size = table.hash_size*2;                              \
                                                                                    \
-                    resizeHash(&table, new_size);                                  \
+                    resizeHash(&table, new_size, name, create_file);               \
                 }                                                                  \
             }                                                                      \
         }                                                                          \
@@ -116,65 +118,6 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
     if(locked)                                                                     \
         unlockHashTable0(&table, self);                                            \
 }
-
-// We created this method to solve adding from file context
-#define addHashEntry(table, ptr, ptr2)												   \
-{																				   	   \
-	int hash = HASH(ptr);                                                          	   \
-	    int i;                                                                         \
-	                                                                                   \
-	    Thread *self;                                                                  \
-	    self = threadSelf();                                                       	   \
-	    lockHashTable0(&table, self);                                              	   \
-	                                                                                   \
-	    i = hash & (table.hash_size - 1);                                              \
-	                                                                                   \
-	    for(;;) {                                                                      \
-	        ptr2 = table.hash_table[i].data;                                           \
-	        if((ptr2 == NULL) || (COMPARE(ptr, ptr2, hash, table.hash_table[i].hash))) \
-	            break;                                                                 \
-	                                                                                   \
-	        i = (i+1) & (table.hash_size - 1);                                         \
-	    }                                                                              \
-	    table.hash_table[i].hash = hash;									  		   \
-	    ptr2 = table.hash_table[i].data = PREPARE(ptr);                    			   \
-	    table.hash_count++;											   				   \
-	    if((table.hash_count * 4) > (table.hash_size * 3)) {                           \
-	    	resizeHash(&table, table.hash_size * 2);                                   \
-	    }                                                                              \
-	    unlockHashTable0(&table, self);                                                \
-}                      															   	   \
-
-// We created this method to solve finding entries after file context
-#define findOnlyHashEntry(table, ptr, ptr2, locked)           					   \
-{                                                                                  \
-    int hash = HASH(ptr);                                                          \
-    int i;                                                                         \
-                                                                                   \
-    Thread *self;                                                                  \
-    if(locked) {                                                                   \
-        self = threadSelf();                                                       \
-        lockHashTable0(&table, self);                                              \
-    }                                                                              \
-                                                                                   \
-    i = hash & (table.hash_size - 1);                                              \
-                                                                                   \
-    for(;;) {                                                                      \
-        ptr2 = table.hash_table[i].data;                                           \
-        if((ptr2 == NULL) || (COMPARE(ptr, ptr2, hash, table.hash_table[i].hash))) \
-            break;                                                                 \
-                                                                                   \
-        i = (i+1) & (table.hash_size - 1);                                         \
-    }                                                                              \
-                                                                                   \
-    if(ptr2) {                                                                     \
-        ptr2 = FOUND(ptr, ptr2);                                                   \
-    }																			   \
-    else { 																		   \
-    	ptr2 = NULL;                                                               \
-    }                                                                              \
-    unlockHashTable0(&table, self);                                                \
-}                      															   \
 
 #define deleteHashEntry(table, ptr, locked)                                        \
 {                                                                                  \

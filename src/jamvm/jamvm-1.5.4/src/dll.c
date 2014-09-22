@@ -220,8 +220,9 @@ uintptr_t *resolveNativeWrapper(Class *class, MethodBlock *mb,
 
 void initialiseDll(InitArgs *args) {
 #ifndef NO_JNI
+	// XXX NVM CHANGE 8.05
     /* Init hash table, and create lock */
-    initHashTable(hash_table, HASHTABSZE, TRUE);
+    initHashTable(hash_table, HASHTABSZE, TRUE, (char*)"dll_ht", FALSE);
 #endif
     verbose = args->verbosedll;
 }
@@ -254,8 +255,9 @@ int resolveDll(char *name, Object *loader) {
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
 
+    // XXX NVM CHANGE Z 10.04.00
     /* Do not add if absent, no scavenge, locked */
-    findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE);
+    findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, (char*)"dll_ht", TRUE);
 
     if(dll == NULL) {
         DllEntry *dll2;
@@ -300,8 +302,11 @@ int resolveDll(char *name, Object *loader) {
 #define COMPARE(ptr1, ptr2, hash1, hash2) \
                   ((hash1 == hash2) && (strcmp(ptr1->name, ptr2->name) == 0))
 
+        //XXX NVM CHANGE Z 10.04.01
         /* Add if absent, no scavenge, locked */
-        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE);
+        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, (char*)"dll_ht", TRUE);
+        //XXX NVM CHANGE 9.04
+        // msync
 
         /* If the library has an OnUnload function it must be
            called from a running Java thread (i.e. not within
@@ -416,8 +421,9 @@ void unloadClassLoaderDlls(Object *loader) {
 
         /* Ensure new table is less than 2/3 full */
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
-
-        resizeHash(&hash_table, size);
+        //todo resizeHash
+        //XXX NVM CHANGE Z 10.04.02
+        resizeHash(&hash_table, size, (char*)"dll_ht", TRUE);
     }
 }
 

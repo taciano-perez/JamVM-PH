@@ -9,9 +9,7 @@ dll.lo: dll.c /usr/include/stdc-predef.h /usr/include/stdio.h \
  /usr/include/_G_config.h /usr/include/wchar.h \
  /usr/lib/gcc/i686-linux-gnu/4.8/include/stdarg.h \
  /usr/include/i386-linux-gnu/bits/stdio_lim.h \
- /usr/include/i386-linux-gnu/bits/sys_errlist.h \
- /usr/include/i386-linux-gnu/bits/stdio.h \
- /usr/include/i386-linux-gnu/bits/stdio2.h /usr/include/stdlib.h \
+ /usr/include/i386-linux-gnu/bits/sys_errlist.h /usr/include/stdlib.h \
  /usr/include/i386-linux-gnu/bits/waitflags.h \
  /usr/include/i386-linux-gnu/bits/waitstatus.h /usr/include/endian.h \
  /usr/include/i386-linux-gnu/bits/endian.h \
@@ -22,27 +20,21 @@ dll.lo: dll.c /usr/include/stdc-predef.h /usr/include/stdio.h \
  /usr/include/i386-linux-gnu/bits/select.h \
  /usr/include/i386-linux-gnu/bits/sigset.h \
  /usr/include/i386-linux-gnu/bits/time.h \
- /usr/include/i386-linux-gnu/bits/select2.h \
  /usr/include/i386-linux-gnu/sys/sysmacros.h \
  /usr/include/i386-linux-gnu/bits/pthreadtypes.h /usr/include/alloca.h \
- /usr/include/i386-linux-gnu/bits/stdlib-bsearch.h \
- /usr/include/i386-linux-gnu/bits/stdlib-float.h \
- /usr/include/i386-linux-gnu/bits/stdlib.h /usr/include/string.h \
- /usr/include/xlocale.h /usr/include/i386-linux-gnu/bits/string.h \
- /usr/include/i386-linux-gnu/bits/string2.h \
- /usr/include/i386-linux-gnu/bits/string3.h /usr/include/ctype.h jam.h \
+ /usr/include/i386-linux-gnu/bits/stdlib-float.h /usr/include/string.h \
+ /usr/include/xlocale.h /usr/include/ctype.h jam.h \
  /usr/include/inttypes.h /usr/lib/gcc/i686-linux-gnu/4.8/include/stdint.h \
  /usr/include/stdint.h /usr/include/i386-linux-gnu/bits/wchar.h \
  /usr/lib/gcc/i686-linux-gnu/4.8/include-fixed/limits.h \
  /usr/lib/gcc/i686-linux-gnu/4.8/include-fixed/syslimits.h \
  /usr/include/limits.h /usr/include/i386-linux-gnu/bits/posix1_lim.h \
  /usr/include/i386-linux-gnu/bits/local_lim.h /usr/include/linux/limits.h \
- /usr/include/i386-linux-gnu/bits/posix2_lim.h config.h arch.h \
- nvm/test/testing_utils.h hash.h thread.h /usr/include/pthread.h \
- /usr/include/sched.h /usr/include/i386-linux-gnu/bits/sched.h \
- /usr/include/i386-linux-gnu/bits/setjmp.h /usr/include/setjmp.h \
- /usr/include/i386-linux-gnu/bits/setjmp2.h jni.h natives.h symbol.h \
- excep.h
+ /usr/include/i386-linux-gnu/bits/posix2_lim.h config.h arch.h hash.h \
+ thread.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/i386-linux-gnu/bits/sched.h \
+ /usr/include/i386-linux-gnu/bits/setjmp.h /usr/include/setjmp.h jni.h \
+ natives.h symbol.h excep.h
 
 /usr/include/stdc-predef.h:
 
@@ -76,10 +68,6 @@ dll.lo: dll.c /usr/include/stdc-predef.h /usr/include/stdio.h \
 
 /usr/include/i386-linux-gnu/bits/sys_errlist.h:
 
-/usr/include/i386-linux-gnu/bits/stdio.h:
-
-/usr/include/i386-linux-gnu/bits/stdio2.h:
-
 /usr/include/stdlib.h:
 
 /usr/include/i386-linux-gnu/bits/waitflags.h:
@@ -106,29 +94,17 @@ dll.lo: dll.c /usr/include/stdc-predef.h /usr/include/stdio.h \
 
 /usr/include/i386-linux-gnu/bits/time.h:
 
-/usr/include/i386-linux-gnu/bits/select2.h:
-
 /usr/include/i386-linux-gnu/sys/sysmacros.h:
 
 /usr/include/i386-linux-gnu/bits/pthreadtypes.h:
 
 /usr/include/alloca.h:
 
-/usr/include/i386-linux-gnu/bits/stdlib-bsearch.h:
-
 /usr/include/i386-linux-gnu/bits/stdlib-float.h:
-
-/usr/include/i386-linux-gnu/bits/stdlib.h:
 
 /usr/include/string.h:
 
 /usr/include/xlocale.h:
-
-/usr/include/i386-linux-gnu/bits/string.h:
-
-/usr/include/i386-linux-gnu/bits/string2.h:
-
-/usr/include/i386-linux-gnu/bits/string3.h:
 
 /usr/include/ctype.h:
 
@@ -160,8 +136,6 @@ config.h:
 
 arch.h:
 
-nvm/test/testing_utils.h:
-
 hash.h:
 
 thread.h:
@@ -175,8 +149,6 @@ thread.h:
 /usr/include/i386-linux-gnu/bits/setjmp.h:
 
 /usr/include/setjmp.h:
-
-/usr/include/i386-linux-gnu/bits/setjmp2.h:
 
 jni.h:
 

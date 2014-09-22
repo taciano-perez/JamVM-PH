@@ -21,9 +21,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include "jam.h"
 #include "hash.h"
 
@@ -35,14 +32,8 @@
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
 
-HashTable *hash_table;
-char *FILENAME_UTF8 = "utf8.ht";
-char *SEP_UTF8 = "\n";
-int persistent_heap_utf8 = FALSE;
-int testing_mode_utf8 = FALSE;
-FILE *hash_file_utf8;
-int file_exists_utf8 = FALSE;
-
+static HashTable hash_table;
+static char* utf8_name = "utf8_ht";
 
 #define GET_UTF8_CHAR(ptr, c)                         \
 {                                                     \
@@ -101,45 +92,18 @@ int utf8Comp(char *ptr, char *ptr2) {
     return TRUE;
 }
 
-char *findHashedUtf8Persintent(char *string, int add_if_absent, int class_to_save){
-	    char *interned = NULL;
-
-	    findHashEntry((*hash_table), string, interned, FALSE, FALSE, FALSE);
-
-	    if(interned != NULL){
-	    	return interned;
-	    }
-	    unsigned short string_lenght = strlen(string) + 1;
-
-		/* Add if absent, no scavenge, locked */
-	    findHashEntry((*hash_table), string, interned, add_if_absent, FALSE, TRUE);
-	    if(class_to_save){
-	    	if(add_if_absent){
-	    		fwrite(&string_lenght, sizeof(unsigned short), 1, hash_file_utf8);
-	    		fwrite(string, sizeof(char), string_lenght, hash_file_utf8);
-	    	}
-	    }
-	    return interned;
-}
-
-char *findHashedUtf8(char *string, int add_if_absent, int class_to_save) {
-    char *interned = NULL;
-
-    if(persistent_heap_utf8 == TRUE){
-    	interned = findHashedUtf8Persintent(string, add_if_absent, class_to_save);
-    }
-    else{
-    	/* Add if absent, no scavenge, locked */
-    	findHashEntry((*hash_table), string, interned, add_if_absent, FALSE, TRUE);
-
-    }
+char *findHashedUtf8(char *string, int add_if_absent) {
+    char *interned;
+    // XXX NVM CHANGE Z 10.06.01
+    /* Add if absent, no scavenge, locked */
+    findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
 
     return interned;
 }
 
 char *copyUtf8(char *string) {
     char *buff = strcpy(sysMalloc(strlen(string) + 1), string);
-    char *found = findHashedUtf8(buff, TRUE, FALSE);
+    char *found = findHashedUtf8(buff, TRUE);
 
     if(found != buff)
         sysFree(buff);
@@ -173,76 +137,18 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
     return buff;
 }
 
-void initialiseUtf8Persistent(){
-	int countHashEntries = 0;
-
-	if(access (FILENAME_UTF8, F_OK) != -1) {
-		file_exists_utf8 = TRUE;
-	}
-
-
-
-	// Adding entries to hash table since file exists
-	if(file_exists_utf8 == TRUE) {
-		hash_file_utf8 = fopen (FILENAME_UTF8, "rb");
-		if(hash_file_utf8 == NULL) {
-			exit(EXIT_FAILURE);
-		}
-		size_t len = 0;
-
-
-		unsigned short string_length = 0;
-		len = fread(&string_length, sizeof(unsigned short), 1, hash_file_utf8);
-
-		while (len == 1) {
-			char *interned = NULL;
-			char *to_add = (char*)calloc(1, string_length * sizeof(char));
-			int count = fread(to_add, sizeof(char), string_length, hash_file_utf8);
-			do {
-				addHashEntry((*hash_table), to_add, interned);
-				interned = NULL;
-				findHashEntry((*hash_table), to_add, interned, FALSE, FALSE, TRUE);
-			}while(interned == NULL);
-
-			countHashEntries++;
-			len = fread(&string_length, sizeof(unsigned short), 1, hash_file_utf8);
-
-		}
-
-	fclose(hash_file_utf8);
-	}
-	hash_file_utf8 = fopen (FILENAME_UTF8, "a+b");
-	// Unit tests
-	if(testing_mode_utf8) {
-		log_test_results("initaliseUTF8_fileExists", file_exists_utf8);
-		if(countHashEntries == hash_table->hash_count){
-			log_test_results("initaliseUTF8_recoverUTF8", TRUE);
-		} else {
-			log_test_results("initaliseUTF8_recoverUTF8", FALSE);
-		}
-	}
-	hash_file_utf8 = fopen (FILENAME_UTF8, "a+b");
-}
-
-void initialiseUtf8(InitArgs *args) {
+void initialiseUtf8() {
     /* Init hash table, and create lock */
-	hash_table = sysMalloc(sizeof(HashTable));
-	initHashTable((*hash_table), HASHTABSZE, TRUE);
-
-	if(args->persistent_heap){
-		persistent_heap_utf8 = args->persistent_heap;
-		testing_mode_utf8 = args->testing_mode;
-		initialiseUtf8Persistent();
-	}
-
+	// XXX NVM CHANGE 8.10
+    initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
 }
 
 #ifndef NO_JNI
 /* Functions used by JNI */
 
-
 int utf8CharLen(unsigned short *unicode, int len) {
     int count = 0;
+
     for(; len > 0; len--) {
         unsigned short c = *unicode++;
         count += c == 0 || c > 0x7f ? (c > 0x7ff ? 3 : 2) : 1;

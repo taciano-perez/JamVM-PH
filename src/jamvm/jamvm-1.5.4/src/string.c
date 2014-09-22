@@ -40,6 +40,8 @@ static int value_offset;
 static int offset_offset;
 
 static HashTable hash_table;
+// XXX NVM CHANGE Z 10.05.00
+static char* string_name = "string_ht";
 
 int stringHash(Object *ptr) {
     int len = INST_DATA(ptr, int, count_offset);
@@ -96,9 +98,9 @@ Object *createString(char *utf8) {
 
 Object *findInternedString(Object *string) {
     Object *interned;
-
+    // XXX NVM CHANGE Z 10.05.02
     /* Add if absent, no scavenge, locked */
-    findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE);
+    findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, string_name, TRUE);
 
     return interned;
 }
@@ -125,8 +127,8 @@ void freeInternedStrings() {
 
         /* Ensure new table is less than 2/3 full */
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
-
-        resizeHash(&hash_table, size);
+        // XXX NVM CHANGE Z 10.05.01
+        resizeHash(&hash_table, size, string_name, TRUE);
     }
 }
 
@@ -187,7 +189,8 @@ void initialiseString() {
     offset_offset = offset->u.offset;
 
     /* Init hash table and create lock */
-    initHashTable(hash_table, HASHTABSZE, TRUE);
+	// XXX NVM CHANGE 8.08
+    initHashTable(hash_table, HASHTABSZE, TRUE, string_name, TRUE);
 }
 
 #ifndef NO_JNI

@@ -21,8 +21,7 @@ relocatability.lo: relocatability.c /usr/include/stdc-predef.h \
  /usr/include/i386-linux-gnu/bits/stdio.h \
  /usr/include/i386-linux-gnu/bits/stdio2.h /usr/include/time.h \
  /usr/include/i386-linux-gnu/bits/time.h /usr/include/xlocale.h \
- ../../../src/config.h ../../../src/arch.h \
- ../../../src/nvm/test/testing_utils.h /usr/include/stdlib.h \
+ ../../../src/config.h ../../../src/arch.h /usr/include/stdlib.h \
  /usr/include/i386-linux-gnu/bits/waitflags.h \
  /usr/include/i386-linux-gnu/bits/waitstatus.h /usr/include/endian.h \
  /usr/include/i386-linux-gnu/bits/endian.h \
@@ -112,8 +111,6 @@ relocatability.lo: relocatability.c /usr/include/stdc-predef.h \
 ../../../src/config.h:
 
 ../../../src/arch.h:
-
-../../../src/nvm/test/testing_utils.h:
 
 /usr/include/stdlib.h:
 

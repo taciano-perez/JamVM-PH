@@ -17,31 +17,24 @@ execute.lo: execute.c /usr/include/stdc-predef.h jam.h \
  /usr/include/i386-linux-gnu/bits/typesizes.h /usr/include/libio.h \
  /usr/include/_G_config.h /usr/include/wchar.h \
  /usr/include/i386-linux-gnu/bits/stdio_lim.h \
- /usr/include/i386-linux-gnu/bits/sys_errlist.h \
- /usr/include/i386-linux-gnu/bits/stdio.h \
- /usr/include/i386-linux-gnu/bits/stdio2.h /usr/include/time.h \
+ /usr/include/i386-linux-gnu/bits/sys_errlist.h /usr/include/time.h \
  /usr/include/i386-linux-gnu/bits/time.h /usr/include/xlocale.h config.h \
- arch.h nvm/test/testing_utils.h sig.h frame.h lock.h thread.h \
- /usr/include/pthread.h /usr/include/endian.h \
- /usr/include/i386-linux-gnu/bits/endian.h \
+ arch.h sig.h frame.h lock.h thread.h /usr/include/pthread.h \
+ /usr/include/endian.h /usr/include/i386-linux-gnu/bits/endian.h \
  /usr/include/i386-linux-gnu/bits/byteswap.h \
  /usr/include/i386-linux-gnu/bits/byteswap-16.h /usr/include/sched.h \
  /usr/include/i386-linux-gnu/bits/sched.h \
  /usr/include/i386-linux-gnu/bits/pthreadtypes.h \
  /usr/include/i386-linux-gnu/bits/setjmp.h /usr/include/setjmp.h \
- /usr/include/i386-linux-gnu/bits/sigset.h \
- /usr/include/i386-linux-gnu/bits/setjmp2.h /usr/include/stdlib.h \
+ /usr/include/i386-linux-gnu/bits/sigset.h /usr/include/stdlib.h \
  /usr/include/i386-linux-gnu/bits/waitflags.h \
  /usr/include/i386-linux-gnu/bits/waitstatus.h \
  /usr/include/i386-linux-gnu/sys/types.h \
  /usr/include/i386-linux-gnu/sys/select.h \
  /usr/include/i386-linux-gnu/bits/select.h \
- /usr/include/i386-linux-gnu/bits/select2.h \
  /usr/include/i386-linux-gnu/sys/sysmacros.h /usr/include/alloca.h \
- /usr/include/i386-linux-gnu/bits/stdlib-bsearch.h \
- /usr/include/i386-linux-gnu/bits/stdlib-float.h \
- /usr/include/i386-linux-gnu/bits/stdlib.h symbol.h excep.h properties.h \
- jni-internal.h
+ /usr/include/i386-linux-gnu/bits/stdlib-float.h symbol.h excep.h \
+ properties.h jni-internal.h
 
 /usr/include/stdc-predef.h:
 
@@ -99,10 +92,6 @@ jam.h:
 
 /usr/include/i386-linux-gnu/bits/sys_errlist.h:
 
-/usr/include/i386-linux-gnu/bits/stdio.h:
-
-/usr/include/i386-linux-gnu/bits/stdio2.h:
-
 /usr/include/time.h:
 
 /usr/include/i386-linux-gnu/bits/time.h:
@@ -112,8 +101,6 @@ jam.h:
 config.h:
 
 arch.h:
-
-nvm/test/testing_utils.h:
 
 sig.h:
 
@@ -145,8 +132,6 @@ thread.h:
 
 /usr/include/i386-linux-gnu/bits/sigset.h:
 
-/usr/include/i386-linux-gnu/bits/setjmp2.h:
-
 /usr/include/stdlib.h:
 
 /usr/include/i386-linux-gnu/bits/waitflags.h:
@@ -159,17 +144,11 @@ thread.h:
 
 /usr/include/i386-linux-gnu/bits/select.h:
 
-/usr/include/i386-linux-gnu/bits/select2.h:
-
 /usr/include/i386-linux-gnu/sys/sysmacros.h:
 
 /usr/include/alloca.h:
 
-/usr/include/i386-linux-gnu/bits/stdlib-bsearch.h:
-
 /usr/include/i386-linux-gnu/bits/stdlib-float.h:
-
-/usr/include/i386-linux-gnu/bits/stdlib.h:
 
 symbol.h:
 

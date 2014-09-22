@@ -25,14 +25,9 @@
 #include <ctype.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/mman.h>
 #include <dirent.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
+#include <sys/mman.h>
+#include <errno.h>
 
 #include "jam.h"
 #include "sig.h"
@@ -48,8 +43,6 @@
 #define PREPARE(ptr) ptr
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
-
-#define HASHFILESIZE 4194304
 
 static int verbose;
 static char *bootpath;
@@ -80,6 +73,10 @@ static Class *package_array_class;
 /* hash table containing packages loaded by the boot loader */
 #define PCKG_INITSZE 1<<6
 static HashTable boot_packages;
+// XXX NVM CHANGE Z 10.03.00
+static char* boot_name = "boot_cl_ht";
+static char* class_name = "classes_ht";
+static char* bootp_name = "bootp_pck_ht";
 
 /* Hashtable entry for each package defined by the boot loader */
 typedef struct package_entry {
@@ -117,52 +114,33 @@ static Class *prim_classes[MAX_PRIM_CLASSES];
    we'll get an abstract method error. */
 static char abstract_method[] = {OPC_ABSTRACT_METHOD_ERROR};
 
-//My variables
-static char *NH_FILENAME = "HW_CLASSES";
-static char *SEP = "\n";
-static int 	is_persistent_classes = FALSE;
-int class_to_save;
-char *FILENAME_CLASSES_HT = "classes.ht";
-char *FILENAME_CLASSES_NAMES = "classes.cn";
-int testing_mode_classes = FALSE;
-FILE *hash_file_classes;
-FILE *name_file_classes;
-FILE *statics_file_classes;
-int pointer_file_exists_classes = FALSE;
-int name_file_exists_classes = FALSE;
-int classes_ht_initialized = FALSE;
-int statics_file_initialized = FALSE;
-LogLevel log_level;
-
-struct stat st = {0};
-
-
-
 static Class *addClassToHash(Class *class, Object *class_loader) {
     HashTable *table;
     Class *entry;
 
 #define HASH(ptr) utf8Hash(CLASS_CB((Class *)ptr)->name)
-#define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2)
+#define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2) && \
+            CLASS_CB((Class *)ptr1)->name == CLASS_CB((Class *)ptr2)->name
 
-    if(class_loader == NULL) {
+    if(class_loader == NULL)
         table = &boot_classes;
-    }
     else {
         Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
 
         if(vmdata == NULL) {
             objectLock(class_loader);
             vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
-
             if(vmdata == NULL) {
                 if((vmdata = allocObject(ldr_new_unloader->class)) == NULL) {
                     objectUnlock(class_loader);
                     return NULL;
                 }
-                table = sysMalloc(sizeof(HashTable));
-
-                initHashTable((*table), CLASS_INITSZE, TRUE);
+/* XXX NVM CHANGE 4.01
+ * XXX NVM CHANGE 8.02
+ * table = sysMalloc(sizeof(HashTable));
+ */
+                table = sysMalloc_persistent(sizeof(HashTable));
+                initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
@@ -174,225 +152,39 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
         table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
     }
 
-    //NVM MODIFICATION
-    //Adding entry to file if needed
-    if(is_persistent_classes){
-    	if(class_loader != NULL){
-    		entry = NULL;
-    		findOnlyHashEntry((*table), class, entry, TRUE);
-    		if(entry == NULL){
-    			hash_file_classes = fopen (FILENAME_CLASSES_HT, "a+b");
-    			name_file_classes = fopen (FILENAME_CLASSES_NAMES, "a+b");
-    			unsigned short string_lenght = strlen(CLASS_CB((Class*)class)->name) + 1;
-    			fwrite(&string_lenght, sizeof(unsigned short), 1, name_file_classes);
-    			fwrite(CLASS_CB((Class*)class)->name, sizeof(char), string_lenght, name_file_classes);
-    			fwrite(&class, sizeof(Class*), 1, hash_file_classes);
-    			fclose(hash_file_classes);
-    			fclose(name_file_classes);
-    			classes_ht_initialized = TRUE;
-    		}
-    	}
-    }
-    //END OF MODIFICATION
-
+    // XXX NVM CHANGE Z 10.03.01
 
     /* Add if absent, no scavenge, locked */
-    findHashEntry((*table), class, entry, TRUE, FALSE, TRUE);
-	msync(table, HASHFILESIZE, MS_SYNC);
-
+    //todo check if it works
+    if ((unsigned int)table == (unsigned int)&boot_classes){
+    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
+    }else{
+    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, class_name, TRUE );
+    }
+    // XXX NVM CHANGE 9.02
+    msync((*table).hash_table, CLASS_INITSZE, MS_SYNC);
     return entry;
 }
 
 static void prepareClass(Class *class) {
+    ClassBlock *cb = CLASS_CB(class);
 
-	ClassBlock *cb = CLASS_CB(class);
-
-
-	if(cb->name == SYMBOL(java_lang_Class)) {
-		java_lang_Class = class->class = class;
-		cb->flags |= CLASS_CLASS;
-	} else {
-		if(java_lang_Class == NULL){
-
-			findSystemClass0(SYMBOL(java_lang_Class));
-		}
-		class->class = java_lang_Class;
-	}
+    if(cb->name == SYMBOL(java_lang_Class)) {
+       java_lang_Class = class->class = class;
+       cb->flags |= CLASS_CLASS;
+    } else {
+       if(java_lang_Class == NULL)
+          findSystemClass0(SYMBOL(java_lang_Class));
+       class->class = java_lang_Class;
+    }
 }
-//NVM method to check if a class is already on the hash table
-Class *searchClass(char *classname, char *data, int offset, int len, Object *class_loader){
-	Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
-	if(vmdata == NULL){
-		return NULL;
-	}
-	u2 major_version, minor_version, this_idx, super_idx;
-	unsigned char *ptr = (unsigned char *)data + offset;
-	int cp_count, intf_count, i;
-	u2 attr_count;
-	u4 magic;
 
-	ConstantPool *constant_pool;
-	ClassBlock *classblock;
-	Class *class, *found;
-	Class **interfaces;
-
-	READ_U4(magic, ptr, len);
-
-	if(magic != 0xcafebabe) {
-		signalException(java_lang_ClassFormatError, "bad magic");
-		return NULL;
-	}
-
-	READ_U2(minor_version, ptr, len);
-	READ_U2(major_version, ptr, len);
-
-
-	if((class = allocClass()) == NULL)
-		return NULL;
-
-	classblock = CLASS_CB(class);
-	READ_U2(cp_count, ptr, len);
-
-
-
-	constant_pool = &classblock->constant_pool;
-	constant_pool->type = sysMalloc(cp_count);
-	constant_pool->info = sysMalloc(cp_count*sizeof(ConstantPoolEntry));
-
-
-
-	for(i = 1; i < cp_count; i++) {
-		u1 tag;
-
-		READ_U1(tag, ptr, len);
-		CP_TYPE(constant_pool,i) = tag;
-
-		switch(tag) {
-		case CONSTANT_Class:
-		case CONSTANT_String:
-			READ_INDEX(CP_INFO(constant_pool,i), ptr, len);
-			break;
-
-		case CONSTANT_Fieldref:
-		case CONSTANT_Methodref:
-		case CONSTANT_NameAndType:
-		case CONSTANT_InterfaceMethodref:
-		{
-			u2 idx1, idx2;
-
-			READ_INDEX(idx1, ptr, len);
-			READ_INDEX(idx2, ptr, len);
-			CP_INFO(constant_pool,i) = (idx2<<16)+idx1;
-			break;
-		}
-
-		case CONSTANT_Float:
-		case CONSTANT_Integer:
-			READ_U4(CP_INFO(constant_pool,i), ptr, len);
-			break;
-
-		case CONSTANT_Long:
-			READ_U8(*(u8 *)&(CP_INFO(constant_pool,i)), ptr, len);
-			CP_TYPE(constant_pool,++i) = 0;
-			break;
-
-		case CONSTANT_Double:
-			READ_DBL(*(u8 *)&(CP_INFO(constant_pool,i)), ptr, len);
-			CP_TYPE(constant_pool,++i) = 0;
-			break;
-
-		case CONSTANT_Utf8:
-		{
-			int length;
-			char *buff, *utf8;
-
-			READ_U2(length, ptr, len);
-			buff = sysMalloc(length+1);
-
-			memcpy(buff, ptr, length);
-			buff[length] = '\0';
-			ptr += length;
-
-
-			//XXX NVM MODIFICATION - save utf8 entries of classes with classloaders
-			if(class_to_save){
-				CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8Save(buff));
-			}
-			else{
-				CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
-			}
-
-
-			if(utf8 != buff)
-				sysFree(buff);
-
-			break;
-		}
-
-		default:
-			signalException(java_lang_ClassFormatError,
-					"bad constant pool tag");
-			return NULL;
-		}
-	}
-
-
-	/* Set count after constant pool has been initialised -- it is now
-	       safe to be scanned by GC */
-	classblock->constant_pool_count = cp_count;
-
-	READ_U2(classblock->access_flags, ptr, len);
-
-	READ_TYPE_INDEX(this_idx, constant_pool, CONSTANT_Class, ptr, len);
-	classblock->name = CP_UTF8(constant_pool, CP_CLASS(constant_pool, this_idx));
-
-	// Search class on classes hash table
-	HashTable *classes_table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
-	Class *result = NULL;
-	findHashEntry((*classes_table), class, result, FALSE, FALSE, TRUE);
-
-	// Unit tests
-	if(testing_mode_classes) {
-		if(result == NULL){
-			log_test_results("searchClass_foundClass", FALSE);
-		}
-		else{
-			log_test_results("searchClass_foundClass", TRUE);
-		}
-	}
-	return result;
-
-}
+/* XXX NVM CHANGE 4.04
+ * changed defineClass sysmallocs
+ */
 
 Class *defineClass(char *classname, char *data, int offset, int len,
                    Object *class_loader) {
-
-	//NVM Variables
-	int reload = FALSE;
-	Class *result = NULL;
-
-
-	//NVM MODIFICATION
-	if(is_persistent_classes){
-		if(class_loader != NULL){
-			class_to_save = TRUE;
-			result = searchClass(classname, data, offset, len, class_loader);
-			if(result == NULL){
-				reload = FALSE;
-			}
-			else{
-				reload = TRUE;
-			}
-		}
-		else{
-			class_to_save = FALSE;
-			reload = FALSE;
-		}
-	}
-	//END OF MODIFICATION
-
-
-
     u2 major_version, minor_version, this_idx, super_idx;
     unsigned char *ptr = (unsigned char *)data + offset;
     int cp_count, intf_count, i;
@@ -414,28 +206,16 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     READ_U2(minor_version, ptr, len);
     READ_U2(major_version, ptr, len);
 
-
-    //NVM MOFICIATION (FIRST IF CLAUSE. ELSE IS VOLATILE FLUX)
-    if(reload == TRUE){
-    	class = result;
-    }
-    else{
-    	if((class = allocClass()) == NULL)
-    		return NULL;
-    }
-    //END OF MODIFICATION
-
+    if((class = allocClass()) == NULL)
+        return NULL;
 
     classblock = CLASS_CB(class);
     READ_U2(cp_count, ptr, len);
 
-
-
     constant_pool = &classblock->constant_pool;
-    constant_pool->type = sysMalloc(cp_count);
-    constant_pool->info = sysMalloc(cp_count*sizeof(ConstantPoolEntry));
-
-
+    // XXX NVM CHANGE 4.04.01
+    constant_pool->type = sysMalloc_persistent(cp_count);
+    constant_pool->info = sysMalloc_persistent(cp_count*sizeof(ConstantPoolEntry));
 
     for(i = 1; i < cp_count; i++) {
         u1 tag;
@@ -471,7 +251,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                READ_U8(*(u8 *)&(CP_INFO(constant_pool,i)), ptr, len);
                CP_TYPE(constant_pool,++i) = 0;
                break;
-
+               
            case CONSTANT_Double:
                READ_DBL(*(u8 *)&(CP_INFO(constant_pool,i)), ptr, len);
                CP_TYPE(constant_pool,++i) = 0;
@@ -489,15 +269,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                buff[length] = '\0';
                ptr += length;
 
-               //NVM MODIFICATION
-               //Changed this part to save utf8 entries of classes with classloaders
-               if(class_to_save){
-            	   CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8Save(buff));
-               }
-               else{
-            	   CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
-               }
-               //END OF MODIFICATION
+               CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
 
                if(utf8 != buff)
                    sysFree(buff);
@@ -511,7 +283,6 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                return NULL;
         }
     }
-
 
     /* Set count after constant pool has been initialised -- it is now
        safe to be scanned by GC */
@@ -530,8 +301,6 @@ Class *defineClass(char *classname, char *data, int offset, int len,
 
     prepareClass(class);
 
-
-
     if(classblock->name == SYMBOL(java_lang_Object)) {
         READ_U2(super_idx, ptr, len);
         if(super_idx) {
@@ -544,57 +313,11 @@ Class *defineClass(char *classname, char *data, int offset, int len,
         classblock->super_name = CP_UTF8(constant_pool, CP_CLASS(constant_pool, super_idx));
     }
 
-    // XXX NVM MODIFICATION
-    if(is_persistent_classes){
-    	if(class_loader != NULL){
-    		int file_exists;
-    		//Check if fields folder exists, if not create it
-    		if (stat("fields", &st) == -1) {
-    			mkdir("fields", 0700);
-    		}
-    		//Malloc the size of the classname plus fields/ (7) plus .fld (4) plus \0 (1)
-    		char *file_name = (char*)calloc(1, sizeof(classblock->name)+12);
-    		strcat(file_name,"fields/");
-    		strcat(file_name, classblock->name);
-    		strcat(file_name, ".fld\0");
-
-    		if(access(file_name, F_OK) == -1) {
-
-    			if(testing_mode_classes){
-    				log_level = DEBUG;
-    				char log[100];
-    				sprintf(log, "Creating field file: %s", file_name);
-    				log(log_level, log);
-    			}
-
-    			statics_file_classes = fopen(file_name, "wr+b");
-    			fclose(statics_file_classes);
-    		}
-
-
-
-    		//Unit Tests
-    		if(testing_mode_classes){
-    			if(access(file_name, F_OK) != -1) {
-    				file_exists = TRUE;
-    			}
-    			else{
-    				file_exists = FALSE;
-    			}
-    			log_test_results("defineClass_fileExists", file_exists);
-    		}
-    	}
-    }
-    //END OF MODIFICATION
-
-
-
-
-
     classblock->class_loader = class_loader;
 
     READ_U2(intf_count = classblock->interfaces_count, ptr, len);
-    interfaces = classblock->interfaces = sysMalloc(intf_count * sizeof(Class *));
+    // XXX NVM CHANGE 4.04.02
+    interfaces = classblock->interfaces = sysMalloc_persistent(intf_count * sizeof(Class *));
 
     memset(interfaces, 0, intf_count * sizeof(Class *));
     for(i = 0; i < intf_count; i++) {
@@ -602,13 +325,12 @@ Class *defineClass(char *classname, char *data, int offset, int len,
        READ_TYPE_INDEX(index, constant_pool, CONSTANT_Class, ptr, len);
        interfaces[i] = resolveClass(class, index, FALSE);
        if(exceptionOccurred())
-           return NULL;
+           return NULL; 
     }
 
     READ_U2(classblock->fields_count, ptr, len);
-    classblock->fields = sysMalloc(classblock->fields_count * sizeof(FieldBlock));
-
-
+    // XXX NVM CHANGE 4.04.03
+    classblock->fields = sysMalloc_persistent(classblock->fields_count * sizeof(FieldBlock));
 
     for(i = 0; i < classblock->fields_count; i++) {
         u2 name_idx, type_idx;
@@ -641,9 +363,10 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                     classblock->fields[i].signature = CP_UTF8(constant_pool, signature_idx);
                 } else
                     if(attr_name == SYMBOL(RuntimeVisibleAnnotations)) {
-                        classblock->fields[i].annotations = sysMalloc(sizeof(AnnotationData));
+                    	// XXX NVM CHANGE 4.04.04
+                        classblock->fields[i].annotations = sysMalloc_persistent(sizeof(AnnotationData));
                         classblock->fields[i].annotations->len = attr_length;
-                        classblock->fields[i].annotations->data = sysMalloc(attr_length);
+                        classblock->fields[i].annotations->data = sysMalloc_persistent(attr_length);
                         memcpy(classblock->fields[i].annotations->data, ptr, attr_length);
                         ptr += attr_length;
                     } else
@@ -652,8 +375,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     }
 
     READ_U2(classblock->methods_count, ptr, len);
-
-    classblock->methods = sysMalloc(classblock->methods_count * sizeof(MethodBlock));
+    // XXX NVM CHANGE 4.04.05
+    classblock->methods = sysMalloc_persistent(classblock->methods_count * sizeof(MethodBlock));
 
     memset(classblock->methods, 0, classblock->methods_count * sizeof(MethodBlock));
 
@@ -690,6 +413,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                 READ_U2(method->max_locals, ptr, len);
 
                 READ_U4(code_length, ptr, len);
+                // XXX NVM CHANGE 4.04.06 !!!
                 method->code = sysMalloc(code_length);
                 memcpy(method->code, ptr, code_length);
                 ptr += code_length;
@@ -697,10 +421,11 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                 method->code_size = code_length;
 
                 READ_U2(method->exception_table_size, ptr, len);
-                method->exception_table = sysMalloc(method->exception_table_size*sizeof(ExceptionTableEntry));
+                // XXX NVM CHANGE 4.04.07
+                method->exception_table = sysMalloc_persistent(method->exception_table_size*sizeof(ExceptionTableEntry));
 
                 for(j = 0; j < method->exception_table_size; j++) {
-                    ExceptionTableEntry *entry = &method->exception_table[j];
+                    ExceptionTableEntry *entry = &method->exception_table[j];              
 
                     READ_U2(entry->start_pc, ptr, len);
                     READ_U2(entry->end_pc, ptr, len);
@@ -719,11 +444,12 @@ Class *defineClass(char *classname, char *data, int offset, int len,
 
                     if(attr_name == SYMBOL(LineNumberTable)) {
                         READ_U2(method->line_no_table_size, ptr, len);
-                        method->line_no_table = sysMalloc(method->line_no_table_size*sizeof(LineNoTableEntry));
+                        // XXX NVM CHANGE 4.04.08
+                        method->line_no_table = sysMalloc_persistent(method->line_no_table_size*sizeof(LineNoTableEntry));
 
                         for(j = 0; j < method->line_no_table_size; j++) {
-                            LineNoTableEntry *entry = &method->line_no_table[j];
-
+                            LineNoTableEntry *entry = &method->line_no_table[j];              
+                         
                             READ_U2(entry->start_pc, ptr, len);
                             READ_U2(entry->line_no, ptr, len);
                         }
@@ -735,7 +461,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                     int j;
 
                     READ_U2(method->throw_table_size, ptr, len);
-                    method->throw_table = sysMalloc(method->throw_table_size*sizeof(u2));
+                    // XXX NVM CHANGE 4.04.09
+                    method->throw_table = sysMalloc_persistent(method->throw_table_size*sizeof(u2));
                     for(j = 0; j < method->throw_table_size; j++) {
                         READ_U2(method->throw_table[j], ptr, len);
                     }
@@ -746,23 +473,26 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                         method->signature = CP_UTF8(constant_pool, signature_idx);
                     } else
                         if(attr_name == SYMBOL(RuntimeVisibleAnnotations)) {
-                            annos.annotations = sysMalloc(sizeof(AnnotationData));
+                        	// XXX NVM CHANGE 4.04.10
+                            annos.annotations = sysMalloc_persistent(sizeof(AnnotationData));
                             annos.annotations->len = attr_length;
-                            annos.annotations->data = sysMalloc(attr_length);
+                            annos.annotations->data = sysMalloc_persistent(attr_length);
                             memcpy(annos.annotations->data, ptr, attr_length);
                             ptr += attr_length;
                         } else
                             if(attr_name == SYMBOL(RuntimeVisibleParameterAnnotations)) {
-                                annos.parameters = sysMalloc(sizeof(AnnotationData));
+                            	// 4.04.11
+                                annos.parameters = sysMalloc_persistent(sizeof(AnnotationData));
                                 annos.parameters->len = attr_length;
-                                annos.parameters->data = sysMalloc(attr_length);
+                                annos.parameters->data = sysMalloc_persistent(attr_length);
                                 memcpy(annos.parameters->data, ptr, attr_length);
                                 ptr += attr_length;
                             } else
                                 if(attr_name == SYMBOL(AnnotationDefault)) {
-                                    annos.dft_val = sysMalloc(sizeof(AnnotationData));
+                                	//XXX NVM CHANGE 4.04.11
+                                    annos.dft_val = sysMalloc_persistent(sizeof(AnnotationData));
                                     annos.dft_val->len = attr_length;
-                                    annos.dft_val->data = sysMalloc(attr_length);
+                                    annos.dft_val->data = sysMalloc_persistent(attr_length);
                                     memcpy(annos.dft_val->data, ptr, attr_length);
                                     ptr += attr_length;
                                 } else
@@ -770,7 +500,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
         }
         if(annos.annotations != NULL || annos.parameters != NULL
                                      || annos.dft_val != NULL) {
-            method->annotations = sysMalloc(sizeof(MethodAnnotationData));
+        	// XXX NVM CHANGE 4.04.12
+            method->annotations = sysMalloc_persistent(sizeof(MethodAnnotationData));
             memcpy(method->annotations, &annos, sizeof(MethodAnnotationData));
         }
     }
@@ -821,7 +552,8 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                     }
 
                     if(classblock->inner_class_count) {
-                        classblock->inner_classes = sysMalloc(classblock->inner_class_count*sizeof(u2));
+                    	// XXX NVM CHANGE 4.04.13
+                        classblock->inner_classes = sysMalloc_persistent(classblock->inner_class_count*sizeof(u2));
                         memcpy(classblock->inner_classes, &inner_classes[0],
                                                           classblock->inner_class_count*sizeof(u2));
                     }
@@ -830,7 +562,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                 if(attr_name == SYMBOL(EnclosingMethod)) {
                     READ_TYPE_INDEX(classblock->enclosing_class, constant_pool, CONSTANT_Class, ptr, len);
                     READ_TYPE_INDEX(classblock->enclosing_method, constant_pool, CONSTANT_NameAndType, ptr, len);
-                } else
+                } else 
                     if(attr_name == SYMBOL(Signature)) {
                         u2 signature_idx;
                         READ_TYPE_INDEX(signature_idx, constant_pool, CONSTANT_Utf8, ptr, len);
@@ -840,9 +572,10 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                             classblock->access_flags |= ACC_SYNTHETIC;
                         else
                             if(attr_name == SYMBOL(RuntimeVisibleAnnotations)) {
-                                classblock->annotations = sysMalloc(sizeof(AnnotationData));
+                            	// XXX NVM CHANGE 4.04.14
+                                classblock->annotations = sysMalloc_persistent(sizeof(AnnotationData));
                                 classblock->annotations->len = attr_length;
-                                classblock->annotations->data = sysMalloc(attr_length);
+                                classblock->annotations->data = sysMalloc_persistent(attr_length);
                                 memcpy(classblock->annotations->data, ptr, attr_length);
                                 ptr += attr_length;
                             } else
@@ -882,9 +615,11 @@ Class *createArrayClass(char *classname, Object *class_loader) {
     classblock->super_name = SYMBOL(java_lang_Object);
     classblock->super = findSystemClass0(SYMBOL(java_lang_Object));
     classblock->method_table = CLASS_CB(classblock->super)->method_table;
-
+/*XXX NVM CHANGE 4.03
+ * classblock->interfaces = sysMalloc(sizeof(Class*) * 2);
+ */
     classblock->interfaces_count = 2;
-    classblock->interfaces = sysMalloc(sizeof(Class*) * 2);
+    classblock->interfaces = sysMalloc_persistent(sizeof(Class*) * 2);
     classblock->interfaces[0] = findSystemClass0(SYMBOL(java_lang_Cloneable));
     classblock->interfaces[1] = findSystemClass0(SYMBOL(java_io_Serializable));
 
@@ -902,7 +637,7 @@ Class *createArrayClass(char *classname, Object *class_loader) {
 
         classblock->element_class = CLASS_CB(comp_class)->element_class;
         classblock->dim = CLASS_CB(comp_class)->dim + 1;
-    } else {
+    } else { 
         if(classname[1] == 'L') {
             char element_name[len - 2];
 
@@ -945,7 +680,7 @@ error:
 Class *createPrimClass(char *classname, int index) {
     Class *class;
     ClassBlock *classblock;
-
+ 
     if((class = allocClass()) == NULL)
         return NULL;
 
@@ -1013,157 +748,8 @@ void prepareFields(Class *class) {
     for(i = 0; i < cb->fields_count; i++) {
         FieldBlock *fb = &cb->fields[i];
 
-        if(fb->access_flags & ACC_STATIC){
-        	fb->u.static_value.l = 0;
-
-
-        	//XXX NVM MODIFICATION
-        	if(is_persistent_classes){
-        		if(CLASS_CB(class)->class_loader != NULL){
-        			// Calloc the size of the classname plus fields/ (7) plus .fld (4) plus \0 (1)
-        			char *file_name = (char*)calloc(1, strlen(CLASS_CB(class)->name) + 12);
-        			strcat(file_name,"fields/");
-        			strcat(file_name, CLASS_CB(class)->name);
-        			strcat(file_name, ".fld\0");
-
-        			if(testing_mode_classes){
-        				log_level = DEBUG;
-        				char log[100];
-        				sprintf(log, "Initializing variable from field file: %s", file_name);
-        				log(log_level, log);
-        			}
-
-        			// FIELD FILE STRUCTURE
-        			// HEADER (number of chars) | VAR NAME | POINTER TO VALUE | PRIMITIVE BOOL | VALUE
-
-        			// Reading field file
-        			statics_file_classes = fopen(file_name, "r+b");
-        			size_t len = 0;
-        			unsigned short string_length;
-        			long long *pointer;
-        			void *pnt;
-        			long long value = 0;
-        			int reload_variable = FALSE;
-        			int primitive = FALSE;
-
-        			len = fread(&string_length, sizeof(unsigned short), 1, statics_file_classes);
-
-        			if(testing_mode_classes){
-        				log_level = DEBUG;
-        				char log[100];
-        				sprintf(log, "Variable: %s", fb->name);
-        				log(log_level, log);
-        			}
-
-        			while (len == 1) {
-        				char *var_name = (char*)calloc(1, (string_length * sizeof(char)) + 1);
-        				fread(var_name, sizeof(char), string_length, statics_file_classes);
-        			    var_name[string_length] = 0;
-
-        			    // Found match, reassign value
-        			    if(strcmp(var_name, fb->name) == 0){
-        			    	reload_variable = TRUE;
-
-        			    	pointer = &(fb->u.static_value.l);
-        			    	fwrite(&pointer, sizeof(void *), 1, statics_file_classes);
-
-        			    	fread(&primitive, sizeof(int), 1, statics_file_classes);
-
-        			    	if(primitive == TRUE){
-        			    		fread(&value, sizeof(long long), 1, statics_file_classes);
-        			    		fb->u.static_value.l = value;
-        			    	}
-        			    	else{
-        			    		fread(&pnt, sizeof(void *), 1, statics_file_classes);
-        			    		fb->u.static_value.p = pnt;
-        			    	}
-
-        			    	if(testing_mode_classes){
-        			    		log_level = DEBUG;
-        			    		char log[100];
-        			    		if(primitive == TRUE){
-        			    			sprintf(log, "Found match in field file for variable %s. Assigning value %x", var_name, value);
-        			    		}
-        			    		else{
-        			    			sprintf(log, "Found match in field file for variable %s. Assigning value %x", var_name, pnt);
-        			    		}
-        			    		log(log_level, log);
-        			    	}
-
-        			    	// Stop reading the file
-        			    	break;
-        			    }
-        			    else{
-
-        			    	// Continue to advance the read pointer
-        			    	fread(&pointer, sizeof(void *), 1, statics_file_classes);
-
-        			    	fread(&primitive, sizeof(int), 1, statics_file_classes);
-
-        			    	if(primitive == TRUE){
-        			    		fread(&value, sizeof(long long), 1, statics_file_classes);
-        			    	}
-        			    	else{
-        			    		fread(&pnt, sizeof(void *), 1, statics_file_classes);
-        			    	}
-        			    }
-
-        			    // Read next file entry
-        				len = fread(&string_length, sizeof(unsigned short), 1, statics_file_classes);
-
-        			}
-
-        			fclose(statics_file_classes);
-
-        			// Primitive types are 1 char long
-        			if((strlen(fb->type) == 1) && (fb->type[0] != '[')){
-        				primitive = TRUE;
-        			}
-        			else{
-        				primitive = FALSE;
-        			}
-
-
-        			// Adding entry to field file
-        			if(reload_variable == FALSE){
-        				statics_file_classes = fopen(file_name, "a+b");
-
-        				string_length = strlen(fb->name);
-        				fwrite(&string_length, sizeof(unsigned short), 1, statics_file_classes);
-
-        				fwrite(fb->name, sizeof(char), string_length, statics_file_classes);
-
-        				pointer = &(fb->u.static_value.l);
-        				fwrite(&pointer, sizeof(void *), 1, statics_file_classes);
-
-        				fwrite(&primitive, sizeof(int), 1, statics_file_classes);
-
-        				if(primitive == TRUE){
-        					fwrite(&value, sizeof(long long), 1, statics_file_classes);
-        				}
-        				else{
-        					fwrite(&value, sizeof(void *), 1, statics_file_classes);
-        				}
-        				fclose(statics_file_classes);
-
-        				if(testing_mode_classes){
-        					log_level = DEBUG;
-        					char log[100];
-        					sprintf(log,"Added entries to field file for variable: %s", fb->name);
-        					log(log_level, log);
-        				}
-
-        			}
-
-        			// UNIT TESTS
-        			if(testing_mode_classes){
-        				log_test_results("pepareFields_reloadVariable", reload_variable);
-        			}
-        		}
-        	}
-        	// END OF MODIFICATION
-        }
-
+        if(fb->access_flags & ACC_STATIC)
+            fb->u.static_value.l = 0;
         else {
             FieldBlock **list;
 
@@ -1254,7 +840,8 @@ void prepareFields(Class *class) {
        } else
            cb->refs_offsets_size = spr_rfs_offsts_sze + 1;
 
-      cb->refs_offsets_table = sysMalloc(cb->refs_offsets_size *
+       // XXX NVM CHANGE 4.07
+      cb->refs_offsets_table = sysMalloc_persistent(cb->refs_offsets_size *
                                          sizeof(RefsOffsetsEntry));
 
       memcpy(cb->refs_offsets_table, spr_rfs_offsts_tbl,
@@ -1270,9 +857,10 @@ void prepareFields(Class *class) {
 
 #define MRNDA_CACHE_SZE 10
 
+// XXX NVM CHANGE 7.02
 #define resizeMTable(method_table, method_table_size, miranda, count)  \
-{                                                                      \
-    method_table = (MethodBlock**)sysRealloc(method_table,             \
+{                                            						   \
+    method_table = (MethodBlock**)sysRealloc_persistent(method_table,  \
                   (method_table_size + count) * sizeof(MethodBlock*)); \
                                                                        \
     memcpy(&method_table[method_table_size], miranda,                  \
@@ -1365,7 +953,7 @@ void linkClass(Class *class) {
 
        if(mb->access_flags & ACC_NATIVE) {
 
-           /* set up native invoker to wrapper to resolve function
+           /* set up native invoker to wrapper to resolve function 
               on first invocation */
 
            mb->native_invoker = &resolveNativeWrapper;
@@ -1382,6 +970,7 @@ void linkClass(Class *class) {
        else  {
            /* Set the bottom bit of the pointer to indicate the
               method is unprepared */
+    	   // todo MASK !!!!!!!
            mb->code = ((char*)mb->code) + 1;
        }
 #endif
@@ -1411,7 +1000,8 @@ void linkClass(Class *class) {
    method_table_size = spr_mthd_tbl_sze + new_methods_count;
 
    if(!(cb->access_flags & ACC_INTERFACE)) {
-       method_table = sysMalloc(method_table_size * sizeof(MethodBlock*));
+	   // XXX NVM CHANGE 4.05.01
+       method_table = sysMalloc_persistent(method_table_size * sizeof(MethodBlock*));
 
        /* Copy parents method table to the start */
        memcpy(method_table, spr_mthd_tbl, spr_mthd_tbl_sze * sizeof(MethodBlock*));
@@ -1433,7 +1023,8 @@ void linkClass(Class *class) {
        new_itable_count += CLASS_CB(cb->interfaces[i])->imethod_table_size;
 
    cb->imethod_table_size = spr_imthd_tbl_sze + new_itable_count;
-   cb->imethod_table = sysMalloc(cb->imethod_table_size * sizeof(ITableEntry));
+   // XXX NVM CHANGE 4.05.02
+   cb->imethod_table = sysMalloc_persistent(cb->imethod_table_size * sizeof(ITableEntry));
 
    /* copy parent's interface table - the offsets into the method table won't change */
 
@@ -1462,7 +1053,8 @@ void linkClass(Class *class) {
    /* if we're an interface all finished - offsets aren't used */
 
    if(!(cb->access_flags & ACC_INTERFACE)) {
-       int *offsets_pntr = sysMalloc(itbl_offset_count * sizeof(int));
+	   // XXX NVM CHANGE 4.05.03
+       int *offsets_pntr = sysMalloc_persistent(itbl_offset_count * sizeof(int));
        int old_mtbl_size = method_table_size;
        MethodBlock *miranda[MRNDA_CACHE_SZE];
        int miranda_count = 0;
@@ -1504,7 +1096,7 @@ void linkClass(Class *class) {
                        if(intf_mb->name == miranda[k]->name &&
                                    intf_mb->type == miranda[k]->type)
                            break;
-
+                           
                    *offsets_pntr++ = method_table_size + k;
 
                    if(k == miranda_count) {
@@ -1524,8 +1116,8 @@ void linkClass(Class *class) {
        if(old_mtbl_size != method_table_size) {
            /* We've created some abstract methods */
            int num_mirandas = method_table_size - old_mtbl_size;
-
-           mb = (MethodBlock *) sysRealloc(cb->methods,
+           // XXX NVM CHANGE 7.01 - sysRealloc
+           mb = (MethodBlock *) sysRealloc_persistent(cb->methods,
                    (cb->methods_count + num_mirandas) * sizeof(MethodBlock));
 
            /* If the realloc of the method list gave us a new pointer, the pointers
@@ -1704,7 +1296,7 @@ Class *initClass(Class *class) {
    if((excep = exceptionOccurred())) {
        Class *error, *eiie;
 
-       clearException();
+       clearException(); 
 
        /* Don't wrap exceptions of type java.lang.Error... */
        if((error = findSystemClass0(SYMBOL(java_lang_Error)))
@@ -1724,7 +1316,7 @@ Class *initClass(Class *class) {
        state = CLASS_BAD;
    } else
        state = CLASS_INITED;
-
+   
 set_state_and_notify:
    objectLock(class);
    cb->state = state;
@@ -1765,7 +1357,7 @@ void defineBootPackage(char *classname, int index) {
         int len = last_slash - classname + 1;
         PackageEntry *package = sysMalloc(sizeof(PackageEntry) + len);
         PackageEntry *hashed;
-
+        
         package->index = index;
         slash2dots2buff(classname, package->name, len);
 
@@ -1775,8 +1367,9 @@ void defineBootPackage(char *classname, int index) {
 #define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2 && \
             utf8Comp(((PackageEntry*)ptr1)->name, ((PackageEntry*)ptr2)->name))
 
+        // XXX NVM CHANGE Z 10.03.02
         /* Add if absent, no scavenge, locked */
-        findHashEntry(boot_packages, package, hashed, TRUE, FALSE, TRUE);
+        findHashEntry(boot_packages, package, hashed, TRUE, FALSE, TRUE, bootp_name, TRUE);
 
         if(package != hashed)
             sysFree(package);
@@ -1784,7 +1377,7 @@ void defineBootPackage(char *classname, int index) {
 }
 
 Class *loadSystemClass(char *classname) {
-	int file_len, fname_len = strlen(classname) + 8;
+    int file_len, fname_len = strlen(classname) + 8;
     char buff[max_cp_element_len + fname_len];
     char filename[fname_len];
     Class *class = NULL;
@@ -1827,135 +1420,6 @@ void addInitiatingLoaderToClass(Object *class_loader, Class *class) {
         addClassToHash(class, class_loader);
 }
 
-//NVM method to initialize the classes hash table
-void initializeClassesHT(Object *class_loader){
-
-#undef COMPARE
-
-#define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2)
-
-	int count_hash_entries = 0; //Testing variable
-	int count_name_entries = 0; //Testing variable
-
-	Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
-	HashTable *table;
-	if(vmdata == NULL){
-		vmdata = allocObject(ldr_new_unloader->class);
-		table = calloc(1, sizeof(HashTable));
-		initHashTable((*table), CLASS_INITSZE, TRUE);
-	}
-	else{
-		INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
-	}
-	if(access (FILENAME_CLASSES_HT, F_OK) != -1) {
-		pointer_file_exists_classes = TRUE;
-	}
-	if(access (FILENAME_CLASSES_NAMES, F_OK) != -1) {
-		name_file_exists_classes = TRUE;
-	}
-	if((pointer_file_exists_classes == TRUE) && (name_file_exists_classes == TRUE)) {
-		hash_file_classes = fopen (FILENAME_CLASSES_HT, "r+b");
-		name_file_classes = fopen (FILENAME_CLASSES_NAMES, "r+b");
-		if((hash_file_classes == NULL) || (name_file_classes == NULL)) {
-			printf("ERROR: error trying to open classes hash table context files\n");
-			exit(EXIT_FAILURE);
-		}
-		size_t len_pointer = 0;
-		size_t len_string = 0;
-		Class *interned = NULL;
-		Class *to_add = (Class*)calloc(1, sizeof(Class*));
-		len_pointer = fread(&to_add, sizeof(Class*), 1, hash_file_classes);
-		while (len_pointer == 1) {
-			do {
-
-				unsigned short string_length = 0;
-				len_string = fread(&string_length, sizeof(unsigned short), 1, name_file_classes);
-
-				char *class_name = (char*)calloc(1, string_length * sizeof(char));
-				int count = fread(class_name, sizeof(char), string_length, name_file_classes);
-
-				if(count == string_length){
-					count_name_entries++;
-				}
-				else{
-					printf("ERROR: error trying to read class name from classname file\n");
-					exit(EXIT_FAILURE);
-				}
-
-				//addHashEntry() adapted
-				int hash = utf8Hash(class_name);
-				int i;
-
-				Thread *self;
-				self = threadSelf();
-				lockHashTable0(&(*table), self);
-
-				i = hash & ((*table).hash_size - 1);
-
-				for(;;) {
-					interned = (*table).hash_table[i].data;
-					if((interned == NULL) || (COMPARE(to_add, interned, hash, (*table).hash_table[i].hash)))
-						break;
-
-					i = (i+1) & ((*table).hash_size - 1);
-				}
-				(*table).hash_table[i].hash = hash;
-				interned = (*table).hash_table[i].data = PREPARE(to_add);
-				(*table).hash_count++;
-
-				if(((*table).hash_count * 4) > ((*table).hash_size * 3)) {
-					resizeHash(&(*table), (*table).hash_size * 2);
-				}
-
-				unlockHashTable0(&(*table), self);
-				//End of addHashEntry()
-
-				interned = NULL;
-
-				//findOnlyHashEntry() adapted
-				hash = utf8Hash(class_name);
-
-				self = threadSelf();
-				lockHashTable0(&(*table), self);
-
-				i = hash & ((*table).hash_size - 1);
-
-				for(;;) {
-					interned = (*table).hash_table[i].data;
-					if((interned == NULL) || (COMPARE(to_add, interned, hash, (*table).hash_table[i].hash)))
-						break;
-
-					i = (i+1) & ((*table).hash_size - 1);
-				}
-
-				unlockHashTable0(&(*table), self);
-				//End of finfOnlyHashEntry()
-
-			}while(interned == NULL);
-			count_hash_entries++;
-			len_pointer = fread(&to_add, sizeof(Class*), 1, hash_file_classes);
-		}
-		fclose(hash_file_classes);
-		fclose(name_file_classes);
-	}
-	//UNIT TESTS
-	if(testing_mode_classes) {
-		log_test_results("initaliseClasses_fileExists", pointer_file_exists_classes && name_file_exists_classes);
-		if(count_hash_entries == table->hash_count){
-			log_test_results("initaliseClasses_recoverClassesPOINTERS", TRUE);
-		} else {
-			log_test_results("initaliseClasses_recoverClassesPOINTERS", FALSE);
-		}
-		if(count_name_entries == count_hash_entries){
-			log_test_results("initaliseClasses_recoverClassesNAMES", TRUE);
-		} else {
-			log_test_results("initaliseClasses_recoverClassesNAMES", FALSE);
-		}
-	}
-
-}
-
-
 Class *findHashedClass(char *classname, Object *class_loader) {
     HashTable *table;
     Class *class;
@@ -1963,29 +1427,16 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 
     /* If the class name is not in the utf8 table it can't
        have been loaded */
-
-    if((name = findUtf8(classname)) == NULL) {
-
+    if((name = findUtf8(classname)) == NULL)
         return NULL;
-    }
 
-    if(class_loader == NULL) {
+    if(class_loader == NULL)
         table = &boot_classes;
-    }
     else {
-    	if(is_persistent_classes){
-    		if(classes_ht_initialized == FALSE){
-    			initializeClassesHT(class_loader);
-    			classes_ht_initialized = TRUE;
-    		}
-    	}
-    	Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
+        Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
 
-
-
-        if(vmdata == NULL) {
+        if(vmdata == NULL)
             return NULL;
-        }
 
         table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
     }
@@ -1996,24 +1447,28 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 #define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2) && \
             (ptr1 == CLASS_CB((Class *)ptr2)->name)
 
-
+    // XXX NVM CHANGE Z 10.03.03
+    //todo check if it works
     /* Do not add if absent, no scavenge, locked */
-    findHashEntry((*table), name, class, FALSE, FALSE, TRUE);
+    if ((unsigned int)table == (unsigned int)&boot_classes){
+	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, boot_name, TRUE );
+   }else{
+	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, class_name, TRUE );
+   }
 
+   //XXX NVM CHANGE 9.03
+   msync((*table).hash_table, CLASS_INITSZE, MS_SYNC);
    return class;
 }
 
 Class *findSystemClass0(char *classname) {
-	Class *class = findHashedClass(classname, NULL);
+   Class *class = findHashedClass(classname, NULL);
 
-   if(class == NULL) {
+   if(class == NULL)
+       class = loadSystemClass(classname);
 
-	   class = loadSystemClass(classname);
-
-   }
-   if(!exceptionOccurred()) {
-      linkClass(class);
-   }
+   if(!exceptionOccurred())
+       linkClass(class);
 
    return class;
 }
@@ -2090,7 +1545,7 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
-	Class *class = findHashedClass(classname, loader);
+    Class *class = findHashedClass(classname, loader);
 
     if(class == NULL) {
         char *dot_name = slash2dots(classname);
@@ -2131,92 +1586,14 @@ Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
     return class;
 }
 
-Class* findInFile (char* name_to_find){
-	Class *class;
-	FILE *file = fopen (NH_FILENAME, "rt");
-	char *line = NULL;
-	size_t len = 0;
-	size_t read = 0;
-	char *name_to_add;
-	int pointer;
-	int i;
-
-	while ((read = getline(&line, &len, file)) != -1)	{
-		char *name_to_add;
-		name_to_add = calloc(1 ,read*sizeof(char));
-		strcpy(name_to_add, line);
-		name_to_add[strlen(name_to_add)-1] = 0;
-
-		if (name_to_add[1] == 'x')
-			continue;
-
-		if (!strcmp(name_to_find,name_to_add)){
-			for (i = 0; i < 3; i++){
-				if ((read = getline(&line, &len, file)) != -1){
-					name_to_add = calloc(1, read*sizeof(char));
-					strcpy(name_to_add, line);
-					name_to_add[strlen(name_to_add)-1] = 0;
-					pointer = (int) strtoll (name_to_add,NULL,16);
-
-					if (i==0)
-						class = (Class*) pointer;
-					if (i==1)
-						class->lock = (unsigned int) pointer;
-					if (i==2)
-						class->class = (Class *) pointer;
-				}
-			}
-				fclose(file);
-				return class;
-		}
-	}
-	fclose(file);
-	return NULL;
-}
-
-Class *findClassFromClassLoader_persistent(char *classname, Object *loader) {
-	Class *class;
-	if(*classname == '[')
-		return findArrayClassFromClassLoader(classname, loader);
-
-	if(loader != NULL){
-		if(access (NH_FILENAME, F_OK) != -1){
-			class = findInFile(classname);
-			if (class != NULL){
-				return class;
-			}
-		}
-
-		class = findNonArrayClassFromClassLoader(classname, loader);
-		FILE * nonHashedFile;
-		nonHashedFile = fopen (NH_FILENAME, "a+");
-
-		fprintf(nonHashedFile, "%s%s", classname, SEP);
-		fprintf(nonHashedFile, "%p%s", class, SEP);
-		fprintf(nonHashedFile, "%u%s", class->lock, SEP);
-		fprintf(nonHashedFile, "%p%s", class->class, SEP);
-
-		fclose(nonHashedFile);
-		return class;
-	}
-
-	return findSystemClass0(classname);
-}
-
 Class *findClassFromClassLoader(char *classname, Object *loader) {
-	//XXX uncomment for different approach
-	/*if (is_persistent_classes)
-		return findClassFromClassLoader_persistent(classname, loader);
-	else{*/
+    if(*classname == '[')
+        return findArrayClassFromClassLoader(classname, loader);
 
-		if(*classname == '[')
-			return findArrayClassFromClassLoader(classname, loader);
+    if(loader != NULL)
+        return findNonArrayClassFromClassLoader(classname, loader);
 
-		if(loader != NULL)
-			return findNonArrayClassFromClassLoader(classname, loader);
-
-		return findSystemClass0(classname);
-	//}
+    return findSystemClass0(classname);
 }
 
 Object *getSystemClassLoader() {
@@ -2229,7 +1606,7 @@ Object *getSystemClassLoader() {
                                           SYMBOL(___java_lang_ClassLoader))) != NULL) {
             Object *system_loader = *(Object**)executeStaticMethod(class_loader, mb);
 
-            if(!exceptionOccurred())
+            if(!exceptionOccurred()) 
                 return system_loader;
         }
     }
@@ -2245,7 +1622,7 @@ Object *createBootPackage(PackageEntry *package_entry) {
                                             vm_loader_create_package, name,
                                             package_entry->index);
 
-        if(!exceptionOccurred())
+        if(!exceptionOccurred()) 
             return package;
     }
 
@@ -2261,8 +1638,9 @@ Object *bootPackage(char *package_name) {
 #define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2 && \
                                  utf8Comp(ptr1, ((PackageEntry*)ptr2)->name))
 
+    // XXX NVM CHANGE Z 10.03.04
     /* Do not add if absent, no scavenge, locked */
-    findHashEntry(boot_packages, package_name, hashed, FALSE, FALSE, TRUE);
+    findHashEntry(boot_packages, package_name, hashed, FALSE, FALSE, TRUE, bootp_name, TRUE);
 
     if(hashed != NULL)
         return createBootPackage(hashed);
@@ -2409,7 +1787,7 @@ void freeClassData(Class *class) {
             }
             gcPendingFree(mb->annotations);
         }
-    }
+    } 
 
     gcPendingFree(cb->methods);
     gcPendingFree(cb->inner_classes);
@@ -2422,7 +1800,7 @@ void freeClassData(Class *class) {
    if(cb->state >= CLASS_LINKED) {
         ClassBlock *super_cb = CLASS_CB(cb->super);
 
-        /* interfaces do not have a method table, or
+        /* interfaces do not have a method table, or 
             imethod table offsets */
         if(!IS_INTERFACE(cb)) {
              int spr_imthd_sze = super_cb->imethod_table_size;
@@ -2455,7 +1833,7 @@ void freeClassLoaderData(Object *class_loader) {
    when the class loader is garbage collected */
 void newLibraryUnloader(Object *class_loader, void *entry) {
     Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
-
+    
     if(vmdata != NULL)
         executeMethod(vmdata, ldr_new_unloader, (long long)(uintptr_t)entry);
 }
@@ -2464,8 +1842,8 @@ int parseBootClassPath(char *cp_var) {
     char *cp, *pntr, *start;
     int i, j, len, max = 0;
     struct stat info;
-
-    cp = sysMalloc(strlen(cp_var)+1);
+    // XXX NVM CHANGE 4.06
+    cp = sysMalloc_persistent(strlen(cp_var)+1);
     strcpy(cp, cp_var);
 
     for(i = 0, start = pntr = cp; *pntr; pntr++) {
@@ -2508,7 +1886,7 @@ int parseBootClassPath(char *cp_var) {
 
 void setClassPath(char *cmdlne_cp) {
     char *env;
-    classpath = cmdlne_cp ? cmdlne_cp :
+    classpath = cmdlne_cp ? cmdlne_cp : 
                  ((env = getenv("CLASSPATH")) ? env : ".");
 }
 
@@ -2540,7 +1918,8 @@ void scanDirForJars(char *dir) {
         while(--n >= 0) {
             char *buff;
             bootpathlen += strlen(namelist[n]->d_name) + dirlen + 2;
-            buff = sysMalloc(bootpathlen);
+            // XXX NVM CHANGE 4.09.01
+            buff = sysMalloc_persistent(bootpathlen);
 
             strcat(strcat(strcat(strcat(strcpy(buff, dir), "/"),
                                  namelist[n]->d_name), ":"), bootpath);
@@ -2581,7 +1960,8 @@ char *setBootClassPath(char *cmdlne_bcp, char bootpathopt) {
         switch(bootpathopt) {
             case 'a':
             case 'p':
-                bootpath = sysMalloc(strlen(DFLT_BCP) + strlen(cmdlne_bcp) + 2);
+            	// XXX NVM CHANGE 4.10
+                bootpath = sysMalloc_persistent(strlen(DFLT_BCP) + strlen(cmdlne_bcp) + 2);
                 if(bootpathopt == 'a')
                     strcat(strcat(strcpy(bootpath, DFLT_BCP), ":"), cmdlne_bcp);
                 else
@@ -2601,7 +1981,7 @@ char *setBootClassPath(char *cmdlne_bcp, char bootpathopt) {
             default:
                 bootpath = sysMalloc(strlen(cmdlne_bcp) + 1);
                 strcpy(bootpath, cmdlne_bcp);
-        }
+        }           
     else {
         char *env = getenv("BOOTCLASSPATH");
         char *path = env ? env : DFLT_BCP;
@@ -2669,17 +2049,11 @@ out:
     return res;
 }
 
-
 void initialiseClass(InitArgs *args) {
     char *bcp = setBootClassPath(args->bootpath, args->bootpathopt);
     FieldBlock *hashtable = NULL;
     Class *loader_data_class;
     Class *vm_loader_class;
-
-    if(args->persistent_heap == TRUE){
-    		is_persistent_classes = TRUE;
-    		testing_mode_classes = TRUE;
-    }
 
     if(!(bcp && parseBootClassPath(bcp))) {
         jam_fprintf(stderr, "bootclasspath is empty!\n");
@@ -2689,26 +2063,24 @@ void initialiseClass(InitArgs *args) {
     verbose = args->verboseclass;
     setClassPath(args->classpath);
 
+    // XXX NVM CHANGE 8.04
     /* Init hash table, and create lock */
-    initHashTable(boot_classes, CLASS_INITSZE, TRUE);
+    initHashTable(boot_classes, CLASS_INITSZE, TRUE, boot_name, TRUE);
 
-    initHashTable(boot_packages, PCKG_INITSZE, TRUE);
+    initHashTable(boot_packages, PCKG_INITSZE, TRUE, bootp_name, TRUE);
 
     loader_data_class = findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData));
     if(loader_data_class != NULL) {
         ldr_new_unloader = findMethod(loader_data_class, SYMBOL(newLibraryUnloader),
                                                          SYMBOL(_J__V));
         hashtable = findField(loader_data_class, SYMBOL(hashtable), SYMBOL(J));
-
     }
-
 
     if(hashtable == NULL || ldr_new_unloader == NULL) {
         jam_fprintf(stderr, "Fatal error: Bad VMClassLoaderData (missing or corrupt)\n");
         exitVM(1);
     }
     ldr_data_tbl_offset = hashtable->u.offset;
-
 
     vm_loader_class = findSystemClass0(SYMBOL(java_lang_VMClassLoader));
     if(vm_loader_class != NULL)
@@ -2732,3 +2104,4 @@ void initialiseClass(InitArgs *args) {
     /* Register the address of where the java.lang.Class ref _will_ be */
     registerStaticClassRef(&java_lang_Class);
 }
+

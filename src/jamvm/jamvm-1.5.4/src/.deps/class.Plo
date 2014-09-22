@@ -25,26 +25,23 @@ class.lo: class.c /usr/include/stdc-predef.h /usr/include/stdio.h \
  /usr/include/i386-linux-gnu/bits/stdlib-float.h /usr/include/string.h \
  /usr/include/xlocale.h /usr/include/ctype.h \
  /usr/include/i386-linux-gnu/sys/stat.h \
- /usr/include/i386-linux-gnu/bits/stat.h \
- /usr/include/i386-linux-gnu/sys/mman.h \
- /usr/include/i386-linux-gnu/bits/mman.h \
- /usr/include/i386-linux-gnu/bits/mman-linux.h /usr/include/dirent.h \
+ /usr/include/i386-linux-gnu/bits/stat.h /usr/include/dirent.h \
  /usr/include/i386-linux-gnu/bits/dirent.h \
  /usr/include/i386-linux-gnu/bits/posix1_lim.h \
  /usr/include/i386-linux-gnu/bits/local_lim.h /usr/include/linux/limits.h \
- /usr/include/unistd.h /usr/include/i386-linux-gnu/bits/posix_opt.h \
- /usr/include/i386-linux-gnu/bits/environments.h \
- /usr/include/i386-linux-gnu/bits/confname.h /usr/include/getopt.h \
- /usr/include/fcntl.h /usr/include/i386-linux-gnu/bits/fcntl.h \
- /usr/include/i386-linux-gnu/bits/fcntl-linux.h jam.h \
- /usr/include/inttypes.h /usr/lib/gcc/i686-linux-gnu/4.8/include/stdint.h \
- /usr/include/stdint.h /usr/include/i386-linux-gnu/bits/wchar.h \
+ /usr/include/i386-linux-gnu/sys/mman.h \
+ /usr/include/i386-linux-gnu/bits/mman.h \
+ /usr/include/i386-linux-gnu/bits/mman-linux.h /usr/include/errno.h \
+ /usr/include/i386-linux-gnu/bits/errno.h /usr/include/linux/errno.h \
+ /usr/include/i386-linux-gnu/asm/errno.h /usr/include/asm-generic/errno.h \
+ /usr/include/asm-generic/errno-base.h jam.h /usr/include/inttypes.h \
+ /usr/lib/gcc/i686-linux-gnu/4.8/include/stdint.h /usr/include/stdint.h \
+ /usr/include/i386-linux-gnu/bits/wchar.h \
  /usr/lib/gcc/i686-linux-gnu/4.8/include-fixed/limits.h \
  /usr/lib/gcc/i686-linux-gnu/4.8/include-fixed/syslimits.h \
  /usr/include/limits.h /usr/include/i386-linux-gnu/bits/posix2_lim.h \
- config.h arch.h nvm/test/testing_utils.h sig.h thread.h \
- /usr/include/pthread.h /usr/include/sched.h \
- /usr/include/i386-linux-gnu/bits/sched.h \
+ config.h arch.h sig.h thread.h /usr/include/pthread.h \
+ /usr/include/sched.h /usr/include/i386-linux-gnu/bits/sched.h \
  /usr/include/i386-linux-gnu/bits/setjmp.h /usr/include/setjmp.h lock.h \
  hash.h zip.h class.h ../src/interp/engine/interp.h properties.h \
  ../src/interp/engine/interp-inlining.h \
@@ -126,12 +123,6 @@ class.lo: class.c /usr/include/stdc-predef.h /usr/include/stdio.h \
 
 /usr/include/i386-linux-gnu/bits/stat.h:
 
-/usr/include/i386-linux-gnu/sys/mman.h:
-
-/usr/include/i386-linux-gnu/bits/mman.h:
-
-/usr/include/i386-linux-gnu/bits/mman-linux.h:
-
 /usr/include/dirent.h:
 
 /usr/include/i386-linux-gnu/bits/dirent.h:
@@ -142,21 +133,23 @@ class.lo: class.c /usr/include/stdc-predef.h /usr/include/stdio.h \
 
 /usr/include/linux/limits.h:
 
-/usr/include/unistd.h:
+/usr/include/i386-linux-gnu/sys/mman.h:
 
-/usr/include/i386-linux-gnu/bits/posix_opt.h:
+/usr/include/i386-linux-gnu/bits/mman.h:
 
-/usr/include/i386-linux-gnu/bits/environments.h:
+/usr/include/i386-linux-gnu/bits/mman-linux.h:
 
-/usr/include/i386-linux-gnu/bits/confname.h:
+/usr/include/errno.h:
 
-/usr/include/getopt.h:
+/usr/include/i386-linux-gnu/bits/errno.h:
 
-/usr/include/fcntl.h:
+/usr/include/linux/errno.h:
 
-/usr/include/i386-linux-gnu/bits/fcntl.h:
+/usr/include/i386-linux-gnu/asm/errno.h:
 
-/usr/include/i386-linux-gnu/bits/fcntl-linux.h:
+/usr/include/asm-generic/errno.h:
+
+/usr/include/asm-generic/errno-base.h:
 
 jam.h:
 
@@ -179,8 +172,6 @@ jam.h:
 config.h:
 
 arch.h:
-
-nvm/test/testing_utils.h:
 
 sig.h:
 

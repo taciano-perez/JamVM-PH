@@ -17,40 +17,31 @@ inlining.lo: inlining.c /usr/include/stdc-predef.h ../../src/jam.h \
  /usr/include/i386-linux-gnu/bits/typesizes.h /usr/include/libio.h \
  /usr/include/_G_config.h /usr/include/wchar.h \
  /usr/include/i386-linux-gnu/bits/stdio_lim.h \
- /usr/include/i386-linux-gnu/bits/sys_errlist.h \
- /usr/include/i386-linux-gnu/bits/stdio.h \
- /usr/include/i386-linux-gnu/bits/stdio2.h /usr/include/time.h \
+ /usr/include/i386-linux-gnu/bits/sys_errlist.h /usr/include/time.h \
  /usr/include/i386-linux-gnu/bits/time.h /usr/include/xlocale.h \
- ../../src/config.h ../../src/arch.h ../../src/nvm/test/testing_utils.h \
- /usr/include/string.h /usr/include/i386-linux-gnu/bits/string.h \
- /usr/include/i386-linux-gnu/bits/string2.h /usr/include/endian.h \
- /usr/include/i386-linux-gnu/bits/endian.h \
- /usr/include/i386-linux-gnu/bits/byteswap.h \
- /usr/include/i386-linux-gnu/bits/byteswap-16.h /usr/include/stdlib.h \
- /usr/include/i386-linux-gnu/bits/string3.h \
+ ../../src/config.h ../../src/arch.h /usr/include/string.h \
  /usr/include/i386-linux-gnu/sys/mman.h \
  /usr/include/i386-linux-gnu/bits/mman.h \
  /usr/include/i386-linux-gnu/bits/mman-linux.h /usr/include/unistd.h \
  /usr/include/i386-linux-gnu/bits/posix_opt.h \
  /usr/include/i386-linux-gnu/bits/environments.h \
  /usr/include/i386-linux-gnu/bits/confname.h /usr/include/getopt.h \
- /usr/include/i386-linux-gnu/bits/unistd.h ../../src/hash.h \
- ../../src/thread.h /usr/include/pthread.h /usr/include/sched.h \
+ ../../src/hash.h ../../src/thread.h /usr/include/pthread.h \
+ /usr/include/endian.h /usr/include/i386-linux-gnu/bits/endian.h \
+ /usr/include/i386-linux-gnu/bits/byteswap.h \
+ /usr/include/i386-linux-gnu/bits/byteswap-16.h /usr/include/sched.h \
  /usr/include/i386-linux-gnu/bits/sched.h \
  /usr/include/i386-linux-gnu/bits/pthreadtypes.h \
  /usr/include/i386-linux-gnu/bits/setjmp.h /usr/include/setjmp.h \
- /usr/include/i386-linux-gnu/bits/sigset.h \
- /usr/include/i386-linux-gnu/bits/setjmp2.h \
+ /usr/include/i386-linux-gnu/bits/sigset.h /usr/include/stdlib.h \
  /usr/include/i386-linux-gnu/bits/waitflags.h \
  /usr/include/i386-linux-gnu/bits/waitstatus.h \
  /usr/include/i386-linux-gnu/sys/types.h \
  /usr/include/i386-linux-gnu/sys/select.h \
  /usr/include/i386-linux-gnu/bits/select.h \
- /usr/include/i386-linux-gnu/bits/select2.h \
  /usr/include/i386-linux-gnu/sys/sysmacros.h /usr/include/alloca.h \
- /usr/include/i386-linux-gnu/bits/stdlib-bsearch.h \
- /usr/include/i386-linux-gnu/bits/stdlib-float.h \
- /usr/include/i386-linux-gnu/bits/stdlib.h inlining.h relocatability.inc
+ /usr/include/i386-linux-gnu/bits/stdlib-float.h inlining.h \
+ relocatability.inc
 
 /usr/include/stdc-predef.h:
 
@@ -108,10 +99,6 @@ inlining.lo: inlining.c /usr/include/stdc-predef.h ../../src/jam.h \
 
 /usr/include/i386-linux-gnu/bits/sys_errlist.h:
 
-/usr/include/i386-linux-gnu/bits/stdio.h:
-
-/usr/include/i386-linux-gnu/bits/stdio2.h:
-
 /usr/include/time.h:
 
 /usr/include/i386-linux-gnu/bits/time.h:
@@ -122,25 +109,7 @@ inlining.lo: inlining.c /usr/include/stdc-predef.h ../../src/jam.h \
 
 ../../src/arch.h:
 
-../../src/nvm/test/testing_utils.h:
-
 /usr/include/string.h:
-
-/usr/include/i386-linux-gnu/bits/string.h:
-
-/usr/include/i386-linux-gnu/bits/string2.h:
-
-/usr/include/endian.h:
-
-/usr/include/i386-linux-gnu/bits/endian.h:
-
-/usr/include/i386-linux-gnu/bits/byteswap.h:
-
-/usr/include/i386-linux-gnu/bits/byteswap-16.h:
-
-/usr/include/stdlib.h:
-
-/usr/include/i386-linux-gnu/bits/string3.h:
 
 /usr/include/i386-linux-gnu/sys/mman.h:
 
@@ -158,13 +127,19 @@ inlining.lo: inlining.c /usr/include/stdc-predef.h ../../src/jam.h \
 
 /usr/include/getopt.h:
 
-/usr/include/i386-linux-gnu/bits/unistd.h:
-
 ../../src/hash.h:
 
 ../../src/thread.h:
 
 /usr/include/pthread.h:
+
+/usr/include/endian.h:
+
+/usr/include/i386-linux-gnu/bits/endian.h:
+
+/usr/include/i386-linux-gnu/bits/byteswap.h:
+
+/usr/include/i386-linux-gnu/bits/byteswap-16.h:
 
 /usr/include/sched.h:
 
@@ -178,7 +153,7 @@ inlining.lo: inlining.c /usr/include/stdc-predef.h ../../src/jam.h \
 
 /usr/include/i386-linux-gnu/bits/sigset.h:
 
-/usr/include/i386-linux-gnu/bits/setjmp2.h:
+/usr/include/stdlib.h:
 
 /usr/include/i386-linux-gnu/bits/waitflags.h:
 
@@ -190,17 +165,11 @@ inlining.lo: inlining.c /usr/include/stdc-predef.h ../../src/jam.h \
 
 /usr/include/i386-linux-gnu/bits/select.h:
 
-/usr/include/i386-linux-gnu/bits/select2.h:
-
 /usr/include/i386-linux-gnu/sys/sysmacros.h:
 
 /usr/include/alloca.h:
 
-/usr/include/i386-linux-gnu/bits/stdlib-bsearch.h:
-
 /usr/include/i386-linux-gnu/bits/stdlib-float.h:
-
-/usr/include/i386-linux-gnu/bits/stdlib.h:
 
 inlining.h:
 

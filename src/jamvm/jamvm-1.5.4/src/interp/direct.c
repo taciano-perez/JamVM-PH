@@ -50,10 +50,13 @@
    has not been calculated yet */
 #define DEPTH_UNKNOWN -1
 
+/* XXX NVM CHANGE 6 !!! - MASK
 /* Method preparation states */
+
 #define PREPARED   0
 #define UNPREPARED 1
 #define PREPARING  2
+
 
 /* Global lock for method preparation */
 static VMWaitLock prepare_lock;
@@ -155,6 +158,7 @@ retry:
         int pc;
 
         if(pass == 1)
+        	// XXX NVM CHANGE 4.11 !!!
             new_code = sysMalloc((ins_count + 1) * sizeof(Instruction));
 
         for(ins_count = 0, pc = 0; pc < code_len; ins_count++) {
@@ -942,6 +946,7 @@ retry:
 
     /* We don't need the old bytecode stream anymore */
     if(!(mb->access_flags & ACC_ABSTRACT))
+    	//XXX NVM CHANGE 5.01 !!! - sysFree
         sysFree(code);
 }
 #endif

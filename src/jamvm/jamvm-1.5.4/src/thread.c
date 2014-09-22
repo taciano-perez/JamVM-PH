@@ -124,6 +124,9 @@ static int main_exited = FALSE;
 static unsigned int *tidBitmap = NULL;
 static int tidBitmapSize = 0;
 
+// XXX NVM CHANGE Z 10.10.00
+static char* thread_name = "thread_ht";
+
 /* Mark a threadID value as no longer used */
 #define freeThreadID(n) tidBitmap[(n-1)>>5] &= ~(1<<((n-1)&0x1f))
 
@@ -429,7 +432,8 @@ Thread *findHashedThread(Thread *thread, long long id) {
     Thread *ptr;
 
     /* Add if absent, scavenge, locked */
-    findHashEntry(thread_id_map, id, ptr, (thread != NULL), TRUE, TRUE);
+    // XXX NVM CHANGE Z 10.10.01
+    findHashEntry(thread_id_map, id, ptr, (thread != NULL), TRUE, TRUE, thread_name, FALSE);
 
     return ptr;
 }
@@ -1034,8 +1038,8 @@ void dumpThreadsLoop(Thread *self) {
         sigwait(&mask, &sig);
 
         /* If it was an interrupt (e.g. Ctrl-C) terminate the VM */
-        //if(sig == SIGINT)
-        //    exitVM(0);
+        if(sig == SIGINT)
+            exitVM(0);
 
         /* It must be a SIGQUIT.  Do a thread dump */
 
@@ -1208,7 +1212,8 @@ void initialiseThreadStage1(InitArgs *args) {
         pthread_attr_setstacksize(&attributes, 1*MB);
 
     monitorInit(&sleep_mon);
-    initHashTable(thread_id_map, HASHTABSZE, TRUE);
+	// XXX NVM CHANGE 8.09
+    initHashTable(thread_id_map, HASHTABSZE, TRUE, thread_name, FALSE);
 
     /* We need to cache field and method offsets to create and initialise
        threads.  However, the class loading component requires a valid

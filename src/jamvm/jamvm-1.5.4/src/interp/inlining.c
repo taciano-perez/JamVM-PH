@@ -111,6 +111,9 @@ static char *goto_start;
 static char **handler_entry_points[HANDLERS];
 static int branch_patch_offsets[HANDLERS][BRANCH_NUM];
 
+// XXX NVM CHANGE Z 10.08.00
+static char* inline_name = "inlining_ht";
+
 char *reason(int reason) {
     switch(reason) {
         case MEMCMP_FAILED:
@@ -206,8 +209,9 @@ int initialiseInlining(InitArgs *args) {
     enabled = args->codemem > 0 ? checkRelocatability() : FALSE;
 
     if(enabled) {
+    	// XXX NVM CHANGE 8.06
         initVMLock(rewrite_lock);
-        initHashTable(code_hash_table, HASHTABSZE, TRUE);
+        initHashTable(code_hash_table, HASHTABSZE, TRUE, inline_name, FALSE);
 
         sys_page_size = getpagesize();
         max_codemem = ROUND(args->codemem, sys_page_size);
@@ -527,8 +531,10 @@ CodeBlockHeader *findCodeBlock(TestCodeBlock *block) {
     if(branch_patching_dup && block->patchers != NULL)
         ret_block = newDuplicateBlock(block);
     else {
-        /* Search hash table.  Add if absent, scavenge and not locked */
-        findHashEntry(code_hash_table, block, ret_block, TRUE, TRUE, FALSE);
+        /* Search hash table.  Add if absent, scavenge and not locked
+         * XXX NVM CHANGE Z 10.08.01
+         * */
+        findHashEntry(code_hash_table, block, ret_block, TRUE, TRUE, FALSE,inline_name, FALSE );
     }
 
     unlockHashTable(code_hash_table);
@@ -929,7 +935,6 @@ void inlineBlock(MethodBlock *mb, BasicBlock *block, Thread *self) {
 
     for(end = end->next; start != end; ) {
         BasicBlock *next = start->next;
-
         sysFree(start->opcodes);
         sysFree(start);
         start = next;

@@ -92,6 +92,9 @@
 static Monitor *mon_free_list = NULL;
 static HashTable mon_cache;
 
+// XXX NVM CHANGE Z 10.09.00
+static char* monitor_name = "monitor_ht";
+
 void monitorInit(Monitor *mon) {
     memset(mon, 0, sizeof(Monitor));
     pthread_mutex_init(&mon->lock, NULL);
@@ -325,7 +328,8 @@ Monitor *findMonitor(Object *obj) {
     else {
         Monitor *mon;
         /* Add if absent, scavenge, locked */
-        findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE);
+        // XXX NVM CHANGE 10.09.01
+        findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
         return mon;
     }
 }
@@ -554,7 +558,8 @@ Thread *objectLockedBy(Object *obj) {
 
 void initialiseMonitor() {
     /* Init hash table, create lock */
-    initHashTable(mon_cache, HASHTABSZE, TRUE);
+	// XXX NVM CHANGE 8.07
+    initHashTable(mon_cache, HASHTABSZE, TRUE, monitor_name, FALSE);
 }
 
 /* Heap compaction support */

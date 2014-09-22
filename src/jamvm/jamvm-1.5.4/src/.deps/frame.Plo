@@ -17,11 +17,9 @@ frame.lo: frame.c /usr/include/stdc-predef.h \
  /usr/include/i386-linux-gnu/bits/typesizes.h /usr/include/libio.h \
  /usr/include/_G_config.h /usr/include/wchar.h \
  /usr/include/i386-linux-gnu/bits/stdio_lim.h \
- /usr/include/i386-linux-gnu/bits/sys_errlist.h \
- /usr/include/i386-linux-gnu/bits/stdio.h \
- /usr/include/i386-linux-gnu/bits/stdio2.h /usr/include/time.h \
+ /usr/include/i386-linux-gnu/bits/sys_errlist.h /usr/include/time.h \
  /usr/include/i386-linux-gnu/bits/time.h /usr/include/xlocale.h config.h \
- arch.h nvm/test/testing_utils.h reflect.h
+ arch.h reflect.h
 
 /usr/include/stdc-predef.h:
 
@@ -79,10 +77,6 @@ jam.h:
 
 /usr/include/i386-linux-gnu/bits/sys_errlist.h:
 
-/usr/include/i386-linux-gnu/bits/stdio.h:
-
-/usr/include/i386-linux-gnu/bits/stdio2.h:
-
 /usr/include/time.h:
 
 /usr/include/i386-linux-gnu/bits/time.h:
@@ -92,7 +86,5 @@ jam.h:
 config.h:
 
 arch.h:
-
-nvm/test/testing_utils.h:
 
 reflect.h:

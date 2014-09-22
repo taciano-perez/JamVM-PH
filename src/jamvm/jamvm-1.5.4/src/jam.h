@@ -31,13 +31,6 @@
 /* Architecture dependent definitions */
 #include "arch.h"
 
-/* NVM specific includes and defines */
-#include "nvm/test/testing_utils.h"
-#include "nvm/utils/logger.h"
-
-/* HEAP MEM ADDRESS */
-#define HEAPADDR 0xaf497000
-
 #ifndef TRUE
 #define         TRUE    1
 #define         FALSE   0
@@ -652,8 +645,8 @@ typedef struct InitArgs {
     unsigned long min_heap;
     unsigned long max_heap;
 
+    /* XXX NVM CHANGE 1 - args  */
     int persistent_heap;
-
     char *heap_file;
 
     int testing_mode;
@@ -789,7 +782,18 @@ extern void *sysMalloc(int n);
 extern void sysFree(void *ptr);
 extern void *sysRealloc(void *ptr, int n);
 
-extern void *gcMemMalloc(int n);
+
+/* XXX NVM CHANGE 4.00 - sysMalloc
+ * Add functions
+ */
+extern void *sysMalloc_persistent(int n);
+extern void sysFree_persistent(void *addr);
+extern void *sysRealloc_persistent(void *ptr, int n);
+
+/* XXX NVM CHANGE 8.00  - GC MEM MALLOC
+ * change arguments
+ */
+extern void *gcMemMalloc(int n, char* name, int create_file);
 extern void gcMemFree(void *ptr);
 extern void *gcMemRealloc(void *ptr, int n);
 
@@ -958,22 +962,19 @@ extern int utf8Len(char *utf8);
 extern int utf8Hash(char *utf8);
 extern int utf8Comp(char *utf81, char *utf82);
 extern void convertUtf8(char *utf8, unsigned short *buff);
-extern char *findHashedUtf8(char *string, int add_if_absent, int class_to_add);
+extern char *findHashedUtf8(char *string, int add_if_absent);
 extern char *copyUtf8(char *string);
 extern int utf8CharLen(unsigned short *unicode, int len);
 extern char *unicode2Utf8(unsigned short *unicode, int len, char *utf8);
 extern char *slash2dots(char *utf8);
 extern char *slash2dots2buff(char *utf8, char *buff, int buff_len);
-extern void initialiseUtf8(InitArgs *args);
+extern void initialiseUtf8();
 
 #define findUtf8(string) \
-    findHashedUtf8(string, FALSE, FALSE)
+    findHashedUtf8(string, FALSE)
 
 #define newUtf8(string) \
-    findHashedUtf8(string, TRUE, FALSE)
-
-#define newUtf8Save(string) \
-    findHashedUtf8(string, TRUE, TRUE)
+    findHashedUtf8(string, TRUE)
 
 /* Dll */
 

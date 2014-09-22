@@ -17,13 +17,10 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
  /usr/include/i386-linux-gnu/bits/typesizes.h /usr/include/libio.h \
  /usr/include/_G_config.h /usr/include/wchar.h \
  /usr/include/i386-linux-gnu/bits/stdio_lim.h \
- /usr/include/i386-linux-gnu/bits/sys_errlist.h \
- /usr/include/i386-linux-gnu/bits/stdio.h \
- /usr/include/i386-linux-gnu/bits/stdio2.h /usr/include/time.h \
+ /usr/include/i386-linux-gnu/bits/sys_errlist.h /usr/include/time.h \
  /usr/include/i386-linux-gnu/bits/time.h /usr/include/xlocale.h \
- ../../src/config.h ../../src/arch.h ../../src/nvm/test/testing_utils.h \
- /usr/include/arpa/inet.h /usr/include/netinet/in.h \
- /usr/include/i386-linux-gnu/sys/socket.h \
+ ../../src/config.h ../../src/arch.h /usr/include/arpa/inet.h \
+ /usr/include/netinet/in.h /usr/include/i386-linux-gnu/sys/socket.h \
  /usr/include/i386-linux-gnu/sys/uio.h \
  /usr/include/i386-linux-gnu/sys/types.h /usr/include/endian.h \
  /usr/include/i386-linux-gnu/bits/endian.h \
@@ -32,7 +29,6 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
  /usr/include/i386-linux-gnu/sys/select.h \
  /usr/include/i386-linux-gnu/bits/select.h \
  /usr/include/i386-linux-gnu/bits/sigset.h \
- /usr/include/i386-linux-gnu/bits/select2.h \
  /usr/include/i386-linux-gnu/sys/sysmacros.h \
  /usr/include/i386-linux-gnu/bits/pthreadtypes.h \
  /usr/include/i386-linux-gnu/bits/uio.h \
@@ -42,21 +38,13 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
  /usr/include/i386-linux-gnu/asm/socket.h \
  /usr/include/asm-generic/socket.h \
  /usr/include/i386-linux-gnu/asm/sockios.h \
- /usr/include/asm-generic/sockios.h \
- /usr/include/i386-linux-gnu/bits/socket2.h \
- /usr/include/i386-linux-gnu/bits/in.h /usr/include/string.h \
- /usr/include/i386-linux-gnu/bits/string.h \
- /usr/include/i386-linux-gnu/bits/string2.h /usr/include/stdlib.h \
- /usr/include/i386-linux-gnu/bits/string3.h ../../src/thread.h \
- /usr/include/pthread.h /usr/include/sched.h \
- /usr/include/i386-linux-gnu/bits/sched.h \
+ /usr/include/asm-generic/sockios.h /usr/include/i386-linux-gnu/bits/in.h \
+ /usr/include/string.h ../../src/thread.h /usr/include/pthread.h \
+ /usr/include/sched.h /usr/include/i386-linux-gnu/bits/sched.h \
  /usr/include/i386-linux-gnu/bits/setjmp.h /usr/include/setjmp.h \
- /usr/include/i386-linux-gnu/bits/setjmp2.h \
- /usr/include/i386-linux-gnu/bits/waitflags.h \
+ /usr/include/stdlib.h /usr/include/i386-linux-gnu/bits/waitflags.h \
  /usr/include/i386-linux-gnu/bits/waitstatus.h /usr/include/alloca.h \
- /usr/include/i386-linux-gnu/bits/stdlib-bsearch.h \
  /usr/include/i386-linux-gnu/bits/stdlib-float.h \
- /usr/include/i386-linux-gnu/bits/stdlib.h \
  ../../src/interp/engine/interp.h ../../src/properties.h \
  ../../src/interp/engine/interp-inlining.h \
  ../../src/interp/engine/interp-threading.h ../../src/symbol.h inlining.h \
@@ -118,10 +106,6 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
 
 /usr/include/i386-linux-gnu/bits/sys_errlist.h:
 
-/usr/include/i386-linux-gnu/bits/stdio.h:
-
-/usr/include/i386-linux-gnu/bits/stdio2.h:
-
 /usr/include/time.h:
 
 /usr/include/i386-linux-gnu/bits/time.h:
@@ -131,8 +115,6 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
 ../../src/config.h:
 
 ../../src/arch.h:
-
-../../src/nvm/test/testing_utils.h:
 
 /usr/include/arpa/inet.h:
 
@@ -158,8 +140,6 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
 
 /usr/include/i386-linux-gnu/bits/sigset.h:
 
-/usr/include/i386-linux-gnu/bits/select2.h:
-
 /usr/include/i386-linux-gnu/sys/sysmacros.h:
 
 /usr/include/i386-linux-gnu/bits/pthreadtypes.h:
@@ -180,19 +160,9 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
 
 /usr/include/asm-generic/sockios.h:
 
-/usr/include/i386-linux-gnu/bits/socket2.h:
-
 /usr/include/i386-linux-gnu/bits/in.h:
 
 /usr/include/string.h:
-
-/usr/include/i386-linux-gnu/bits/string.h:
-
-/usr/include/i386-linux-gnu/bits/string2.h:
-
-/usr/include/stdlib.h:
-
-/usr/include/i386-linux-gnu/bits/string3.h:
 
 ../../src/thread.h:
 
@@ -206,7 +176,7 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
 
 /usr/include/setjmp.h:
 
-/usr/include/i386-linux-gnu/bits/setjmp2.h:
+/usr/include/stdlib.h:
 
 /usr/include/i386-linux-gnu/bits/waitflags.h:
 
@@ -214,11 +184,7 @@ direct.lo: direct.c /usr/include/stdc-predef.h ../../src/jam.h \
 
 /usr/include/alloca.h:
 
-/usr/include/i386-linux-gnu/bits/stdlib-bsearch.h:
-
 /usr/include/i386-linux-gnu/bits/stdlib-float.h:
-
-/usr/include/i386-linux-gnu/bits/stdlib.h:
 
 ../../src/interp/engine/interp.h:
 

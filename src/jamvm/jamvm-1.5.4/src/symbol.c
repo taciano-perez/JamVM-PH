@@ -28,32 +28,13 @@ char *symbol_values[] = {
     SYMBOLS_DO(SYMBOL_VALUE)
 };
 
-int PERSISTENT_HEAP_SYMBOL = FALSE;
-
-void initialiseSymbolPersistent() {
+void initialiseSymbol() {
     int i;
 
     for(i = 0; i < MAX_SYMBOL_ENUM; i++)
-        if(strcmp(symbol_values[i], newUtf8(symbol_values[i])) != 0) {
+        if(symbol_values[i] != newUtf8(symbol_values[i])) {
             jam_fprintf(stderr, "Error when initialising VM symbols."
                                 "  Aborting VM.\n");
             exit(1);
         }
-}
-
-void initialiseSymbol(InitArgs *args) {
-    int i;
-
-    if(args->persistent_heap){
-    	PERSISTENT_HEAP_SYMBOL = args->persistent_heap;
-    	initialiseSymbolPersistent();
-    }else{
-
-		for(i = 0; i < MAX_SYMBOL_ENUM; i++)
-			if(symbol_values[i] != newUtf8(symbol_values[i])) {
-				jam_fprintf(stderr, "Error when initialising VM symbols."
-									"  Aborting VM.\n");
-				exit(1);
-			}
-    }
 }
