@@ -111,7 +111,7 @@ static char *goto_start;
 static char **handler_entry_points[HANDLERS];
 static int branch_patch_offsets[HANDLERS][BRANCH_NUM];
 
-// XXX NVM CHANGE Z 10.08.00
+/*	XXX	NVM VARIABLES - INLINING.C	*/
 static char* inline_name = "inlining_ht";
 
 char *reason(int reason) {
@@ -209,8 +209,8 @@ int initialiseInlining(InitArgs *args) {
     enabled = args->codemem > 0 ? checkRelocatability() : FALSE;
 
     if(enabled) {
-    	// XXX NVM CHANGE 8.06
         initVMLock(rewrite_lock);
+        /* XXX NVM CHANGE 005.001.005 - Inline HT - N*/
         initHashTable(code_hash_table, HASHTABSZE, TRUE, inline_name, FALSE);
 
         sys_page_size = getpagesize();
@@ -532,8 +532,7 @@ CodeBlockHeader *findCodeBlock(TestCodeBlock *block) {
         ret_block = newDuplicateBlock(block);
     else {
         /* Search hash table.  Add if absent, scavenge and not locked
-         * XXX NVM CHANGE Z 10.08.01
-         * */
+    /* XXX NVM CHANGE 006.003.011 - ES  */
         findHashEntry(code_hash_table, block, ret_block, TRUE, TRUE, FALSE,inline_name, FALSE );
     }
 

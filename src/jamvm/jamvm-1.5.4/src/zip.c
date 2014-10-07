@@ -84,7 +84,7 @@
 #define HASH(ptr) zipHash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) ((hash1 == hash2) && \
                                            zipComp(ptr1, ptr2)) 
-// XXX NVM CHANGE Z 10.07.00
+/*	XXX	NVM VARIABLES - ZIP.C	*/
 static char* zip_name = "zip_ht";
 
 /* The filenames within the zip file are added to a hash-table for faster
@@ -172,11 +172,11 @@ ZipFile *processArchive(char *path) {
        Do not create lock -- we're single threaded (bootstrapping)
        and once entries are added, table is read-only */
 
-    // XXX NVM CHANGE 4.08.01
+   	/*	XXX NVM CHANGE 004.001.023 */
     hash_table = sysMalloc_persistent(sizeof(HashTable));
 
-    // XXX NVM CHANGE 8.11
-    initHashTable((*hash_table), HASHTABSZE, FALSE, zip_name, TRUE);
+    /* XXX NVM CHANGE 005.001.010 - Files HT - N - NW!!*/
+    initHashTable((*hash_table), HASHTABSZE, FALSE, zip_name, FALSE);
 
     /* Get the offset from the start of the file of the first directory entry */
     pntr = data + READ_LE_INT(pntr + END_CEN_DIR_START_OFFSET);
@@ -208,11 +208,11 @@ ZipFile *processArchive(char *path) {
         /* Skip variable fields, to point to next sig */
         pntr += path_len + extra_len + comment_len;
 
-        // XXX NVM CHANGE Z 10.07.01
+        /* XXX NVM CHANGE 006.003.009  */
         /* Add if absent, no scavenge, not locked */
-        findHashEntry((*hash_table), pathname, found, TRUE, FALSE, FALSE, zip_name, TRUE);
+        findHashEntry((*hash_table), pathname, found, TRUE, FALSE, FALSE, zip_name, FALSE);
     }
-    // XXX NVM CHANGE 4.08.02
+   	/*	XXX NVM CHANGE 004.001.024 */
     zip = sysMalloc_persistent(sizeof(ZipFile));
 
     zip->data = data;
@@ -257,9 +257,9 @@ int utf8ZipComp(char *path1, char *path2) {
 char *findArchiveDirEntry(char *pathname, ZipFile *zip) {
     char *found;
 
-    //XXX NVM CHANGE Z 10.07.02
+    /* XXX NVM CHANGE 006.003.010  */
     /* Do not add if absent, no scavenge, not locked */
-    findHashEntry((*zip->dir_hash), pathname, found, FALSE, FALSE, FALSE, zip_name, TRUE);
+    findHashEntry((*zip->dir_hash), pathname, found, FALSE, FALSE, FALSE, zip_name, FALSE);
 
     return found;
 }

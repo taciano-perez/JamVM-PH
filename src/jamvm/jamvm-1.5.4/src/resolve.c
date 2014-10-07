@@ -31,7 +31,7 @@ MethodBlock *findMethod(Class *class, char *methodname, char *type) {
    int i;
 
    for(i = 0; i < cb->methods_count; i++,mb++)
-       if(mb->name == methodname && mb->type == type)
+	   if(mb->name == methodname && mb->type == type)
           return mb;
 
    return NULL;
@@ -47,7 +47,7 @@ FieldBlock *findField(Class *class, char *fieldname, char *type) {
     int i;
 
     for(i = 0; i < cb->fields_count; i++,fb++)
-        if(fb->name == fieldname && fb->type == type)
+    	if(fb->name == fieldname && fb->type == type)
             return fb;
 
     return NULL;

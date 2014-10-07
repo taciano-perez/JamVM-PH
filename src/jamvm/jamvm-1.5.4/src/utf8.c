@@ -23,11 +23,12 @@
 #include <stdlib.h>
 #include "jam.h"
 #include "hash.h"
-
-#define HASHTABSZE 1<<10
+// todo FIX THIS
+//Changed Default size of UTF8 hash 1 << 10
+#define HASHTABSZE 1<<13
 #define HASH(ptr) utf8Hash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (ptr1 == ptr2) || \
-                  ((hash1 == hash2) && utf8Comp(ptr1, ptr2))
+                  (utf8Comp(ptr1, ptr2) && (hash1 == hash2))
 #define PREPARE(ptr) ptr
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
@@ -93,12 +94,15 @@ int utf8Comp(char *ptr, char *ptr2) {
 }
 
 char *findHashedUtf8(char *string, int add_if_absent) {
-    char *interned;
-    // XXX NVM CHANGE Z 10.06.01
+    char *interned = NULL;
     /* Add if absent, no scavenge, locked */
-    findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
+    /* XXX NVM CHANGE 006.003.008  */
+    /* XXX NVM CHANGE 006.004.001 */
+   	findOnlyHashEntry(hash_table, string, interned, TRUE);
 
-    return interned;
+   	if (add_if_absent && interned == NULL)
+   		findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
+   	return interned;
 }
 
 char *copyUtf8(char *string) {
@@ -139,7 +143,7 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
 
 void initialiseUtf8() {
     /* Init hash table, and create lock */
-	// XXX NVM CHANGE 8.10
+    /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y*/
     initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
 }
 

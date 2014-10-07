@@ -645,7 +645,7 @@ typedef struct InitArgs {
     unsigned long min_heap;
     unsigned long max_heap;
 
-    /* XXX NVM CHANGE 1 - args  */
+    /* XXX NVM CHANGE 001.000 - Parameter  */
     int persistent_heap;
     char *heap_file;
 
@@ -783,19 +783,19 @@ extern void sysFree(void *ptr);
 extern void *sysRealloc(void *ptr, int n);
 
 
-/* XXX NVM CHANGE 4.00 - sysMalloc
- * Add functions
+/* XXX NVM CHANGE 004.000 - P.A.F
+ * Added functions
  */
 extern void *sysMalloc_persistent(int n);
 extern void sysFree_persistent(void *addr);
 extern void *sysRealloc_persistent(void *ptr, int n);
 
-/* XXX NVM CHANGE 8.00  - GC MEM MALLOC
- * change arguments
+/* XXX NVM CHANGE 005.000 - GcMem A.F
+ * Changed functions args
  */
 extern void *gcMemMalloc(int n, char* name, int create_file);
 extern void gcMemFree(void *ptr);
-extern void *gcMemRealloc(void *ptr, int n);
+extern void *gcMemRealloc(void *ptr, int n, char* name, int create_file);
 
 extern void registerStaticObjectRef(Object **ref);
 extern void registerStaticObjectRefLocked(Object **ref, Object *obj);

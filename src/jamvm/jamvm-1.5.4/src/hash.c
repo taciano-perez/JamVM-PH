@@ -37,11 +37,11 @@ void unlockHashTable0(HashTable *table, Thread *self) {
     fastEnableSuspend(self);
     unlockVMLock(table->lock, self);
 }
-// XXX NVM CHANGE Z 10.01
 
-void resizeHash(HashTable *table, int new_size, char*name , int create_file) {
-	// todo GCMEMMALLOC WRONG LOOK OUT
-    HashEntry *new_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*new_size, name, create_file);
+/* XXX NVM CHANGE 006.002 - Resize Hash */
+void resizeHash(HashTable *table, int new_size, char* name , int create_file) {
+    /* XXX NVM CHANGE 005.001.011 - Resize Hash*/
+	HashEntry *new_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*new_size, name, create_file);
     int i;
 
     memset(new_table, 0, sizeof(HashEntry)*new_size);

@@ -50,9 +50,8 @@
    has not been calculated yet */
 #define DEPTH_UNKNOWN -1
 
-/* XXX NVM CHANGE 6 !!! - MASK
 /* Method preparation states */
-
+//TODO MASK 2 !!
 #define PREPARED   0
 #define UNPREPARED 1
 #define PREPARING  2
@@ -158,7 +157,7 @@ retry:
         int pc;
 
         if(pass == 1)
-        	// XXX NVM CHANGE 4.11 !!!
+            /* XXX NVM CHANGE 004.001.027 - CODE !!!!  */
             new_code = sysMalloc((ins_count + 1) * sizeof(Instruction));
 
         for(ins_count = 0, pc = 0; pc < code_len; ins_count++) {
@@ -946,7 +945,7 @@ retry:
 
     /* We don't need the old bytecode stream anymore */
     if(!(mb->access_flags & ACC_ABSTRACT))
-    	//XXX NVM CHANGE 5.01 !!! - sysFree
+        /* XXX NVM CHANGE 004.003.001 - CODE!!!  */
         sysFree(code);
 }
 #endif

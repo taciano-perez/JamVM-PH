@@ -92,7 +92,7 @@
 static Monitor *mon_free_list = NULL;
 static HashTable mon_cache;
 
-// XXX NVM CHANGE Z 10.09.00
+/*	XXX	NVM VARIABLES - LOCK.C	*/
 static char* monitor_name = "monitor_ht";
 
 void monitorInit(Monitor *mon) {
@@ -328,7 +328,7 @@ Monitor *findMonitor(Object *obj) {
     else {
         Monitor *mon;
         /* Add if absent, scavenge, locked */
-        // XXX NVM CHANGE 10.09.01
+        /* XXX NVM CHANGE 006.003.012  */
         findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
         return mon;
     }
@@ -558,7 +558,7 @@ Thread *objectLockedBy(Object *obj) {
 
 void initialiseMonitor() {
     /* Init hash table, create lock */
-	// XXX NVM CHANGE 8.07
+    /* XXX NVM CHANGE 005.001.006 - Monitors HT - N*/
     initHashTable(mon_cache, HASHTABSZE, TRUE, monitor_name, FALSE);
 }
 

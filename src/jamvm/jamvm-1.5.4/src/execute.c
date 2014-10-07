@@ -122,7 +122,6 @@ void *executeMethodVaList(Object *ob, Class *class, MethodBlock *mb,
 
     if(mb->access_flags & ACC_SYNCHRONIZED)
         objectLock(ob ? ob : mb->class);
-
     if(mb->access_flags & ACC_NATIVE)
         (*mb->native_invoker)(class, mb, ret);
     else

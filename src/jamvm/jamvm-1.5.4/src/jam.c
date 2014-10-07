@@ -238,7 +238,7 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
                 goto exit;
             }
 
-            /* XXX NVM CHANGE 2 - parameters */
+            /* XXX NVM CHANGE 001.001 */
         } else if(strncmp(argv[i], "-persistentheap:", 16) == 0) {
             args->persistent_heap = TRUE;
             args->heap_file = argv[i] + 16;

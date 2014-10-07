@@ -32,12 +32,14 @@ typedef struct hash_table {
     int hash_count;
     VMLock lock;
 } HashTable;
-// XXX NVM CHANGE Z 10.01.01
+/* XXX NVM CHANGE 006.000 - Hash Functions
+ * Changed functions args
+ */
 extern void resizeHash(HashTable *table, int new_size, char* name, int create_file);
 extern void lockHashTable0(HashTable *table, Thread *self);
 extern void unlockHashTable0(HashTable *table, Thread *self);
 
-// XXX NVM CHANGE Z 10.02
+/* XXX NVM CHANGE 006.001 - Init Hash = GMM */
 #define initHashTable(table, initial_size, create_lock, name, create_file)         \
 {                                                                                  \
     table.hash_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*initial_size, name, create_file);    \
@@ -57,7 +59,7 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
 #define hashTableCount(table)                                                      \
     table.hash_count
 
-// XXX NVM CHANGE Z 10.00
+/* XXX NVM CHANGE 006.003 - Find Hash */
 #define findHashEntry(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)           \
 {                                                                                  \
     int hash = HASH(ptr);                                                          \
@@ -117,6 +119,35 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
                                                                                    \
     if(locked)                                                                     \
         unlockHashTable0(&table, self);                                            \
+}
+
+/* XXX NVM CHANGE 006.004 - FindOnlyHash		*/
+#define findOnlyHashEntry(table, ptr, ptr2, locked) 								\
+{ 																					\
+	int hash = HASH(ptr); 															\
+	int i; 																			\
+																					\
+	Thread *self; 																	\
+	if(locked) { 																	\
+		self = threadSelf(); 														\
+		lockHashTable0(&table, self); 												\
+	} 																				\
+																					\
+	i = hash & (table.hash_size - 1); 												\
+																					\
+	for(;;) { 																		\
+		ptr2 = table.hash_table[i].data; 											\
+		if((ptr2 == NULL) || (COMPARE(ptr, ptr2, hash, table.hash_table[i].hash))) 	\
+		break; 																		\
+		i = (i+1) & (table.hash_size - 1); 											\
+	} 																				\
+	if(ptr2) { 																		\
+		ptr2 = FOUND(ptr, ptr2); 													\
+	} 																				\
+	else { 																			\
+		ptr2 = NULL; 																\
+	} 																				\
+	unlockHashTable0(&table, self); 												\
 }
 
 #define deleteHashEntry(table, ptr, locked)                                        \
