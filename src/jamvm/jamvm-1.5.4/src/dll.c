@@ -222,7 +222,7 @@ void initialiseDll(InitArgs *args) {
 #ifndef NO_JNI
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.004 - DLL HT - N */
-	initHashTable(hash_table, HASHTABSZE, TRUE, (char*)"dll_ht", TRUE);
+	initHashTable(hash_table, HASHTABSZE, TRUE, (char*)"dll_ht", FALSE);
 #endif
     verbose = args->verbosedll;
 }
@@ -258,7 +258,7 @@ int resolveDll(char *name, Object *loader) {
 
     /* Do not add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.005  */
-    findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, (char*)"dll_ht", TRUE);
+    findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, (char*)"dll_ht", FALSE);
 
     if(dll == NULL) {
         DllEntry *dll2;
@@ -305,7 +305,7 @@ int resolveDll(char *name, Object *loader) {
 
         /* Add if absent, no scavenge, locked */
         /* XXX NVM CHANGE 006.003.006  */
-        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, (char*)"dll_ht", TRUE);
+        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, (char*)"dll_ht", FALSE);
 
         /* If the library has an OnUnload function it must be
            called from a running Java thread (i.e. not within
@@ -421,7 +421,7 @@ void unloadClassLoaderDlls(Object *loader) {
         /* Ensure new table is less than 2/3 full */
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
         /* XXX NVM CHANGE 006.002.002  */
-        resizeHash(&hash_table, size, (char*)"dll_ht", TRUE);
+        resizeHash(&hash_table, size, (char*)"dll_ht", FALSE);
     }
 }
 

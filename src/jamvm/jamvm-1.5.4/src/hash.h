@@ -121,34 +121,6 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
         unlockHashTable0(&table, self);                                            \
 }
 
-/* XXX NVM CHANGE 006.004 - FindOnlyHash		*/
-#define findOnlyHashEntry(table, ptr, ptr2, locked) 								\
-{ 																					\
-	int hash = HASH(ptr); 															\
-	int i; 																			\
-																					\
-	Thread *self; 																	\
-	if(locked) { 																	\
-		self = threadSelf(); 														\
-		lockHashTable0(&table, self); 												\
-	} 																				\
-																					\
-	i = hash & (table.hash_size - 1); 												\
-																					\
-	for(;;) { 																		\
-		ptr2 = table.hash_table[i].data; 											\
-		if((ptr2 == NULL) || (COMPARE(ptr, ptr2, hash, table.hash_table[i].hash))) 	\
-		break; 																		\
-		i = (i+1) & (table.hash_size - 1); 											\
-	} 																				\
-	if(ptr2) { 																		\
-		ptr2 = FOUND(ptr, ptr2); 													\
-	} 																				\
-	else { 																			\
-		ptr2 = NULL; 																\
-	} 																				\
-	unlockHashTable0(&table, self); 												\
-}
 
 #define deleteHashEntry(table, ptr, locked)                                        \
 {                                                                                  \

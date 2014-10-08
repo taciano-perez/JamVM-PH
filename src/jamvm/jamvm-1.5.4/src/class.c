@@ -102,7 +102,7 @@ int enqueue_mtbl_idx;
 
 /* hash table containing classes loaded by the boot loader and
    internally created arrays */
-#define CLASS_INITSZE 1<<8
+#define CLASS_INITSZE 1<<9
 static HashTable boot_classes;
 
 /* Array large enough to hold all primitive classes -
@@ -154,7 +154,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.001  */
     if ((unsigned int)table == (unsigned int)&boot_classes){
-    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, FALSE );
+    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
     }else{
     	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, class_name, TRUE );
     }
@@ -1441,7 +1441,7 @@ Class *findHashedClass(char *classname, Object *class_loader) {
     /* Do not add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.003  */
     if ((unsigned int)table == (unsigned int)&boot_classes){
-	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, boot_name, FALSE );
+	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, boot_name, TRUE );
    }else{
 	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, class_name, TRUE );
    }
@@ -2051,8 +2051,8 @@ void initialiseClass(InitArgs *args) {
     setClassPath(args->classpath);
 
     /* Init hash table, and create lock */
-    /* XXX NVM CHANGE 005.001.002 - BP/BC HT - N*/
-    initHashTable(boot_classes,  CLASS_INITSZE, TRUE, boot_name,  FALSE);
+    /* XXX NVM CHANGE 005.001.002 - BC/BP HT - N/Y*/
+    initHashTable(boot_classes,  CLASS_INITSZE, TRUE, boot_name,  TRUE);
     initHashTable(boot_packages, PCKG_INITSZE,  TRUE, bootp_name, TRUE);
     loader_data_class = findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData));
     if(loader_data_class != NULL) {

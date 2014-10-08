@@ -2318,9 +2318,6 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 			fd = open (name, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
 			lseek (fd, size-1, SEEK_SET);
 			write(fd,"",1);
-			if (strcoll(name, "boot_cl_ht") == 0)
-				mem = (uintptr_t*)mmap((unsigned int)0xb7fc5000, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_FIXED, fd, 0);
-			else
 				mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 
 			msync(mem, size, MS_SYNC);
