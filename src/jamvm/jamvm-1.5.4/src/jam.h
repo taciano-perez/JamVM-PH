@@ -28,6 +28,10 @@
 /* Configure options */
 #include "config.h"
 
+/* NVM specific includes and defines */
+#include "nvm/test/testing_utils.h"
+#include "nvm/utils/logger.h"
+
 /* Architecture dependent definitions */
 #include "arch.h"
 
@@ -648,7 +652,6 @@ typedef struct InitArgs {
     /* XXX NVM CHANGE 001.000 - Parameter  */
     int persistent_heap;
     char *heap_file;
-
     int testing_mode;
 
     Property *commandline_props;

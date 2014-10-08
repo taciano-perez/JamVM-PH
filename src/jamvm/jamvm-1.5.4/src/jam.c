@@ -35,6 +35,9 @@
 #define BCP_MESSAGE "<directories separated by :>"
 #endif
 
+
+LogLevel logLevel;
+
 void showNonStandardOptions() {
     printf("  -Xbootclasspath:%s\n", BCP_MESSAGE);
     printf("\t\t   locations where to find the system classes\n");
@@ -238,10 +241,13 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
                 goto exit;
             }
 
-            /* XXX NVM CHANGE 001.001 */
-        } else if(strncmp(argv[i], "-persistentheap:", 16) == 0) {
-            args->persistent_heap = TRUE;
-            args->heap_file = argv[i] + 16;
+			/* XXX NVM CHANGE 001.001 */
+		} else if (strncmp(argv[i], "-persistentheap:", 16) == 0) {
+			args->persistent_heap = TRUE;
+			args->heap_file = argv[i] + 16;
+
+		} else if (strncmp(argv[i], "-testingmode", 12) == 0) {
+			args->testing_mode = TRUE;
 
         } else if(strncmp(argv[i], "-D", 2) == 0) {
             char *key = strcpy(sysMalloc(strlen(argv[i] + 2) + 1), argv[i] + 2);
@@ -364,8 +370,8 @@ int main(int argc, char *argv[]) {
     args.main_stack_base = &array_class;
     initVM(&args);
 
-   if((system_loader = getSystemClassLoader()) == NULL)
-        goto error;
+    if ((system_loader = getSystemClassLoader()) == NULL)
+    	goto error;
 
     mainThreadSetContextClassLoader(system_loader);
 
