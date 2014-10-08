@@ -2051,7 +2051,7 @@ void initialiseClass(InitArgs *args) {
     setClassPath(args->classpath);
 
     /* Init hash table, and create lock */
-    /* XXX NVM CHANGE 005.001.002 - BC/BP HT - N/Y*/
+    /* XXX NVM CHANGE 005.001.002 - BC/BP HT - Y/Y*/
     initHashTable(boot_classes,  CLASS_INITSZE, TRUE, boot_name,  TRUE);
     initHashTable(boot_packages, PCKG_INITSZE,  TRUE, bootp_name, TRUE);
     loader_data_class = findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData));
