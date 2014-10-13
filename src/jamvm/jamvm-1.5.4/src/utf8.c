@@ -23,6 +23,10 @@
 #include <stdlib.h>
 #include "jam.h"
 #include "hash.h"
+
+// XXX NVM CHANGE GLOBAL VARIABLES - UTF-8
+static int testing_mode = FALSE;
+
 // todo FIX THIS
 //Changed Default size of UTF8 hash 1 << 10
 #define HASHTABSZE 1<<13
@@ -137,7 +141,11 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
     return buff;
 }
 
-void initialiseUtf8() {
+void initialiseUtf8(InitArgs *args) {
+	if(args->testing_mode == TRUE)
+	{
+		testing_mode = TRUE;
+	}
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y*/
     initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);

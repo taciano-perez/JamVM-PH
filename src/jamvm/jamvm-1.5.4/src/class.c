@@ -77,6 +77,7 @@ static HashTable boot_packages;
 static char* boot_name = "boot_cl_ht";
 static char* class_name = "classes_ht";
 static char* bootp_name = "boot_pck_ht";
+static int testing_mode = FALSE;
 
 /* Hashtable entry for each package defined by the boot loader */
 typedef struct package_entry {
@@ -138,8 +139,18 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
 
                 /* XXX NVM CHANGE 004.001.001    */
                 table = sysMalloc_persistent(sizeof(HashTable));
+
+                if(testing_mode)
+                {
+                	char log_string[80];
+                	sprintf(log_string, "Initialized hash table %s at %p with initial size %d", class_name, table, CLASS_INITSZE);
+                	log(DEBUG, log_string);
+                }
                 /* XXX NVM CHANGE 005.001.001 - Classes HT - Y*/
                 initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
+
+
+
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
 
@@ -2037,7 +2048,11 @@ out:
 }
 
 void initialiseClass(InitArgs *args) {
-    char *bcp = setBootClassPath(args->bootpath, args->bootpathopt);
+    if(args->testing_mode == TRUE)
+    {
+    	testing_mode = TRUE;
+    }
+	char *bcp = setBootClassPath(args->bootpath, args->bootpathopt);
     FieldBlock *hashtable = NULL;
     Class *loader_data_class;
     Class *vm_loader_class;

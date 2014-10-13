@@ -33,6 +33,9 @@
 #include "symbol.h"
 #include "excep.h"
 
+// XXX NVM CHANGE GLOBAL VARIABLES - DLL
+static int testing_mode = FALSE;
+
 /* Set by call to initialise -- if true, prints out
     results of dynamic method resolution */
 static int verbose;
@@ -222,6 +225,10 @@ void initialiseDll(InitArgs *args) {
 #ifndef NO_JNI
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.004 - DLL HT - N */
+	if(args->testing_mode == TRUE)
+	{
+		testing_mode = TRUE;
+	}
 	initHashTable(hash_table, HASHTABSZE, TRUE, (char*)"dll_ht", FALSE);
 #endif
     verbose = args->verbosedll;

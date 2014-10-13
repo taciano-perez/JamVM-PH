@@ -105,7 +105,9 @@
  */
 
 /*	XXX	NVM VARIABLES - ALLOC.C	*/
-static int is_persistent = 0;
+static int is_persistent = FALSE;
+static int testing_mode = FALSE;
+
 
 /* HEAP MEM ADDRESS */
 #define HEAPADDR 		0xaf497000
@@ -335,7 +337,6 @@ void initialiseNVM(){
 	nvm = (char*) mmap(NVM_ADDRESS, nvmCurrentSize, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, nvm_fd, 0);
 	msync(nvm, nvmCurrentSize, MS_SYNC);
 	nvm_limit = (unsigned int) nvm + nvmCurrentSize;
-	printf ("NVM: %p\n",nvm);
 
 	if (nvm == -1){
 		int errsv = errno;
@@ -349,6 +350,13 @@ void initialiseNVM(){
 		case ENOMEM: printf("ERROR: ENOMEM\n");
 					 break;
 		}
+	}
+
+	if (testing_mode == TRUE)
+	{
+		char log_string[80];
+		sprintf(log_string, "Created NVM Memory an %p with size %d", nvm, nvmCurrentSize);
+		log(DEBUG,log_string);
 	}
 	/* 1st chunk =  all mem */
 	nvmfreelist = (nvmChunk*) nvm;
@@ -368,8 +376,13 @@ void initialiseAlloc(InitArgs *args) {
 	maxHeap = args->max_heap;
 	unsigned int volatile * const heapMemAddr = (unsigned int *) HEAPADDR;
 
+	if(args->testing_mode == TRUE)
+	{
+		testing_mode = TRUE;
+	}
+
 	if(args->persistent_heap == TRUE){
-		is_persistent = 1;
+		is_persistent = TRUE;
 		if( access(args->heap_file, F_OK ) != -1 ) {
 			fd = open (args->heap_file, O_RDWR | O_CREAT | O_APPEND , S_IRUSR | S_IWUSR);
 			file = TRUE;
@@ -1877,6 +1890,7 @@ void referenceHandlerThreadLoop(Thread *self) {
 }
 
 void initialiseGC(InitArgs *args) {
+
 	/* Pre-allocate an OutOfMemoryError exception object - we throw it
 	 * when we're really low on heap space, and can create FA... */
 
@@ -2315,13 +2329,29 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 	uintptr_t *mem;
 	int fd;
 	if (is_persistent && create_file){
-			fd = open (name, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
-			lseek (fd, size-1, SEEK_SET);
-			write(fd,"",1);
-				mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+		fd = open (name, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+		lseek (fd, size-1, SEEK_SET);
+		write(fd,"",1);
+		mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 
-			msync(mem, size, MS_SYNC);
-			printf("name %s \tmem %p \tsize %d\n", name, mem, size);
+		msync(mem, size, MS_SYNC);
+
+		if(testing_mode == TRUE)
+		{
+			char log_string[80], function_string[80];
+			sprintf(log_string, "Allocated %s at %p with size %d", name, mem, size);
+			log(DEBUG, log_string);
+
+			sprintf(function_string, "GcMemMalloc for %s", name);
+			if(mem == MAP_FAILED)
+			{
+				log_test_results(function_string, FALSE);
+			}
+			else
+			{
+				log_test_results(function_string, TRUE);
+			}
+		}
 
 	}else
 		mem = mmap(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);

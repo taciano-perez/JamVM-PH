@@ -78,12 +78,12 @@ void initVM(InitArgs *args) {
     initialiseProperties(args);
     initialiseAlloc(args);
     initialiseDll(args);
-    initialiseUtf8();
+    initialiseUtf8(args);
     initialiseThreadStage1(args);
     initialiseSymbol();
     initialiseClass(args);
-    initialiseMonitor();
-    initialiseString();
+    initialiseMonitor(args);
+    initialiseString(args);
     initialiseException();
     initialiseNatives();
     initialiseJNI();
