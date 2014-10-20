@@ -39,11 +39,13 @@ extern void resizeHash(HashTable *table, int new_size, char* name, int create_fi
 extern void lockHashTable0(HashTable *table, Thread *self);
 extern void unlockHashTable0(HashTable *table, Thread *self);
 
-/* XXX NVM CHANGE 006.001 - Init Hash = GMM */
+/* XXX NVM CHANGE 006.001 - Init HT = GMM */
+//todo Memset
+//memset(table.hash_table, 0, sizeof(HashEntry)*initial_size);                   \
+
 #define initHashTable(table, initial_size, create_lock, name, create_file)         \
 {                                                                                  \
     table.hash_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*initial_size, name, create_file);    \
-    memset(table.hash_table, 0, sizeof(HashEntry)*initial_size);                   \
     table.hash_size = initial_size;                                                \
     table.hash_count = 0;                                                          \
     if(create_lock)                                                                \

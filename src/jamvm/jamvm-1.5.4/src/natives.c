@@ -41,6 +41,10 @@
 static int pd_offset;
 
 void initialiseNatives() {
+	//todo fix this
+	if (java_lang_Class == NULL)
+		java_lang_Class = (unsigned int)0xaf4970a0;
+
     FieldBlock *pd = findField(java_lang_Class, SYMBOL(pd),
                                SYMBOL(sig_java_security_ProtectionDomain));
 

@@ -123,7 +123,7 @@ static int is_persistent = 0;
  static char *nvm;
  static int nvm_fd;
  static int nvmHeaderSize = sizeof(nvmChunk);
- static int minSize = (sizeof(nvmChunk)+sizeof(void*));
+ static int minSize = (0x3 + sizeof(nvmChunk) + sizeof(void*));
  static unsigned int nvmFreeSpace = 0;
  static unsigned int nvmCurrentSize = NVM_INIT_SIZE;
  static unsigned long nvm_limit;
@@ -325,7 +325,7 @@ void clearMarkBits() {
 void initialiseNVM(){
 	int file = FALSE;
 	if( access( "Memory", F_OK ) != -1 ) {
-		nvm_fd = open ("Memory", O_RDWR | O_CREAT | O_APPEND , S_IRUSR | S_IWUSR);
+		nvm_fd = open ("Memory", O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
 		file = TRUE;
 	}else{
 		nvm_fd = open ("Memory", O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
@@ -371,7 +371,7 @@ void initialiseAlloc(InitArgs *args) {
 	if(args->persistent_heap == TRUE){
 		is_persistent = 1;
 		if( access(args->heap_file, F_OK ) != -1 ) {
-			fd = open (args->heap_file, O_RDWR | O_CREAT | O_APPEND , S_IRUSR | S_IWUSR);
+			fd = open (args->heap_file, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
 			file = TRUE;
 		}else{
 			fd = open (args->heap_file, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
@@ -2315,14 +2315,23 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 	uintptr_t *mem;
 	int fd;
 	if (is_persistent && create_file){
+		unsigned int buffer[1];
+		size = size + sizeof(unsigned int);
+		if( access( name, F_OK ) != -1 ) {
+			fd = open (name, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
+			read(fd, &buffer, sizeof(unsigned int)+sizeof(uintptr_t));
+
+			mem = (uintptr_t*)mmap((unsigned int)buffer[0],buffer[1], PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+			*mem++ = (unsigned int)mem;
+		}else{
 			fd = open (name, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
 			lseek (fd, size-1, SEEK_SET);
 			write(fd,"",1);
-				mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-
+			mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+			*mem++ = (unsigned int)mem;
+		}
 			msync(mem, size, MS_SYNC);
-			printf("name %s \tmem %p \tsize %d\n", name, mem, size);
-
+			printf("name %s\taddress %p \n", name, mem);
 	}else
 		mem = mmap(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
 
@@ -2335,8 +2344,6 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 }
 
 /* XXX NVM CHANGE 005.002 - GcMemRealloc
- * XXX NVM CHANGE 007.000 - MSYNC
- * Not used for data state
  */
 void *gcMemRealloc(void *addr, int size, char* name, int create_file) {
 	if(addr == NULL)
@@ -2446,6 +2453,7 @@ void *sysMalloc_persistent(int size){
 		void *ret_addr = NULL;
 		nvmChunk *found = NULL;
 		nvmChunk **iterate  = &nvmfreelist;
+		int shift = 0;
 
 		while (*iterate){
 			/*	search unallocated chunk		*/
@@ -2459,21 +2467,25 @@ void *sysMalloc_persistent(int size){
 				found = *iterate;
 				found->allocBit = 1;
 				/*	check if remaining space can hold a chunk		*/
-				if((int)(len - (n + nvmHeaderSize)) >= minSize) {
+				if((int)(len - (nvmHeaderSize + n)) >= minSize) {
 					nvmChunk *rem = NULL;
-
 					/*	ptr +	header	+ content = OK	*/
 					rem = ((char*)found + nvmHeaderSize + n);
+
+					if (shift = (unsigned int)rem & 0x3){
+						shift = (0x4 - shift);
+						memset(rem, 0 , shift);
+						rem = ((char*)rem + shift);
+					}
 					rem->allocBit = 0;
-					rem->chunkSize = len - (n + nvmHeaderSize);
+					rem->chunkSize = len - (shift + nvmHeaderSize + n);
 					rem->next = found->next;
 
 					found->chunkSize = n;
 					/* A -> Found -> Rem -> Found->next */
 					found->next = rem;
-					nvmFreeSpace = nvmFreeSpace - nvmHeaderSize;
+					nvmFreeSpace = nvmFreeSpace - nvmHeaderSize - shift;
 				}
-
 				ret_addr = ((void*)found + nvmHeaderSize);
 				break;
 			}
@@ -2498,14 +2510,18 @@ void *sysMalloc_persistent(int size){
 
 /* XXX NVM CHANGE 004.003 - SysFree */
 void sysFree_persistent(void* addr){
-	unsigned int ptr = (unsigned int) addr;
-	/*	chunk = ptr - header */
-	nvmChunk *toFree = (ptr-nvmHeaderSize);
-	toFree->allocBit = 0;
-	nvmFreeSpace = nvmFreeSpace + toFree->chunkSize;
-	/* clear chunk */
-	memset(ptr, 0, toFree->chunkSize);
-	msync(nvm, nvmCurrentSize, MS_SYNC);
+	if(is_persistent){
+		unsigned int ptr = (unsigned int) addr;
+		/*	chunk = ptr - header */
+		nvmChunk *toFree = (ptr-nvmHeaderSize);
+		toFree->allocBit = 0;
+		nvmFreeSpace = nvmFreeSpace + toFree->chunkSize;
+		/* clear chunk */
+		memset(ptr, 0, toFree->chunkSize);
+		msync(nvm, nvmCurrentSize, MS_SYNC);
+	}else
+		sysFree(addr);
+
 }
 
 /* XXX NVM CHANGE 004.002 - SysRealloc */

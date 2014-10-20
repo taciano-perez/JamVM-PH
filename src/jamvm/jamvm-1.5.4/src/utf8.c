@@ -23,8 +23,7 @@
 #include <stdlib.h>
 #include "jam.h"
 #include "hash.h"
-// todo FIX THIS
-//Changed Default size of UTF8 hash 1 << 10
+// todo FIX THIS 1 << 10
 #define HASHTABSZE 1<<13
 #define HASH(ptr) utf8Hash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (ptr1 == ptr2) || \

@@ -41,6 +41,7 @@ MethodBlock *findMethod(Class *class, char *methodname, char *type) {
    types, we used to give up if we found a field with the right name but wrong
    type.  However, obfuscators rename fields, breaking this optimisation.
 */
+
 FieldBlock *findField(Class *class, char *fieldname, char *type) {
     ClassBlock *cb = CLASS_CB(class);
     FieldBlock *fb = cb->fields;

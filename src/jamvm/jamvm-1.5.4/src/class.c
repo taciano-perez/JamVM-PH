@@ -74,9 +74,10 @@ static Class *package_array_class;
 #define PCKG_INITSZE 1<<6
 static HashTable boot_packages;
 /*	XXX	NVM VARIABLES - CLASS.C	*/
-static char* boot_name = "boot_cl_ht";
+static char* boot_name = "bootCl_ht";
 static char* class_name = "classes_ht";
-static char* bootp_name = "boot_pck_ht";
+static char* bootp_name = "bootPck_ht";
+static int is_persistent = 0;
 
 /* Hashtable entry for each package defined by the boot loader */
 typedef struct package_entry {
@@ -102,6 +103,7 @@ int enqueue_mtbl_idx;
 
 /* hash table containing classes loaded by the boot loader and
    internally created arrays */
+//todo FIX THIS 1 << 8
 #define CLASS_INITSZE 1<<9
 static HashTable boot_classes;
 
@@ -255,14 +257,16 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                char *buff, *utf8;
 
                READ_U2(length, ptr, len);
-               buff = sysMalloc(length+1);
+               /* XXX NVM CHANGE 004.001.028 */
+               buff = is_persistent ? sysMalloc_persistent(length+1) : sysMalloc(length+1);
                memcpy(buff, ptr, length);
                buff[length] = '\0';
                ptr += length;
                CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
 
                if(utf8 != buff)
-                   sysFree(buff);
+            	  /* XXX NVM CHANGE 005.000.001	*/
+                  is_persistent ? sysFree_persistent(buff) : sysFree(buff);
 
                break;
            }
@@ -404,7 +408,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
 
                 READ_U4(code_length, ptr, len);
             	/*	XXX NVM CHANGE 004.001.018 - CODE !!! */
-                method->code = sysMalloc(code_length);
+                method->code = sysMalloc_persistent(code_length);
                 memcpy(method->code, ptr, code_length);
                 ptr += code_length;
 
@@ -889,6 +893,7 @@ void linkClass(Class *class) {
    int new_itable_count;
    int itbl_idx, i, j;
    int spr_flags = 0;
+
 
    if(cb->state >= CLASS_LINKED)
        return;
@@ -2041,6 +2046,10 @@ void initialiseClass(InitArgs *args) {
     FieldBlock *hashtable = NULL;
     Class *loader_data_class;
     Class *vm_loader_class;
+
+    /* XXX NVM CHANGE 001.002 */
+	if(args->persistent_heap == TRUE)
+		is_persistent = 1;
 
     if(!(bcp && parseBootClassPath(bcp))) {
         jam_fprintf(stderr, "bootclasspath is empty!\n");

@@ -106,7 +106,6 @@ void prepare(MethodBlock *mb, const void ***handlers) {
 
 retry:
     code = mb->code;
-
     switch((uintptr_t)code & 0x3) {
         case PREPARED:
             unlockVMWaitLock(prepare_lock, self);
@@ -158,7 +157,7 @@ retry:
 
         if(pass == 1)
             /* XXX NVM CHANGE 004.001.027 - CODE !!!!  */
-            new_code = sysMalloc((ins_count + 1) * sizeof(Instruction));
+            new_code = sysMalloc_persistent((ins_count + 1) * sizeof(Instruction));
 
         for(ins_count = 0, pc = 0; pc < code_len; ins_count++) {
             int quickened = FALSE;
@@ -870,7 +869,7 @@ retry:
 
                         TRACE("Block start %d end %d length %d last opcode quickened %d\n",
                               ins_start, ins_count, block_len, quickened);
-
+                        //todo prepare info
                         if(quickened) {
                             QuickPrepareInfo *prepare_info;
 
@@ -946,6 +945,6 @@ retry:
     /* We don't need the old bytecode stream anymore */
     if(!(mb->access_flags & ACC_ABSTRACT))
         /* XXX NVM CHANGE 004.003.001 - CODE!!!  */
-        sysFree(code);
+        sysFree_persistent(code);
 }
 #endif
