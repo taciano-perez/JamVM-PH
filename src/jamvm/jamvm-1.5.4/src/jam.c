@@ -36,8 +36,6 @@
 #endif
 
 
-LogLevel logLevel;
-
 void showNonStandardOptions() {
     printf("  -Xbootclasspath:%s\n", BCP_MESSAGE);
     printf("\t\t   locations where to find the system classes\n");
@@ -364,11 +362,16 @@ int main(int argc, char *argv[]) {
     int status;
     int i;
 
+    log(INFO, "Entering JamVM Main");
+    initialise_log_file();
+    initialise_tests_file();
+
     setDefaultInitArgs(&args);
     class_arg = parseCommandLine(argc, argv, &args);
 
     args.main_stack_base = &array_class;
     initVM(&args);
+
 
     if ((system_loader = getSystemClassLoader()) == NULL)
     	goto error;
@@ -405,6 +408,8 @@ int main(int argc, char *argv[]) {
             if(!(args[i] = Cstr2String(argv[i])))
                 break;
 
+        log(INFO, "Entering Java Main");
+
         /* Call the main method */
         if(i == argc)
             executeStaticMethod(main_class, mb, array);
@@ -418,6 +423,9 @@ error:
 
     /* Wait for all but daemon threads to die */
     mainThreadWaitToExitVM();
+
+    log(INFO, "Exit");
+
     exitVM(status);
 
    /* Keep the compiler happy */

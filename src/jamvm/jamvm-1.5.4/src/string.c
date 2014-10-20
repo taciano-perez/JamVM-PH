@@ -42,6 +42,7 @@ static int offset_offset;
 static HashTable hash_table;
 /*	XXX	NVM VARIABLES - STRING.C	*/
 static char* string_name = "string_ht";
+static int testing_mode = FALSE;
 
 int stringHash(Object *ptr) {
     int len = INST_DATA(ptr, int, count_offset);
@@ -166,7 +167,11 @@ char *String2Cstr(Object *string) {
     return String2Buff0(string, buff, len);
 }
 
-void initialiseString() {
+void initialiseString(InitArgs *args) {
+	if(args->testing_mode == TRUE)
+	{
+		testing_mode = TRUE;
+	}
     FieldBlock *count = NULL, *value = NULL, *offset = NULL;
 
     string_class = findSystemClass0(SYMBOL(java_lang_String));

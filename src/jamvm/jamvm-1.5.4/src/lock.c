@@ -34,6 +34,9 @@
 #include "symbol.h"
 #include "excep.h"
 
+//XXX NVM GLOBAL VARIABLES - LOCK
+static int testing_mode = FALSE;
+
 /* Trace lock operations and inflation/deflation */
 #ifdef TRACELOCK
 #define TRACE(fmt, ...) jam_printf(fmt, ## __VA_ARGS__)
@@ -556,7 +559,11 @@ Thread *objectLockedBy(Object *obj) {
     return owner;
 }
 
-void initialiseMonitor() {
+void initialiseMonitor(InitArgs *args) {
+	if(args->testing_mode == TRUE)
+	{
+		testing_mode = TRUE;
+	}
     /* Init hash table, create lock */
     /* XXX NVM CHANGE 005.001.006 - Monitors HT - N*/
     initHashTable(mon_cache, HASHTABSZE, TRUE, monitor_name, FALSE);
