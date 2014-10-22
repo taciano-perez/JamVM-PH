@@ -229,7 +229,7 @@ void initialiseDll(InitArgs *args) {
 	{
 		testing_mode = TRUE;
 	}
-	initHashTable(hash_table, HASHTABSZE, TRUE, (char*)"dll_ht", FALSE);
+	initHashTable(hash_table, HASHTABSZE, TRUE, (char*)"dll_ht", TRUE);
 #endif
     verbose = args->verbosedll;
 }
@@ -265,7 +265,7 @@ int resolveDll(char *name, Object *loader) {
 
     /* Do not add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.005  */
-    findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, (char*)"dll_ht", FALSE);
+    findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, (char*)"dll_ht", TRUE);
 
     if(dll == NULL) {
         DllEntry *dll2;
@@ -298,9 +298,9 @@ int resolveDll(char *name, Object *loader) {
 
         if(verbose)
            jam_printf("[Opened native library %s]\n", name);
-
-        dll = sysMalloc(sizeof(DllEntry));
-        dll->name = strcpy(sysMalloc(strlen(name) + 1), name);
+//todo persistent dll
+        dll = sysMalloc_persistent(sizeof(DllEntry));
+        dll->name = strcpy(sysMalloc_persistent(strlen(name) + 1), name);
         dll->handle = handle;
         dll->loader = loader;
 
@@ -312,8 +312,8 @@ int resolveDll(char *name, Object *loader) {
 
         /* Add if absent, no scavenge, locked */
         /* XXX NVM CHANGE 006.003.006  */
-        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, (char*)"dll_ht", FALSE);
-
+        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, (char*)"dll_ht", TRUE);
+        log(TRACE,dll->name);
         /* If the library has an OnUnload function it must be
            called from a running Java thread (i.e. not within
            the GC!). Create an unloader object which will be

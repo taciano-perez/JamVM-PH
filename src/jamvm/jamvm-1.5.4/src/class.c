@@ -20,6 +20,7 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -78,6 +79,7 @@ static char* boot_name = "bootCl_ht";
 static char* class_name = "classes_ht";
 static char* bootp_name = "bootPck_ht";
 static int is_persistent = 0;
+static int second_ex = FALSE;
 static int testing_mode = FALSE;
 
 /* Hashtable entry for each package defined by the boot loader */
@@ -150,8 +152,8 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                 }
                 /* XXX NVM CHANGE 005.001.001 - Classes HT - Y*/
                 initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
-
-
+                //todo check this 2
+                second_ex = TRUE;
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
@@ -166,7 +168,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
 
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.001  */
-    if ((unsigned int)table == (unsigned int)&boot_classes){
+    if ((unsigned long)table == (unsigned long)&boot_classes){
     	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
     }else{
     	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, class_name, TRUE );
@@ -1447,6 +1449,8 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 
         table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
     }
+//	if( access( class_name, F_OK ) != -1 )
+//        initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
 
 #undef HASH
 #undef COMPARE
@@ -1456,7 +1460,7 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 
     /* Do not add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.003  */
-    if ((unsigned int)table == (unsigned int)&boot_classes){
+    if ((unsigned long)table == (unsigned long)&boot_classes){
 	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, boot_name, TRUE );
    }else{
 	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, class_name, TRUE );
@@ -1549,6 +1553,14 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
+	// todo check this
+	if( (is_persistent) && (access( class_name, F_OK ) != -1) && (second_ex == FALSE)){
+		Object *vmdata = INST_DATA(loader, Object*, ldr_vmdata_offset);
+		HashTable *table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
+        initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
+        second_ex = TRUE;
+	}
+
     Class *class = findHashedClass(classname, loader);
 
     if(class == NULL) {
@@ -2063,8 +2075,11 @@ void initialiseClass(InitArgs *args) {
     Class *vm_loader_class;
 
     /* XXX NVM CHANGE 001.002 */
-	if(args->persistent_heap == TRUE)
+	if(args->persistent_heap == TRUE){
 		is_persistent = 1;
+		//todo fix this
+		ldr_vmdata_offset = 16;
+	}
 
     if(!(bcp && parseBootClassPath(bcp))) {
         jam_fprintf(stderr, "bootclasspath is empty!\n");

@@ -105,11 +105,13 @@ char *findHashedUtf8(char *string, int add_if_absent) {
 }
 
 char *copyUtf8(char *string) {
-    char *buff = strcpy(sysMalloc(strlen(string) + 1), string);
+	/*XXX NVM CHANGE 004.001.030	*/
+    char *buff = strcpy(sysMalloc_persistent(strlen(string) + 1), string);
     char *found = findHashedUtf8(buff, TRUE);
 
     if(found != buff)
-        sysFree(buff);
+   	/*XXX NVM CHANGE 004.003.003	*/
+        sysFree_persistent(buff);
 
     return found;
 }

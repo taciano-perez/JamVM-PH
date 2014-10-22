@@ -336,7 +336,7 @@ void initialiseNVM(){
 	}
 	nvm = (char*) mmap(NVM_ADDRESS, nvmCurrentSize, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, nvm_fd, 0);
 	msync(nvm, nvmCurrentSize, MS_SYNC);
-	nvm_limit = (unsigned int) nvm + nvmCurrentSize;
+	nvm_limit = (unsigned long) nvm + nvmCurrentSize;
 
 	if (nvm == -1){
 		int errsv = errno;
@@ -374,7 +374,7 @@ void initialiseAlloc(InitArgs *args) {
 	int file = FALSE;
 
 	maxHeap = args->max_heap;
-	unsigned int volatile * const heapMemAddr = (unsigned int *) HEAPADDR;
+	unsigned long volatile * const heapMemAddr = (unsigned long *) HEAPADDR;
 
 	if(args->testing_mode == TRUE)
 	{
@@ -393,6 +393,7 @@ void initialiseAlloc(InitArgs *args) {
 			write(fd,"",1);
 		}
 		heapMem = (char*)mmap(heapMemAddr, args->max_heap, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+		printf("heap %p\n", heapMem);
 		initialiseNVM();
 		msync(heapMem, args->max_heap, MS_SYNC);
 	}
@@ -2319,10 +2320,6 @@ unsigned long maxHeapMem() {
 
 /* XXX NVM CHANGE 005.001 - GcMemMalloc
  *  Added file to mmap in persistence mode
-//		if( access( name, F_OK ) != -1 ) {
-//			fd = open (name, O_RDWR | O_CREAT | O_APPEND , S_IRUSR | S_IWUSR);
-//			read(fd, &size, 4);
-//		}else{
  */
 void *gcMemMalloc(int n, char* name, int create_file) {
 	uintptr_t size = n + sizeof(uintptr_t);
@@ -2330,20 +2327,20 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 	int fd;
 
 	if (is_persistent && create_file){
-		unsigned int buffer[1];
-		size = size + sizeof(unsigned int);
+		unsigned long buffer[1];
+		size = size + sizeof(unsigned long);
 		if( access( name, F_OK ) != -1 ) {
 			fd = open (name, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
-			read(fd, &buffer, sizeof(unsigned int)+sizeof(uintptr_t));
+			read(fd, &buffer, sizeof(unsigned long)+sizeof(uintptr_t));
 
-			mem = (uintptr_t*)mmap((unsigned int)buffer[0],buffer[1], PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-			*mem++ = (unsigned int)mem;
+			mem = (uintptr_t*)mmap((unsigned long)buffer[0],buffer[1], PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+			*mem++ = (unsigned long)mem;
 		}else{
 			fd = open (name, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
 			lseek (fd, size-1, SEEK_SET);
 			write(fd,"",1);
 			mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-			*mem++ = (unsigned int)mem;
+			*mem++ = (unsigned long)mem;
 		}
 			if(testing_mode == TRUE){
 				char log_string[80], function_string[80];
@@ -2542,7 +2539,7 @@ void *sysMalloc_persistent(int size){
 /* XXX NVM CHANGE 004.003 - SysFree */
 void sysFree_persistent(void* addr){
 	if(is_persistent){
-		unsigned int ptr = (unsigned int) addr;
+		unsigned long ptr = (unsigned long) addr;
 		/*	chunk = ptr - header */
 		nvmChunk *toFree = (ptr-nvmHeaderSize);
 		toFree->allocBit = 0;
