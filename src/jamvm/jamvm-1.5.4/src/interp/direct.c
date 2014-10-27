@@ -51,7 +51,6 @@
 #define DEPTH_UNKNOWN -1
 
 /* Method preparation states */
-//TODO MASK 2 !!
 #define PREPARED   0
 #define UNPREPARED 1
 #define PREPARING  2
@@ -869,7 +868,6 @@ retry:
 
                         TRACE("Block start %d end %d length %d last opcode quickened %d\n",
                               ins_start, ins_count, block_len, quickened);
-                        //todo prepare info
                         if(quickened) {
                             QuickPrepareInfo *prepare_info;
 

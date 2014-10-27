@@ -33,7 +33,7 @@
 #include "symbol.h"
 #include "excep.h"
 
-// XXX NVM CHANGE GLOBAL VARIABLES - DLL
+/*	XXX	NVM VARIABLES - DLL.C	*/
 static int testing_mode = FALSE;
 
 /* Set by call to initialise -- if true, prints out
@@ -225,11 +225,10 @@ void initialiseDll(InitArgs *args) {
 #ifndef NO_JNI
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.004 - DLL HT - N */
-	if(args->testing_mode == TRUE)
-	{
+	if(args->testing_mode == TRUE)	{
 		testing_mode = TRUE;
 	}
-	initHashTable(hash_table, HASHTABSZE, TRUE, (char*)"dll_ht", TRUE);
+	initHashTable(hash_table, HASHTABSZE, TRUE, (char*)"dll_ht", FALSE);
 #endif
     verbose = args->verbosedll;
 }
@@ -252,6 +251,7 @@ int dllNameHash(char *name) {
 
 int resolveDll(char *name, Object *loader) {
     DllEntry *dll;
+    log(TRACE,name);
 
     TRACE("<DLL: Attempting to resolve library %s>\n", name);
 
@@ -265,7 +265,7 @@ int resolveDll(char *name, Object *loader) {
 
     /* Do not add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.005  */
-    findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, (char*)"dll_ht", TRUE);
+    findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, (char*)"dll_ht", FALSE);
 
     if(dll == NULL) {
         DllEntry *dll2;
@@ -298,8 +298,9 @@ int resolveDll(char *name, Object *loader) {
 
         if(verbose)
            jam_printf("[Opened native library %s]\n", name);
-//todo persistent dll
+        /*XXX NVM CHANGE 004.001.031	*/
         dll = sysMalloc_persistent(sizeof(DllEntry));
+        /*XXX NVM CHANGE 004.001.032	*/
         dll->name = strcpy(sysMalloc_persistent(strlen(name) + 1), name);
         dll->handle = handle;
         dll->loader = loader;
@@ -312,8 +313,8 @@ int resolveDll(char *name, Object *loader) {
 
         /* Add if absent, no scavenge, locked */
         /* XXX NVM CHANGE 006.003.006  */
-        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, (char*)"dll_ht", TRUE);
-        log(TRACE,dll->name);
+        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, (char*)"dll_ht", FALSE);
+
         /* If the library has an OnUnload function it must be
            called from a running Java thread (i.e. not within
            the GC!). Create an unloader object which will be
@@ -377,8 +378,10 @@ void unloadDll(DllEntry *dll, int unloader) {
         }
 
         nativeLibClose(dll->handle);
-        sysFree(dll->name);
-        sysFree(dll);
+        /*XXX NVM CHANGE 004.003.004	*/
+        sysFree_persistent(dll->name);
+        /*XXX NVM CHANGE 004.003.005	*/
+        sysFree_persistent(dll);
     }
 }
 

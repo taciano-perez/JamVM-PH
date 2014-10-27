@@ -106,7 +106,8 @@ int enqueue_mtbl_idx;
 
 /* hash table containing classes loaded by the boot loader and
    internally created arrays */
-//todo FIX THIS 1 << 8
+//todo HT SIZE
+//1 << 8
 #define CLASS_INITSZE 1<<9
 static HashTable boot_classes;
 
@@ -152,7 +153,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                 }
                 /* XXX NVM CHANGE 005.001.001 - Classes HT - Y*/
                 initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
-                //todo check this 2
+                //todo DOC CHANGE
                 second_ex = TRUE;
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
@@ -977,7 +978,6 @@ void linkClass(Class *class) {
        else  {
            /* Set the bottom bit of the pointer to indicate the
               method is unprepared */
-    	   // todo MASK !!
            mb->code = ((char*)mb->code) + 1;
        }
 #endif
@@ -1553,7 +1553,7 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
-	// todo check this
+	// todo DOC CHANGE
 	if( (is_persistent) && (access( class_name, F_OK ) != -1) && (second_ex == FALSE)){
 		Object *vmdata = INST_DATA(loader, Object*, ldr_vmdata_offset);
 		HashTable *table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
@@ -2077,7 +2077,7 @@ void initialiseClass(InitArgs *args) {
     /* XXX NVM CHANGE 001.002 */
 	if(args->persistent_heap == TRUE){
 		is_persistent = 1;
-		//todo fix this
+		//todo HARD CODE
 		ldr_vmdata_offset = 16;
 	}
 

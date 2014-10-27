@@ -41,7 +41,7 @@
 static int pd_offset;
 
 void initialiseNatives() {
-	//todo fix this
+	//todo HARD CODE
 	if (java_lang_Class == NULL)
 		java_lang_Class = (unsigned long)0xaf497110;
 
