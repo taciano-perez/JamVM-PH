@@ -155,7 +155,7 @@ retry:
         int pc;
 
         if(pass == 1)
-            /* XXX NVM CHANGE 004.001.027 - CODE !!!!  */
+            /* XXX NVM CHANGE 004.001.027 */
             new_code = sysMalloc_persistent((ins_count + 1) * sizeof(Instruction));
 
         for(ins_count = 0, pc = 0; pc < code_len; ins_count++) {
@@ -942,7 +942,7 @@ retry:
 
     /* We don't need the old bytecode stream anymore */
     if(!(mb->access_flags & ACC_ABSTRACT))
-        /* XXX NVM CHANGE 004.003.001 - CODE!!!  */
+        /* XXX NVM CHANGE 004.003.001  */
         sysFree_persistent(code);
 }
 #endif

@@ -153,7 +153,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                 }
                 /* XXX NVM CHANGE 005.001.001 - Classes HT - Y*/
                 initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
-                //todo DOC CHANGE
+                /* XXX NVM CHANGE 007.000.001 */
                 second_ex = TRUE;
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
@@ -421,7 +421,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                 READ_U2(method->max_locals, ptr, len);
 
                 READ_U4(code_length, ptr, len);
-            	/*	XXX NVM CHANGE 004.001.018 - CODE !!! */
+            	/*	XXX NVM CHANGE 004.001.018 */
                 method->code = sysMalloc_persistent(code_length);
                 memcpy(method->code, ptr, code_length);
                 ptr += code_length;
@@ -1553,7 +1553,10 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
-	// todo DOC CHANGE
+    /* XXX NVM CHANGE 007.000.001
+     * Had to ensure that hash table is not created twice during executions and
+     * that it can be used on second execution in persistent mode
+     */
 	if( (is_persistent) && (access( class_name, F_OK ) != -1) && (second_ex == FALSE)){
 		Object *vmdata = INST_DATA(loader, Object*, ldr_vmdata_offset);
 		HashTable *table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);

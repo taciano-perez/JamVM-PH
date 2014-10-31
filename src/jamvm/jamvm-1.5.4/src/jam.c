@@ -139,6 +139,7 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
     int is_jar = FALSE;
     int status = 1;
     int i;
+    args->persistent_heap = FALSE;
 
     Property props[argc-1];
     int props_count = 0;
