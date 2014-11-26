@@ -20,8 +20,8 @@ public class OPRuntime {
 
 	static {
 		// FIXME: GAMBIARRA
-		staticListeners = new HashSet<Class<?>>();
-		staticListeners.add(FileChannelImpl.class);
+		//staticListeners = new HashSet<Class<?>>();
+		//staticListeners.add(FileChannelImpl.class);
 	}
 	
 	
@@ -70,11 +70,11 @@ public class OPRuntime {
 				Class<?> clazz = it.next();
 				Method method;
 				try {
-					System.out.println("Getting resume method from class "+clazz);
+					//System.out.println("Getting resume method from class "+clazz);
 										
 					method = clazz.getMethod("resume", null);
 
-					System.out.println("Invoking static resume() method on class "+clazz);
+					//System.out.println("Invoking static resume() method on class "+clazz);
 					
 					method.invoke(null, (Object[])null);
 				} catch (NoSuchMethodException e) {
