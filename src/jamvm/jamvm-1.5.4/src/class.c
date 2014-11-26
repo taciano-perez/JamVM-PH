@@ -145,8 +145,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                 /* XXX NVM CHANGE 004.001.001    */
                 table = sysMalloc_persistent(sizeof(HashTable));
 
-                if(testing_mode)
-                {
+                if(testing_mode){
                 	char log_string[80];
                 	sprintf(log_string, "Initialized hash table %s at %p with initial size %d", class_name, table, CLASS_INITSZE);
                 	log(DEBUG, log_string);
@@ -1449,8 +1448,6 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 
         table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
     }
-//	if( access( class_name, F_OK ) != -1 )
-//        initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
 
 #undef HASH
 #undef COMPARE
@@ -1553,16 +1550,18 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
-    /* XXX NVM CHANGE 007.000.001
+    /* XXX NVM CHANGE 007.000.000
      * Had to ensure that hash table is not created twice during executions and
      * that it can be used on second execution in persistent mode
      */
+
 	if( (is_persistent) && (access( class_name, F_OK ) != -1) && (second_ex == FALSE)){
 		Object *vmdata = INST_DATA(loader, Object*, ldr_vmdata_offset);
 		HashTable *table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
         initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
         second_ex = TRUE;
 	}
+
 
     Class *class = findHashedClass(classname, loader);
 
@@ -2069,9 +2068,8 @@ out:
 
 void initialiseClass(InitArgs *args) {
     if(args->testing_mode == TRUE)
-    {
     	testing_mode = TRUE;
-    }
+
 	char *bcp = setBootClassPath(args->bootpath, args->bootpathopt);
     FieldBlock *hashtable = NULL;
     Class *loader_data_class;

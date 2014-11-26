@@ -352,19 +352,18 @@ void initialiseNVM(){
 		}
 	}
 
-	if (testing_mode == TRUE)
-	{
+	if (testing_mode == TRUE){
 		char log_string[80];
 		sprintf(log_string, "Created NVM Memory an %p with size %d", nvm, nvmCurrentSize);
 		log(DEBUG,log_string);
 	}
 	/* 1st chunk =  all mem */
 	nvmfreelist = (nvmChunk*) nvm;
-//	if (!file){
+	if (!file){
 		nvmfreelist->chunkSize = nvmFreeSpace = (nvmCurrentSize - nvmHeaderSize);
 		nvmfreelist->allocBit = 0;
 		nvmfreelist->next = NULL;
-//	}
+	}
 }
 /* XXX NVM CHANGE 003.000 - InitAlloc
  * Changed InitialiseAlloc to hold persistence
@@ -377,9 +376,7 @@ void initialiseAlloc(InitArgs *args) {
 	unsigned long volatile * const heapMemAddr = (unsigned long *) HEAPADDR;
 
 	if(args->testing_mode == TRUE)
-	{
 		testing_mode = TRUE;
-	}
 
 	if(args->persistent_heap == TRUE){
 		is_persistent = TRUE;
@@ -393,7 +390,6 @@ void initialiseAlloc(InitArgs *args) {
 			write(fd,"",1);
 		}
 		heapMem = (char*)mmap(heapMemAddr, args->max_heap, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-		printf("heap %p\n", heapMem);
 		initialiseNVM();
 		msync(heapMem, args->max_heap, MS_SYNC);
 	}
@@ -2345,15 +2341,12 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 			if(testing_mode == TRUE){
 				char log_string[80], function_string[80];
 				sprintf(log_string, "Allocated %s at %p with size %d", name, mem, size);
-				log(DEBUG, log_string);
+				//log(DEBUG, log_string);
 
 				sprintf(function_string, "GcMemMalloc for %s", name);
-				if(mem == MAP_FAILED)
-				{
+				if(mem == MAP_FAILED)				{
 					log_test_results(function_string, FALSE);
-				}
-				else
-				{
+				}else{
 					log_test_results(function_string, TRUE);
 				}
 			}

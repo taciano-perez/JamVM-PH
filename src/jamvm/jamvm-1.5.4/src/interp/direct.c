@@ -71,7 +71,7 @@ void initialiseDirect(InitArgs *args) {
 #endif
     initVMWaitLock(prepare_lock);
 }
-
+//todo code changes here in 1st exec
 void prepare(MethodBlock *mb, const void ***handlers) {
     int code_len = mb->code_size;
 #ifdef USE_CACHE

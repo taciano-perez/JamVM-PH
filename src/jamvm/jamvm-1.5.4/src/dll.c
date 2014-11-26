@@ -232,7 +232,9 @@ typedef struct {
     Object *loader;
 } DllEntry;
 
-//todo DOC CHANGE
+/* XXX NVM CHANGE 008.000.000
+ * Created method to reload dlls used on previous run
+ */
 void reloadDlls(InitArgs *args){
 	DllEntry *dll;
 	FILE *fp;
@@ -241,6 +243,7 @@ void reloadDlls(InitArgs *args){
 	ssize_t read;
 
 	if((args->persistent_heap) && (access("dlls.txt", F_OK) != -1 ) ){
+		/* XXX NVM CHANGE 007.000.002 */
 		second_ex = TRUE;
 		fp = fopen("dlls.txt", "r+");
 		if (fp == NULL)
@@ -257,7 +260,7 @@ void reloadDlls(InitArgs *args){
 void initialiseDll(InitArgs *args) {
 #ifndef NO_JNI
     /* Init hash table, and create lock */
-    /* XXX NVM CHANGE 005.001.004 - DLL HT - Y */
+    /* XXX NVM CHANGE 005.001.004 - DLL HT - N */
 	initHashTable(hash_table, HASHTABSZE, TRUE, dll_ht_name, FALSE);
 	reloadDlls(args);
 
@@ -283,7 +286,7 @@ int dllNameHash(char *name) {
 
 int resolveDll(char *name, Object *loader) {
     DllEntry *dll;
-    // todo DOC CHANGE
+    /* XXX NVM CHANGE 008.000.001	*/
     FILE *f = fopen("dlls.txt","a+");
     TRACE("<DLL: Attempting to resolve library %s>\n", name);
 
@@ -344,7 +347,7 @@ int resolveDll(char *name, Object *loader) {
         /* Add if absent, no scavenge, locked */
         /* XXX NVM CHANGE 006.003.006  */
         findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, dll_ht_name, FALSE);
-        //todo DOC CHANGE
+        /* XXX NVM CHANGE 008.000.002	*/
         if (is_persistent){
         	FILE * fp;
         	fp = fopen("dlls.txt", "a+");
@@ -472,16 +475,16 @@ void unloadClassLoaderDlls(Object *loader) {
 static void *env = &Jam_JNINativeInterface;
 
 uintptr_t *callJNIWrapper(Class *class, MethodBlock *mb, uintptr_t *ostack) {
-    MethodBlock *load_mb;
 	TRACE("<DLL: Calling JNI method %s.%s%s>\n", CLASS_CB(class)->name,
           mb->name, mb->type);
 
-	//todo DOC CHANGE
+	/* XXX NVM CHANGE 007.000.003 */
 	if (second_ex)
 		lookupLoadedDlls(mb);
 
     if(!initJNILrefs())
         return NULL;
+
 
     return callJNIMethod(&env, (mb->access_flags & ACC_STATIC) ? class : NULL,
                          mb->type, mb->native_extra_arg, ostack, mb->code,

@@ -2140,13 +2140,21 @@ uintptr_t *executeJava() {
 
     DEF_OPC_210(OPC_INVOKEVIRTUAL_QUICK, {
         Class *new_class;
+//        ClassBlock *cb_teste;
+//       printf("Arg1 antes %p\n",arg1);
 
         arg1 = ostack - INV_QUICK_ARGS(pc);
+//        printf("Arg1 depois %p\n",arg1);
         NULL_POINTER_CHECK(*arg1);
+//        printf("Arg1 Null pointer %p\n",arg1);
 
         new_class = (*(Object **)arg1)->class;
+//      printf("Arg1 new class name %s\n",CLASS_CB(new_class)->name);
+//      printf("Arg1 new class %p\n", new_class);
+//        cb_teste = CLASS_CB(new_class);
+//        printf("Method table %p\n",(cb_teste)->method_table);
         new_mb = CLASS_CB(new_class)->method_table[INV_QUICK_IDX(pc)];
-
+//        printf("Arg1 new mb %p\n",new_mb);
         goto invokeMethod;
     })
 

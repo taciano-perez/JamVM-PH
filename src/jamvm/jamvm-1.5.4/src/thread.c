@@ -1154,7 +1154,7 @@ void exitVM(int status) {
 
     if(!VMInitialising()) {
         Class *system = findSystemClass(SYMBOL(java_lang_System));
-        if(system) {
+        if(system) { // todo Code wrong in 2nd exec
             MethodBlock *exit = findMethod(system, SYMBOL(exit), SYMBOL(_I__V));
             if(exit)
                 executeStaticMethod(system, exit, status);

@@ -72,11 +72,14 @@ void initialiseJNI() {
     /* Cache class and method/fields for JNI 1.4 NIO support */
 
     buffer_class = findSystemClass0(SYMBOL(java_nio_Buffer));
+
     buffImpl_class = findSystemClass0(
                          SYMBOL(java_nio_DirectByteBufferImpl_ReadWrite));
+
     rawdata_class = findSystemClass0(sizeof(uintptr_t) == 4
                                             ? SYMBOL(gnu_classpath_Pointer32)
                                             : SYMBOL(gnu_classpath_Pointer64));
+
 
     if(buffer_class == NULL || buffImpl_class == NULL || rawdata_class == NULL)
         return;

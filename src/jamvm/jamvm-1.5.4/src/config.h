@@ -178,7 +178,7 @@
 /* #undef TRACETHREAD */
 
 /* interpreter uses caching */
-#define USE_CACHE 1
+/* #undef USE_CACHE */
 
 /* use FFI */
 #define USE_FFI 1

@@ -353,6 +353,32 @@ exit:
     exit(status);
 }
 
+
+
+int resumeAllListeners(Object *system_loader)
+{
+	Class *op_runtime = findClassFromClassLoader("javax.op.OPRuntime", system_loader);
+
+    if(op_runtime != NULL)
+        initClass(op_runtime); //todo finish io_fd loading / exists - close /
+
+    if(exceptionOccurred())
+        return FALSE;
+
+    MethodBlock *mb = lookupMethod(op_runtime, SYMBOL(resumeAllListeners),
+                                  SYMBOL(___V));
+
+    if(mb == NULL || !(mb->access_flags & ACC_STATIC)) {
+        signalException(java_lang_NoSuchMethodError, "resumeAllListeners");
+        return FALSE;
+    }
+
+    executeStaticMethod(op_runtime, mb, NULL);
+
+    return TRUE;
+
+}
+
 int main(int argc, char *argv[]) {
     Class *array_class, *main_class;
     Object *system_loader, *array;
@@ -372,20 +398,23 @@ int main(int argc, char *argv[]) {
 
     args.main_stack_base = &array_class;
     initVM(&args);
+    log(INFO,"VM initialized");
 
-
-    if ((system_loader = getSystemClassLoader()) == NULL)
+    if ((system_loader = getSystemClassLoader()) == NULL) //todo start io_fd loading / init- is_dir /
     	goto error;
 
     mainThreadSetContextClassLoader(system_loader);
+
+    resumeAllListeners(system_loader);
 
     for(cpntr = argv[class_arg]; *cpntr; cpntr++)
         if(*cpntr == '.')
             *cpntr = '/';
 
     main_class = findClassFromClassLoader(argv[class_arg], system_loader);
+
     if(main_class != NULL)
-        initClass(main_class);
+        initClass(main_class); //todo finish io_fd loading / exists - close /
 
     if(exceptionOccurred())
         goto error;
@@ -426,7 +455,6 @@ error:
     mainThreadWaitToExitVM();
 
     log(INFO, "Exit");
-
     exitVM(status);
 
    /* Keep the compiler happy */

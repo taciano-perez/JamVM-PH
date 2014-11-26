@@ -83,7 +83,7 @@ int utf8Hash(char *utf8) {
 }
 
 int utf8Comp(char *ptr, char *ptr2) {
-    while(*ptr && *ptr2) {
+     while(*ptr && *ptr2) {
         unsigned short c, c2;
 
         GET_UTF8_CHAR(ptr, c);
