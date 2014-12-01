@@ -358,9 +358,10 @@ exit:
 int resumeAllListeners(Object *system_loader)
 {
 	Class *op_runtime = findClassFromClassLoader("javax.op.OPRuntime", system_loader);
+	Class *vm_channel = findClassFromClassLoader("gnu.java.nio.VMChannel", system_loader);
 
     if(op_runtime != NULL)
-        initClass(op_runtime); //todo finish io_fd loading / exists - close /
+        initClass(op_runtime);
 
     if(exceptionOccurred())
         return FALSE;
@@ -374,6 +375,16 @@ int resumeAllListeners(Object *system_loader)
     }
 
     executeStaticMethod(op_runtime, mb, NULL);
+
+
+    if(vm_channel != NULL)
+    	initClass(vm_channel);
+
+    if(exceptionOccurred())
+    	return FALSE;
+
+    if((mb = findMethod(vm_channel, SYMBOL(class_init), SYMBOL(___V))) != NULL)
+         executeStaticMethod(vm_channel, mb);
 
     return TRUE;
 
@@ -400,7 +411,7 @@ int main(int argc, char *argv[]) {
     initVM(&args);
     log(INFO,"VM initialized");
 
-    if ((system_loader = getSystemClassLoader()) == NULL) //todo start io_fd loading / init- is_dir /
+    if ((system_loader = getSystemClassLoader()) == NULL)
     	goto error;
 
     mainThreadSetContextClassLoader(system_loader);
@@ -414,7 +425,7 @@ int main(int argc, char *argv[]) {
     main_class = findClassFromClassLoader(argv[class_arg], system_loader);
 
     if(main_class != NULL)
-        initClass(main_class); //todo finish io_fd loading / exists - close /
+        initClass(main_class);
 
     if(exceptionOccurred())
         goto error;
@@ -455,6 +466,7 @@ error:
     mainThreadWaitToExitVM();
 
     log(INFO, "Exit");
+    // XXX NVM CHANGE
     exitVM(status);
 
    /* Keep the compiler happy */

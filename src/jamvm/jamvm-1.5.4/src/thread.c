@@ -1144,9 +1144,18 @@ Thread *findRunningThreadByTid(int tid) {
 
     return thread;
 }
-
+// XXX NVM CHANGE
 void exitVM(int status) {
-    main_exited = TRUE;
+	main_exited = TRUE;
+	// XXX NVM CHANGE
+	PHIV *ph_values = get_phiv_ptr();
+	ph_values->chunkpp = get_chunkpp();
+	ph_values->freelist_header = get_freelist_header();
+	ph_values->freelist_next = get_freelist_next();
+	ph_values->heapfree = get_heapfree();
+	ph_values->nvmFreeSpace = get_nvmFreeSpace();
+	ph_values->java_lang_Class =  get_java_lang_class();
+	ph_values->ldr_vmdata_offset = get_ldr_vmdata_offset();
 
     /* Execute System.exit() to run any registered shutdown hooks.
        In the unlikely event that System.exit() can't be found, or
@@ -1154,7 +1163,7 @@ void exitVM(int status) {
 
     if(!VMInitialising()) {
         Class *system = findSystemClass(SYMBOL(java_lang_System));
-        if(system) { // todo Code wrong in 2nd exec
+        if(system) {
             MethodBlock *exit = findMethod(system, SYMBOL(exit), SYMBOL(_I__V));
             if(exit)
                 executeStaticMethod(system, exit, status);

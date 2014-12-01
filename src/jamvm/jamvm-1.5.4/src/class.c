@@ -2079,7 +2079,7 @@ void initialiseClass(InitArgs *args) {
 	if(args->persistent_heap == TRUE){
 		is_persistent = 1;
 		//todo HARD CODE
-		ldr_vmdata_offset = 16;
+		//ldr_vmdata_offset = 16;
 	}
 
     if(!(bcp && parseBootClassPath(bcp))) {
@@ -2130,3 +2130,11 @@ void initialiseClass(InitArgs *args) {
     registerStaticClassRef(&java_lang_Class);
 }
 
+//XXX NVM CHANGE
+int get_ldr_vmdata_offset(){
+	return ldr_vmdata_offset;
+}
+
+void set_ldr_vmdata_offset(int ldr){
+	ldr_vmdata_offset = ldr;
+}

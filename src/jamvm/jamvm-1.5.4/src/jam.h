@@ -677,6 +677,18 @@ typedef struct InitArgs {
 #endif
 } InitArgs;
 
+// XXX NVM CHANGE ---.---.---
+// Persistent Heap Important Values
+typedef struct phiv {
+	int ldr_vmdata_offset;
+	Class *java_lang_Class;
+	unsigned long chunkpp;
+	uintptr_t freelist_header;
+	struct chunk *freelist_next;
+	unsigned int heapfree;
+	unsigned int nvmFreeSpace;
+} PHIV;
+
 #define CLASS_CB(classRef)           ((ClassBlock*)(classRef+1))
 
 #define INST_DATA(obj, type, offset) *(type*)&((char*)obj)[offset]
@@ -792,6 +804,21 @@ extern void *sysRealloc(void *ptr, int n);
 extern void *sysMalloc_persistent(int n);
 extern void sysFree_persistent(void *addr);
 extern void *sysRealloc_persistent(void *ptr, int n);
+
+//XXX NVM CHANGE
+extern PHIV *get_phiv_ptr();
+
+extern unsigned long get_chunkpp();
+extern uintptr_t get_freelist_header();
+extern struct chunk *get_freelist_next();
+extern unsigned int get_heapfree();
+extern unsigned int get_nvmFreeSpace();
+extern int get_ldr_vmdata_offset();
+extern void set_ldr_vmdata_offset(int ldr);
+
+extern Class* get_java_lang_class();
+extern void set_java_lang_class(Class *clazz);
+
 
 /* XXX NVM CHANGE 005.000 - GcMem A.F
  * Changed functions args
@@ -1014,6 +1041,7 @@ extern void createJavaThread(Object *jThread, long long stack_size);
 extern void mainThreadSetContextClassLoader(Object *loader);
 extern void mainThreadWaitToExitVM();
 extern void uncaughtException();
+//xxx NVM CHANGE
 extern void exitVM(int status);
 extern void scanThreads();
 

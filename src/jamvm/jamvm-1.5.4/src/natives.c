@@ -42,8 +42,8 @@ static int pd_offset;
 
 void initialiseNatives() {
 	//todo HARD CODE
-	if (java_lang_Class == NULL)
-		java_lang_Class = (unsigned long)0xaf497110;
+//	if (java_lang_Class == NULL)
+	//	java_lang_Class = (unsigned long)0xaf497110;
 
     FieldBlock *pd = findField(java_lang_Class, SYMBOL(pd),
                                SYMBOL(sig_java_security_ProtectionDomain));
@@ -1683,6 +1683,15 @@ uintptr_t *vmSupportsCS8(Class *class, MethodBlock *mb, uintptr_t *ostack) {
 uintptr_t *nativeUnloadDll(Class *class, MethodBlock *mb, uintptr_t *ostack) {
     unloaderUnloadDll((uintptr_t)*(long long*)&ostack[1]);
     return ostack;
+}
+
+//XXX NVM CHANGE
+Class* get_java_lang_class(){
+	return java_lang_Class;
+}
+
+void set_java_lang_class(Class *clazz){
+	java_lang_Class = clazz;
 }
 
 VMMethod vm_object[] = {

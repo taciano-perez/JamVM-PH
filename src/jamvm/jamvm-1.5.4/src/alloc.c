@@ -108,6 +108,13 @@
 static int is_persistent = FALSE;
 static int testing_mode = FALSE;
 
+uintptr_t get_freelist_header();
+struct chunk *get_freelist_next();
+
+void set_chunkpp(unsigned long ptr);
+void set_freelist_header(uintptr_t header);
+void set_freelist_next(struct chunk *next);
+
 
 /* HEAP MEM ADDRESS */
 #define HEAPADDR 		0xaf497000
@@ -305,6 +312,8 @@ static int sys_page_size;
 #define MIN_OBJECT_SIZE ((sizeof(Object)+HEADER_SIZE+OBJECT_GRAIN-1)& \
 		~(OBJECT_GRAIN-1))
 
+static uintptr_t doSweep(Thread *self);
+
 void allocMarkBits() {
 	int no_of_bits = (heaplimit-heapbase)>>(LOG_BYTESPERMARK-LOG_BITSPERMARK);
 
@@ -326,6 +335,7 @@ void clearMarkBits() {
 
 void initialiseNVM(){
 	int file = FALSE;
+
 	if( access( "Memory", F_OK ) != -1 ) {
 		nvm_fd = open ("Memory", O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
 		file = TRUE;
@@ -335,6 +345,7 @@ void initialiseNVM(){
 		write(nvm_fd,"",1);
 	}
 	nvm = (char*) mmap(NVM_ADDRESS, nvmCurrentSize, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, nvm_fd, 0);
+	nvm = nvm + sizeof(PHIV);
 	msync(nvm, nvmCurrentSize, MS_SYNC);
 	nvm_limit = (unsigned long) nvm + nvmCurrentSize;
 
@@ -371,6 +382,8 @@ void initialiseNVM(){
 void initialiseAlloc(InitArgs *args) {
 	int fd;
 	int file = FALSE;
+	PHIV *ph_value;
+	uintptr_t largest;
 
 	maxHeap = args->max_heap;
 	unsigned long volatile * const heapMemAddr = (unsigned long *) HEAPADDR;
@@ -390,6 +403,7 @@ void initialiseAlloc(InitArgs *args) {
 			write(fd,"",1);
 		}
 		heapMem = (char*)mmap(heapMemAddr, args->max_heap, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+
 		initialiseNVM();
 		msync(heapMem, args->max_heap, MS_SYNC);
 	}
@@ -411,11 +425,22 @@ void initialiseAlloc(InitArgs *args) {
 
 	/* Set initial free-list to one block covering entire heap */
 	freelist = (Chunk*)heapbase;
-
-//	if (!file){
+	//XXX NVM CHANGE
+	if(!file){
 		freelist->header = heapfree = heaplimit-heapbase;
 		freelist->next = NULL;
-//	}
+	}else{
+	//if (file){
+		ph_value = (char*)(nvm-sizeof(PHIV));
+		set_chunkpp(ph_value->chunkpp);
+		freelist->header = ph_value->freelist_header;
+		freelist->next = ph_value->freelist_next;
+		heapfree = ph_value->heapfree;
+		nvmFreeSpace = ph_value->nvmFreeSpace;
+		set_java_lang_class(ph_value->java_lang_Class);
+		set_ldr_vmdata_offset(ph_value->ldr_vmdata_offset);
+	}
+
 
 	TRACE_GC("Alloced heap size %p\n", heaplimit-heapbase);
 	allocMarkBits();
@@ -2351,7 +2376,6 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 				}
 			}
 		msync(mem, size, MS_SYNC);
-		printf("name %s\taddress %p \n", name, mem);
 
 	}else
 		mem = mmap(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
@@ -2592,3 +2616,37 @@ void *sysRealloc(void *addr, int size) {
 void sysFree(void *addr) {
 	free(addr);
 }
+
+//XXX NVM CHANGE
+unsigned long get_chunkpp()
+{
+	return (unsigned long)*chunkpp;
+}
+
+void set_chunkpp(unsigned long ptr)
+{
+	//*chunkpp = (char*)0xaf4da0d0;
+	*chunkpp = (char*)ptr;
+}
+
+PHIV *get_phiv_ptr()
+{
+	return (PHIV*)((char*)nvm-sizeof(PHIV));
+}
+
+uintptr_t get_freelist_header(){
+
+	return freelist->header;
+}
+
+struct chunk *get_freelist_next(){
+	return freelist->next;
+}
+
+unsigned int get_heapfree(){
+	return heapfree;
+}
+unsigned int get_nvmFreeSpace(){
+	return nvmFreeSpace;
+}
+
