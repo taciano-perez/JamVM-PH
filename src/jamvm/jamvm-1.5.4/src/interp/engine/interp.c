@@ -2154,7 +2154,7 @@ uintptr_t *executeJava() {
 //        cb_teste = CLASS_CB(new_class);
 //        printf("Method table %p\n",(cb_teste)->method_table);
         new_mb = CLASS_CB(new_class)->method_table[INV_QUICK_IDX(pc)];
-//        printf("Arg1 new mb %p\n",new_mb);
+//       printf("Arg1 new mb %p\n",new_mb);
         goto invokeMethod;
     })
 
