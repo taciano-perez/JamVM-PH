@@ -232,7 +232,7 @@ typedef struct {
     Object *loader;
 } DllEntry;
 
-/* XXX NVM CHANGE 008.000.000
+/* XXX NVM CHANGE 008.000.000 - RELOAD DLL
  * Created method to reload dlls used on previous run
  */
 void reloadDlls(InitArgs *args){

@@ -41,9 +41,6 @@
 static int pd_offset;
 
 void initialiseNatives() {
-	//todo HARD CODE
-//	if (java_lang_Class == NULL)
-	//	java_lang_Class = (unsigned long)0xaf497110;
 
     FieldBlock *pd = findField(java_lang_Class, SYMBOL(pd),
                                SYMBOL(sig_java_security_ProtectionDomain));
@@ -1685,11 +1682,11 @@ uintptr_t *nativeUnloadDll(Class *class, MethodBlock *mb, uintptr_t *ostack) {
     return ostack;
 }
 
-//XXX NVM CHANGE
+/*	XXX NVM CHANGE 009.002.002	*/
 Class* get_java_lang_class(){
 	return java_lang_Class;
 }
-
+/*	XXX NVM CHANGE 009.002.003	*/
 void set_java_lang_class(Class *clazz){
 	java_lang_Class = clazz;
 }

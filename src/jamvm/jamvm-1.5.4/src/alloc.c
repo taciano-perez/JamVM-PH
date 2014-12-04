@@ -110,11 +110,7 @@ static int testing_mode = FALSE;
 
 uintptr_t get_freelist_header();
 struct chunk *get_freelist_next();
-
-void set_chunkpp(unsigned long ptr);
-void set_freelist_header(uintptr_t header);
-void set_freelist_next(struct chunk *next);
-
+int file = FALSE;
 
 /* HEAP MEM ADDRESS */
 #define HEAPADDR 		0xaf497000
@@ -319,8 +315,8 @@ void allocMarkBits() {
 
 	markbit_size = (no_of_bits+MARKSIZEBITS-1)>>LOG_MARKSIZEBITS;
 
-	/*	XXX NVM CHANGE 004.001.002 */
-	markbits = sysMalloc_persistent(markbit_size * sizeof(*markbits));
+	/*	TODO CHECK THIS	*/
+	markbits = file ? markbits : sysMalloc_persistent(markbit_size * sizeof(*markbits));
 
 	TRACE_GC("Allocated mark bits - size is %d\n", markbit_size);
 }
@@ -334,7 +330,7 @@ void clearMarkBits() {
  */
 
 void initialiseNVM(){
-	int file = FALSE;
+
 
 	if( access( "Memory", F_OK ) != -1 ) {
 		nvm_fd = open ("Memory", O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
@@ -425,14 +421,15 @@ void initialiseAlloc(InitArgs *args) {
 
 	/* Set initial free-list to one block covering entire heap */
 	freelist = (Chunk*)heapbase;
-	//XXX NVM CHANGE
+
+	/*	XXX NVM CHANGE 009.000.003	*/
 	if(!file){
 		freelist->header = heapfree = heaplimit-heapbase;
 		freelist->next = NULL;
 	}else{
-	//if (file){
 		ph_value = (char*)(nvm-sizeof(PHIV));
-		set_chunkpp(ph_value->chunkpp);
+		*chunkpp = ph_value->chunkpp;
+		markbits = ph_value->markbits;
 		freelist->header = ph_value->freelist_header;
 		freelist->next = ph_value->freelist_next;
 		heapfree = ph_value->heapfree;
@@ -1670,7 +1667,8 @@ void expandHeap(int min) {
 	/* The heap has increased in size - need to reallocate
        the mark bits to cover new area */
 
-	sysFree(markbits);
+	/* XXX NVM CHANGE 004.003.004 */
+	sysFree_persistent(markbits);
 	allocMarkBits();
 }
 
@@ -2617,36 +2615,42 @@ void sysFree(void *addr) {
 	free(addr);
 }
 
-//XXX NVM CHANGE
+/*	XXX NVM CHANGE 009.001.001	*/
 unsigned long get_chunkpp()
 {
 	return (unsigned long)*chunkpp;
 }
 
-void set_chunkpp(unsigned long ptr)
-{
-	//*chunkpp = (char*)0xaf4da0d0;
-	*chunkpp = (char*)ptr;
-}
-
+/*	XXX NVM CHANGE 009.001.002	*/
 PHIV *get_phiv_ptr()
 {
 	return (PHIV*)((char*)nvm-sizeof(PHIV));
 }
 
+/*	XXX NVM CHANGE 009.001.003	*/
 uintptr_t get_freelist_header(){
 
 	return freelist->header;
 }
 
+/*	XXX NVM CHANGE 009.001.004	*/
 struct chunk *get_freelist_next(){
 	return freelist->next;
 }
 
+/*	XXX NVM CHANGE 009.001.005	*/
 unsigned int get_heapfree(){
 	return heapfree;
 }
+
+/*	XXX NVM CHANGE 009.001.006	*/
 unsigned int get_nvmFreeSpace(){
 	return nvmFreeSpace;
+}
+
+/*	XXX NVM CHANGE 009.001.007	*/
+unsigned int *get_markbits()
+{
+	return markbits;
 }
 

@@ -1550,7 +1550,7 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
-    /* XXX NVM CHANGE 007.000.000
+    /* XXX NVM CHANGE 007.000.000 - SECOND_EX FLAG
      * Had to ensure that hash table is not created twice during executions and
      * that it can be used on second execution in persistent mode
      */
@@ -1860,8 +1860,8 @@ int parseBootClassPath(char *cp_var) {
     char *cp, *pntr, *start;
     int i, j, len, max = 0;
     struct stat info;
-   	/*	XXX NVM CHANGE 004.001.022 */
-    cp = sysMalloc_persistent(strlen(cp_var)+1);
+
+    cp = sysMalloc(strlen(cp_var)+1);
     strcpy(cp, cp_var);
 
     for(i = 0, start = pntr = cp; *pntr; pntr++) {
@@ -2076,11 +2076,8 @@ void initialiseClass(InitArgs *args) {
     Class *vm_loader_class;
 
     /* XXX NVM CHANGE 001.002 */
-	if(args->persistent_heap == TRUE){
+	if(args->persistent_heap == TRUE)
 		is_persistent = 1;
-		//todo HARD CODE
-		//ldr_vmdata_offset = 16;
-	}
 
     if(!(bcp && parseBootClassPath(bcp))) {
         jam_fprintf(stderr, "bootclasspath is empty!\n");
@@ -2130,11 +2127,11 @@ void initialiseClass(InitArgs *args) {
     registerStaticClassRef(&java_lang_Class);
 }
 
-//XXX NVM CHANGE
+/*	XXX NVM CHANGE 009.002.000	*/
 int get_ldr_vmdata_offset(){
 	return ldr_vmdata_offset;
 }
-
+/*	XXX NVM CHANGE 009.002.001	*/
 void set_ldr_vmdata_offset(int ldr){
 	ldr_vmdata_offset = ldr;
 }

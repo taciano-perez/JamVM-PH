@@ -1144,10 +1144,10 @@ Thread *findRunningThreadByTid(int tid) {
 
     return thread;
 }
-// XXX NVM CHANGE
+
 void exitVM(int status) {
 	main_exited = TRUE;
-	// XXX NVM CHANGE
+	/*	XXX NVM CHANGE 009.000.002	*/
 	PHIV *ph_values = get_phiv_ptr();
 	ph_values->chunkpp = get_chunkpp();
 	ph_values->freelist_header = get_freelist_header();
@@ -1156,6 +1156,7 @@ void exitVM(int status) {
 	ph_values->nvmFreeSpace = get_nvmFreeSpace();
 	ph_values->java_lang_Class =  get_java_lang_class();
 	ph_values->ldr_vmdata_offset = get_ldr_vmdata_offset();
+	ph_values->markbits = get_markbits();
 
     /* Execute System.exit() to run any registered shutdown hooks.
        In the unlikely event that System.exit() can't be found, or

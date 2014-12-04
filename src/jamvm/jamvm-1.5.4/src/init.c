@@ -74,7 +74,7 @@ void initVM(InitArgs *args) {
     initialisePlatform();
 
     /* Initialise the VM modules -- ordering is important! */
-    /* XXX NVM CHANGE 009.000.000
+    /* XXX NVM CHANGE 010.000.000
      * Changed initialise order
      * Alloc - DLL - UTF8
      * Exception - Natives - JNI	*/

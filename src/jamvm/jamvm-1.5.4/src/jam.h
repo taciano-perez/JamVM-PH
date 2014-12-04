@@ -677,8 +677,9 @@ typedef struct InitArgs {
 #endif
 } InitArgs;
 
-// XXX NVM CHANGE ---.---.---
-// Persistent Heap Important Values
+/* XXX NVM CHANGE 009.000.000 - PHIV
+ * Persistent Heap Important Values
+*/
 typedef struct phiv {
 	int ldr_vmdata_offset;
 	Class *java_lang_Class;
@@ -687,6 +688,7 @@ typedef struct phiv {
 	struct chunk *freelist_next;
 	unsigned int heapfree;
 	unsigned int nvmFreeSpace;
+	unsigned int *markbits;
 } PHIV;
 
 #define CLASS_CB(classRef)           ((ClassBlock*)(classRef+1))
@@ -805,7 +807,7 @@ extern void *sysMalloc_persistent(int n);
 extern void sysFree_persistent(void *addr);
 extern void *sysRealloc_persistent(void *ptr, int n);
 
-//XXX NVM CHANGE
+/*	XXX NVM CHANGE 009.000.001	*/
 extern PHIV *get_phiv_ptr();
 
 extern unsigned long get_chunkpp();
@@ -815,6 +817,7 @@ extern unsigned int get_heapfree();
 extern unsigned int get_nvmFreeSpace();
 extern int get_ldr_vmdata_offset();
 extern void set_ldr_vmdata_offset(int ldr);
+extern unsigned int *get_markbits();
 
 extern Class* get_java_lang_class();
 extern void set_java_lang_class(Class *clazz);
@@ -1041,7 +1044,6 @@ extern void createJavaThread(Object *jThread, long long stack_size);
 extern void mainThreadSetContextClassLoader(Object *loader);
 extern void mainThreadWaitToExitVM();
 extern void uncaughtException();
-//xxx NVM CHANGE
 extern void exitVM(int status);
 extern void scanThreads();
 
