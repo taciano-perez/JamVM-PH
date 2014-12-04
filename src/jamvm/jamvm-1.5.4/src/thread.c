@@ -1157,6 +1157,11 @@ void exitVM(int status) {
 	ph_values->java_lang_Class =  get_java_lang_class();
 	ph_values->ldr_vmdata_offset = get_ldr_vmdata_offset();
 	ph_values->markbits = get_markbits();
+	ph_values->boot_classes_hash_count = get_BC_HC();
+	ph_values->boot_packages_hash_count = get_BP_HC();
+	ph_values->string_hash_count = get_string_HC();
+	ph_values->utf8_hash_count = get_utf8_HC();
+	ph_values->classes_hash_count = get_CL_HC();
 
     /* Execute System.exit() to run any registered shutdown hooks.
        In the unlikely event that System.exit() can't be found, or

@@ -144,13 +144,15 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
 }
 
 void initialiseUtf8(InitArgs *args) {
-	if(args->testing_mode == TRUE)
-	{
+	if(args->testing_mode == TRUE){
 		testing_mode = TRUE;
 	}
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y*/
     initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
+    /* XXX DOC CHANGE */
+    PHIV *ph_value = get_phiv_ptr();
+    hash_table.hash_count = ph_value->utf8_hash_count;
 }
 
 #ifndef NO_JNI
@@ -187,3 +189,10 @@ char *unicode2Utf8(unsigned short *unicode, int len, char *utf8) {
     return utf8;
 }
 #endif
+
+
+/*	XXX NVM CHANGE 009.004.001	*/
+int get_utf8_HC()
+{
+	return hash_table.hash_count;
+}

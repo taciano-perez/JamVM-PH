@@ -81,6 +81,7 @@ static char* bootp_name = "bootPck_ht";
 static int is_persistent = 0;
 static int second_ex = FALSE;
 static int testing_mode = FALSE;
+static int class_HC = 0;
 
 /* Hashtable entry for each package defined by the boot loader */
 typedef struct package_entry {
@@ -172,7 +173,10 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
     	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
     }else{
     	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, class_name, TRUE );
+    	class_HC = table->hash_count;
     }
+
+
     return entry;
 }
 
@@ -1559,6 +1563,8 @@ Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
 		Object *vmdata = INST_DATA(loader, Object*, ldr_vmdata_offset);
 		HashTable *table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
         initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
+        PHIV *ph_value = get_phiv_ptr();
+        table->hash_count = ph_value->classes_hash_count;
         second_ex = TRUE;
 	}
 
@@ -2091,6 +2097,12 @@ void initialiseClass(InitArgs *args) {
     /* XXX NVM CHANGE 005.001.002 - BC/BP HT - Y/Y*/
     initHashTable(boot_classes,  CLASS_INITSZE, TRUE, boot_name,  TRUE);
     initHashTable(boot_packages, PCKG_INITSZE,  TRUE, bootp_name, TRUE);
+
+    /* XXX DOC CHANGE */
+    PHIV *ph_value = get_phiv_ptr();
+    boot_classes.hash_count = ph_value->boot_classes_hash_count;
+    boot_packages.hash_count = ph_value->boot_packages_hash_count;
+
     loader_data_class = findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData));
     if(loader_data_class != NULL) {
         ldr_new_unloader = findMethod(loader_data_class, SYMBOL(newLibraryUnloader),
@@ -2135,3 +2147,23 @@ int get_ldr_vmdata_offset(){
 void set_ldr_vmdata_offset(int ldr){
 	ldr_vmdata_offset = ldr;
 }
+
+
+/*	XXX NVM CHANGE 009.002.002	*/
+int get_BC_HC()
+{
+	return boot_classes.hash_count;
+}
+
+/*	XXX NVM CHANGE 009.002.003	*/
+int get_BP_HC()
+{
+	return boot_packages.hash_count;
+}
+
+/*	XXX NVM CHANGE 009.002.004	*/
+int get_CL_HC()
+{
+	return class_HC;
+}
+

@@ -196,6 +196,9 @@ void initialiseString(InitArgs *args) {
     /* Init hash table and create lock */
     /* XXX NVM CHANGE 005.001.007 - Strings HT - Y*/
     initHashTable(hash_table, HASHTABSZE, TRUE, string_name, TRUE);
+    /* XXX DOC CHANGE */
+    PHIV *ph_value = get_phiv_ptr();
+    hash_table.hash_count = ph_value->string_hash_count;
 }
 
 #ifndef NO_JNI
@@ -246,3 +249,9 @@ char *String2Utf8(Object *string) {
     return unicode2Utf8(unicode, len, utf8);
 }
 #endif
+
+/*	XXX NVM CHANGE 009.003.001	*/
+int get_string_HC()
+{
+	return hash_table.hash_count;
+}

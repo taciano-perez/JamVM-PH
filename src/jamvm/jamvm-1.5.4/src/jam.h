@@ -689,6 +689,11 @@ typedef struct phiv {
 	unsigned int heapfree;
 	unsigned int nvmFreeSpace;
 	unsigned int *markbits;
+	int boot_classes_hash_count;
+	int boot_packages_hash_count;
+	int classes_hash_count;
+	int string_hash_count;
+	int utf8_hash_count;
 } PHIV;
 
 #define CLASS_CB(classRef)           ((ClassBlock*)(classRef+1))
@@ -819,6 +824,13 @@ extern int get_ldr_vmdata_offset();
 extern void set_ldr_vmdata_offset(int ldr);
 extern unsigned int *get_markbits();
 
+
+extern int get_string_HC();
+extern int get_utf8_HC();
+
+extern int get_BC_HC();
+extern int get_BP_HC();
+extern int get_CL_HC();
 extern Class* get_java_lang_class();
 extern void set_java_lang_class(Class *clazz);
 

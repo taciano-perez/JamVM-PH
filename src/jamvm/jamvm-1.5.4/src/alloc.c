@@ -330,8 +330,6 @@ void clearMarkBits() {
  */
 
 void initialiseNVM(){
-
-
 	if( access( "Memory", F_OK ) != -1 ) {
 		nvm_fd = open ("Memory", O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
 		file = TRUE;

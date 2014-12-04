@@ -465,7 +465,7 @@ error:
     /* Wait for all but daemon threads to die */
     mainThreadWaitToExitVM();
 
- //   gc1();
+    gc1();
     log(INFO, "Exit");
     exitVM(status);
 
