@@ -287,7 +287,10 @@ int dllNameHash(char *name) {
 int resolveDll(char *name, Object *loader) {
     DllEntry *dll;
     /* XXX NVM CHANGE 008.000.001	*/
-    FILE *f = fopen("dlls.txt","a+");
+    if(is_persistent){
+    	FILE *f = fopen("dlls.txt","a+");
+    }
+
     TRACE("<DLL: Attempting to resolve library %s>\n", name);
 
 #define HASH(ptr) dllNameHash(ptr)
