@@ -2072,6 +2072,11 @@ out:
     return res;
 }
 
+void set_prim_classes(){
+	PHIV *ph_values = get_phiv_ptr();
+	memcpy(prim_classes, ph_values->prim_classes, sizeof(prim_classes));
+}
+
 void initialiseClass(InitArgs *args) {
     if(args->testing_mode == TRUE)
     	testing_mode = TRUE;
@@ -2099,9 +2104,12 @@ void initialiseClass(InitArgs *args) {
     initHashTable(boot_packages, PCKG_INITSZE,  TRUE, bootp_name, TRUE);
 
     /* XXX DOC CHANGE */
-    PHIV *ph_value = get_phiv_ptr();
-    boot_classes.hash_count = ph_value->boot_classes_hash_count;
-    boot_packages.hash_count = ph_value->boot_packages_hash_count;
+    if(is_persistent){
+    	PHIV *ph_value = get_phiv_ptr();
+    	boot_classes.hash_count = ph_value->boot_classes_hash_count;
+    	boot_packages.hash_count = ph_value->boot_packages_hash_count;
+    	set_prim_classes();
+    }
 
     loader_data_class = findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData));
     if(loader_data_class != NULL) {
@@ -2135,6 +2143,8 @@ void initialiseClass(InitArgs *args) {
         exitVM(1);
     }
 
+
+
     /* Register the address of where the java.lang.Class ref _will_ be */
     registerStaticClassRef(&java_lang_Class);
 }
@@ -2167,3 +2177,6 @@ int get_CL_HC()
 	return class_HC;
 }
 
+Class ** get_prim_classes(){
+	return prim_classes;
+}

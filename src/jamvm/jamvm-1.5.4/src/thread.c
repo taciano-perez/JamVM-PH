@@ -1162,6 +1162,8 @@ void exitVM(int status) {
 	ph_values->string_hash_count = get_string_HC();
 	ph_values->utf8_hash_count = get_utf8_HC();
 	ph_values->classes_hash_count = get_CL_HC();
+	memcpy(ph_values->prim_classes, get_prim_classes(), sizeof(ph_values->prim_classes));
+
 
     /* Execute System.exit() to run any registered shutdown hooks.
        In the unlikely event that System.exit() can't be found, or

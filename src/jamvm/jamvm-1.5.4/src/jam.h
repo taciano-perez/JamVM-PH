@@ -694,6 +694,7 @@ typedef struct phiv {
 	int classes_hash_count;
 	int string_hash_count;
 	int utf8_hash_count;
+	Class *prim_classes[9];
 } PHIV;
 
 #define CLASS_CB(classRef)           ((ClassBlock*)(classRef+1))
@@ -823,6 +824,8 @@ extern unsigned int get_nvmFreeSpace();
 extern int get_ldr_vmdata_offset();
 extern void set_ldr_vmdata_offset(int ldr);
 extern unsigned int *get_markbits();
+extern Class ** get_prim_classes();
+extern void set_prim_classes();
 
 
 extern int get_string_HC();
@@ -831,6 +834,7 @@ extern int get_utf8_HC();
 extern int get_BC_HC();
 extern int get_BP_HC();
 extern int get_CL_HC();
+
 extern Class* get_java_lang_class();
 extern void set_java_lang_class(Class *clazz);
 
