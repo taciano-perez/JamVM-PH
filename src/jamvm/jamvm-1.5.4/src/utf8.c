@@ -39,6 +39,7 @@ static HashTable hash_table;
 /*XXX NVM VARIABLES - UTF8.C */
 static char* utf8_name = "utf8_ht";
 static int testing_mode = FALSE;
+static int is_persistent = FALSE;
 
 #define GET_UTF8_CHAR(ptr, c)                         \
 {                                                     \
@@ -147,12 +148,17 @@ void initialiseUtf8(InitArgs *args) {
 	if(args->testing_mode == TRUE){
 		testing_mode = TRUE;
 	}
+	if(args->persistent_heap == TRUE){
+		is_persistent = TRUE;
+	}
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y*/
     initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
     /* XXX DOC CHANGE */
-    PHIV *ph_value = get_phiv_ptr();
-    hash_table.hash_count = ph_value->utf8_hash_count;
+    if(is_persistent){
+    	PHIV *ph_value = get_phiv_ptr();
+    	hash_table.hash_count = ph_value->utf8_hash_count;
+    }
 }
 
 #ifndef NO_JNI

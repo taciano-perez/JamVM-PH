@@ -43,6 +43,7 @@ static HashTable hash_table;
 /*	XXX	NVM VARIABLES - STRING.C	*/
 static char* string_name = "string_ht";
 static int testing_mode = FALSE;
+static int is_persistent = FALSE;
 
 int stringHash(Object *ptr) {
     int len = INST_DATA(ptr, int, count_offset);
@@ -172,6 +173,9 @@ void initialiseString(InitArgs *args) {
 	{
 		testing_mode = TRUE;
 	}
+	if(args->persistent_heap == TRUE){
+		is_persistent = TRUE;
+	}
     FieldBlock *count = NULL, *value = NULL, *offset = NULL;
 
     string_class = findSystemClass0(SYMBOL(java_lang_String));
@@ -197,8 +201,10 @@ void initialiseString(InitArgs *args) {
     /* XXX NVM CHANGE 005.001.007 - Strings HT - Y*/
     initHashTable(hash_table, HASHTABSZE, TRUE, string_name, TRUE);
     /* XXX DOC CHANGE */
-    PHIV *ph_value = get_phiv_ptr();
-    hash_table.hash_count = ph_value->string_hash_count;
+    if(is_persistent){
+    	PHIV *ph_value = get_phiv_ptr();
+    	hash_table.hash_count = ph_value->string_hash_count;
+    }
 }
 
 #ifndef NO_JNI
