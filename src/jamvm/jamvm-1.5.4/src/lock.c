@@ -34,7 +34,7 @@
 #include "symbol.h"
 #include "excep.h"
 
-//XXX NVM GLOBAL VARIABLES - LOCK
+/*	XXX	NVM VARIABLES - LOCK.C	*/
 static int testing_mode = FALSE;
 
 /* Trace lock operations and inflation/deflation */

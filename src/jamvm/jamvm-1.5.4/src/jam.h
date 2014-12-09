@@ -677,6 +677,26 @@ typedef struct InitArgs {
 #endif
 } InitArgs;
 
+/* XXX NVM CHANGE 009.000.000 - OPC
+ * Orthogonal Persistence Context
+*/
+typedef struct opc {
+	int ldr_vmdata_offset;
+	Class *java_lang_Class;
+	unsigned long chunkpp;
+	uintptr_t freelist_header;
+	struct chunk *freelist_next;
+	unsigned int heapfree;
+	unsigned int nvmFreeSpace;
+	unsigned int *markbits;
+	int boot_classes_hash_count;
+	int boot_packages_hash_count;
+	int classes_hash_count;
+	int string_hash_count;
+	int utf8_hash_count;
+	Class *prim_classes[9];
+} OPC;
+
 #define CLASS_CB(classRef)           ((ClassBlock*)(classRef+1))
 
 #define INST_DATA(obj, type, offset) *(type*)&((char*)obj)[offset]
@@ -792,6 +812,32 @@ extern void *sysRealloc(void *ptr, int n);
 extern void *sysMalloc_persistent(int n);
 extern void sysFree_persistent(void *addr);
 extern void *sysRealloc_persistent(void *ptr, int n);
+
+/*	XXX NVM CHANGE 009.000.001	*/
+extern OPC *get_opc_ptr();
+
+extern unsigned long get_chunkpp();
+extern uintptr_t get_freelist_header();
+extern struct chunk *get_freelist_next();
+extern unsigned int get_heapfree();
+extern unsigned int get_nvmFreeSpace();
+extern int get_ldr_vmdata_offset();
+extern void set_ldr_vmdata_offset(int ldr);
+extern unsigned int *get_markbits();
+extern Class ** get_prim_classes();
+extern void set_prim_classes();
+
+
+extern int get_string_HC();
+extern int get_utf8_HC();
+
+extern int get_BC_HC();
+extern int get_BP_HC();
+extern int get_CL_HC();
+
+extern Class* get_java_lang_class();
+extern void set_java_lang_class(Class *clazz);
+
 
 /* XXX NVM CHANGE 005.000 - GcMem A.F
  * Changed functions args

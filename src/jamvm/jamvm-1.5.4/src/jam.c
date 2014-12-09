@@ -139,6 +139,7 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
     int is_jar = FALSE;
     int status = 1;
     int i;
+    args->persistent_heap = FALSE;
 
     Property props[argc-1];
     int props_count = 0;
@@ -352,6 +353,43 @@ exit:
     exit(status);
 }
 
+
+
+int resumeAllListeners(Object *system_loader)
+{
+	Class *op_runtime = findClassFromClassLoader("javax.op.OPRuntime", system_loader);
+	Class *vm_channel = findClassFromClassLoader("gnu.java.nio.VMChannel", system_loader);
+
+    if(op_runtime != NULL)
+        initClass(op_runtime);
+
+    if(exceptionOccurred())
+        return FALSE;
+
+    MethodBlock *mb = lookupMethod(op_runtime, SYMBOL(resumeAllListeners),
+                                  SYMBOL(___V));
+
+    if(mb == NULL || !(mb->access_flags & ACC_STATIC)) {
+        signalException(java_lang_NoSuchMethodError, "resumeAllListeners");
+        return FALSE;
+    }
+
+    executeStaticMethod(op_runtime, mb, NULL);
+
+
+    if(vm_channel != NULL)
+    	initClass(vm_channel);
+
+    if(exceptionOccurred())
+    	return FALSE;
+
+    if((mb = findMethod(vm_channel, SYMBOL(class_init), SYMBOL(___V))) != NULL)
+         executeStaticMethod(vm_channel, mb);
+
+    return TRUE;
+
+}
+
 int main(int argc, char *argv[]) {
     Class *array_class, *main_class;
     Object *system_loader, *array;
@@ -371,18 +409,21 @@ int main(int argc, char *argv[]) {
 
     args.main_stack_base = &array_class;
     initVM(&args);
-
+    log(INFO,"VM initialized");
 
     if ((system_loader = getSystemClassLoader()) == NULL)
     	goto error;
 
     mainThreadSetContextClassLoader(system_loader);
 
+    resumeAllListeners(system_loader);
+
     for(cpntr = argv[class_arg]; *cpntr; cpntr++)
         if(*cpntr == '.')
             *cpntr = '/';
 
     main_class = findClassFromClassLoader(argv[class_arg], system_loader);
+
     if(main_class != NULL)
         initClass(main_class);
 
@@ -424,8 +465,8 @@ error:
     /* Wait for all but daemon threads to die */
     mainThreadWaitToExitVM();
 
+    gc1();
     log(INFO, "Exit");
-
     exitVM(status);
 
    /* Keep the compiler happy */

@@ -1,1 +1,1 @@
-../src/arch/i386.h
+../src/arch/x86_64.h

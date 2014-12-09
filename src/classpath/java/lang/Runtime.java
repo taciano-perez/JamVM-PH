@@ -170,8 +170,10 @@ public class Runtime
     if (sm != null)
       sm.checkExit(status);
 
-    if (runShutdownHooks())
+    if (runShutdownHooks()) {
+      exitSequence = null;
       halt(status);
+    }
 
     // Someone else already called runShutdownHooks().
     // Make sure we are not/no longer in the shutdownHooks set.

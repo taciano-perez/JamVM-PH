@@ -20,6 +20,7 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -33,8 +34,11 @@
 #include "symbol.h"
 #include "excep.h"
 
-// XXX NVM CHANGE GLOBAL VARIABLES - DLL
+/*	XXX	NVM VARIABLES - DLL.C	*/
 static int testing_mode = FALSE;
+static char* dll_ht_name = "dll_ht";
+static int second_ex = FALSE;
+static int is_persistent = FALSE;
 
 /* Set by call to initialise -- if true, prints out
     results of dynamic method resolution */
@@ -221,25 +225,55 @@ uintptr_t *resolveNativeWrapper(Class *class, MethodBlock *mb,
            (class, mb, ostack);
 }
 
-void initialiseDll(InitArgs *args) {
-#ifndef NO_JNI
-    /* Init hash table, and create lock */
-    /* XXX NVM CHANGE 005.001.004 - DLL HT - N */
-	if(args->testing_mode == TRUE)
-	{
-		testing_mode = TRUE;
-	}
-	initHashTable(hash_table, HASHTABSZE, TRUE, (char*)"dll_ht", FALSE);
-#endif
-    verbose = args->verbosedll;
-}
-
 #ifndef NO_JNI
 typedef struct {
     char *name;
     void *handle;
     Object *loader;
 } DllEntry;
+
+/* XXX NVM CHANGE 008.000.000 - RELOAD DLL
+ * Created method to reload dlls used on previous run
+ */
+void reloadDlls(InitArgs *args){
+	DllEntry *dll;
+	FILE *fp;
+	char *name = NULL;
+	size_t len = 0;
+	ssize_t read;
+
+	if((args->persistent_heap) && (access("dlls.txt", F_OK) != -1 ) ){
+		/* XXX NVM CHANGE 007.000.002 */
+		second_ex = TRUE;
+		fp = fopen("dlls.txt", "r+");
+		if (fp == NULL)
+			exit(EXIT_FAILURE);
+
+		while ((read = getline(&name, &len, fp)) != -1) {
+			name[strlen(name)-1] = '\0';
+			resolveDll(name,NULL);
+		}
+		fclose(fp);
+	}
+}
+
+void initialiseDll(InitArgs *args) {
+#ifndef NO_JNI
+    /* Init hash table, and create lock */
+    /* XXX NVM CHANGE 005.001.004 - DLL HT - N */
+	initHashTable(hash_table, HASHTABSZE, TRUE, dll_ht_name, FALSE);
+	reloadDlls(args);
+
+#endif
+
+	if(args->testing_mode == TRUE)
+		testing_mode = TRUE;
+
+	if(args->testing_mode == TRUE)
+		is_persistent = TRUE;
+
+	verbose = args->verbosedll;
+}
 
 int dllNameHash(char *name) {
     int hash = 0;
@@ -252,6 +286,10 @@ int dllNameHash(char *name) {
 
 int resolveDll(char *name, Object *loader) {
     DllEntry *dll;
+    /* XXX NVM CHANGE 008.000.001	*/
+    if(is_persistent){
+    	FILE *f = fopen("dlls.txt","a+");
+    }
 
     TRACE("<DLL: Attempting to resolve library %s>\n", name);
 
@@ -265,7 +303,7 @@ int resolveDll(char *name, Object *loader) {
 
     /* Do not add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.005  */
-    findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, (char*)"dll_ht", FALSE);
+    findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, dll_ht_name, FALSE);
 
     if(dll == NULL) {
         DllEntry *dll2;
@@ -298,7 +336,6 @@ int resolveDll(char *name, Object *loader) {
 
         if(verbose)
            jam_printf("[Opened native library %s]\n", name);
-
         dll = sysMalloc(sizeof(DllEntry));
         dll->name = strcpy(sysMalloc(strlen(name) + 1), name);
         dll->handle = handle;
@@ -312,8 +349,14 @@ int resolveDll(char *name, Object *loader) {
 
         /* Add if absent, no scavenge, locked */
         /* XXX NVM CHANGE 006.003.006  */
-        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, (char*)"dll_ht", FALSE);
-
+        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, dll_ht_name, FALSE);
+        /* XXX NVM CHANGE 008.000.002	*/
+        if (is_persistent){
+        	FILE * fp;
+        	fp = fopen("dlls.txt", "a+");
+        	fprintf(fp, "%s\n", dll->name);
+        	fclose(fp);
+        }
         /* If the library has an OnUnload function it must be
            called from a running Java thread (i.e. not within
            the GC!). Create an unloader object which will be
@@ -428,18 +471,23 @@ void unloadClassLoaderDlls(Object *loader) {
         /* Ensure new table is less than 2/3 full */
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
         /* XXX NVM CHANGE 006.002.002  */
-        resizeHash(&hash_table, size, (char*)"dll_ht", FALSE);
+        resizeHash(&hash_table, size, dll_ht_name, FALSE);
     }
 }
 
 static void *env = &Jam_JNINativeInterface;
 
 uintptr_t *callJNIWrapper(Class *class, MethodBlock *mb, uintptr_t *ostack) {
-    TRACE("<DLL: Calling JNI method %s.%s%s>\n", CLASS_CB(class)->name,
+	TRACE("<DLL: Calling JNI method %s.%s%s>\n", CLASS_CB(class)->name,
           mb->name, mb->type);
+
+	/* XXX NVM CHANGE 007.000.003 */
+	if (second_ex)
+		lookupLoadedDlls(mb);
 
     if(!initJNILrefs())
         return NULL;
+
 
     return callJNIMethod(&env, (mb->access_flags & ACC_STATIC) ? class : NULL,
                          mb->type, mb->native_extra_arg, ostack, mb->code,

@@ -23,7 +23,8 @@
 #include <stdlib.h>
 #include "jam.h"
 #include "hash.h"
-// todo FIX THIS 1 << 10
+// todo HT SIZE
+//1 << 10
 //Changed Default size of UTF8 hash 1 << 10
 #define HASHTABSZE 1<<13
 #define HASH(ptr) utf8Hash(ptr)
@@ -38,6 +39,7 @@ static HashTable hash_table;
 /*XXX NVM VARIABLES - UTF8.C */
 static char* utf8_name = "utf8_ht";
 static int testing_mode = FALSE;
+static int is_persistent = FALSE;
 
 #define GET_UTF8_CHAR(ptr, c)                         \
 {                                                     \
@@ -82,7 +84,7 @@ int utf8Hash(char *utf8) {
 }
 
 int utf8Comp(char *ptr, char *ptr2) {
-    while(*ptr && *ptr2) {
+     while(*ptr && *ptr2) {
         unsigned short c, c2;
 
         GET_UTF8_CHAR(ptr, c);
@@ -105,11 +107,13 @@ char *findHashedUtf8(char *string, int add_if_absent) {
 }
 
 char *copyUtf8(char *string) {
-    char *buff = strcpy(sysMalloc(strlen(string) + 1), string);
+	/*XXX NVM CHANGE 004.001.030	*/
+    char *buff = strcpy(sysMalloc_persistent(strlen(string) + 1), string);
     char *found = findHashedUtf8(buff, TRUE);
 
     if(found != buff)
-        sysFree(buff);
+   	/*XXX NVM CHANGE 004.003.003	*/
+        sysFree_persistent(buff);
 
     return found;
 }
@@ -141,13 +145,20 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
 }
 
 void initialiseUtf8(InitArgs *args) {
-	if(args->testing_mode == TRUE)
-	{
+	if(args->testing_mode == TRUE){
 		testing_mode = TRUE;
+	}
+	if(args->persistent_heap == TRUE){
+		is_persistent = TRUE;
 	}
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y*/
     initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
+    /* XXX DOC CHANGE */
+    if(is_persistent){
+    	OPC *ph_value = get_opc_ptr();
+    	hash_table.hash_count = ph_value->utf8_hash_count;
+    }
 }
 
 #ifndef NO_JNI
@@ -184,3 +195,10 @@ char *unicode2Utf8(unsigned short *unicode, int len, char *utf8) {
     return utf8;
 }
 #endif
+
+
+/*	XXX NVM CHANGE 009.004.001	*/
+int get_utf8_HC()
+{
+	return hash_table.hash_count;
+}

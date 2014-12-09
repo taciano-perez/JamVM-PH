@@ -20,6 +20,7 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -78,7 +79,9 @@ static char* boot_name = "bootCl_ht";
 static char* class_name = "classes_ht";
 static char* bootp_name = "bootPck_ht";
 static int is_persistent = 0;
+static int second_ex = FALSE;
 static int testing_mode = FALSE;
+static int class_HC = 0;
 
 /* Hashtable entry for each package defined by the boot loader */
 typedef struct package_entry {
@@ -104,7 +107,8 @@ int enqueue_mtbl_idx;
 
 /* hash table containing classes loaded by the boot loader and
    internally created arrays */
-//todo FIX THIS 1 << 8
+//todo HT SIZE
+//1 << 8
 #define CLASS_INITSZE 1<<9
 static HashTable boot_classes;
 
@@ -142,16 +146,15 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                 /* XXX NVM CHANGE 004.001.001    */
                 table = sysMalloc_persistent(sizeof(HashTable));
 
-                if(testing_mode)
-                {
+                if(testing_mode){
                 	char log_string[80];
                 	sprintf(log_string, "Initialized hash table %s at %p with initial size %d", class_name, table, CLASS_INITSZE);
                 	log(DEBUG, log_string);
                 }
                 /* XXX NVM CHANGE 005.001.001 - Classes HT - Y*/
                 initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
-
-
+                /* XXX NVM CHANGE 007.000.001 */
+                second_ex = TRUE;
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
@@ -166,11 +169,14 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
 
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.001  */
-    if ((unsigned int)table == (unsigned int)&boot_classes){
+    if ((unsigned long)table == (unsigned long)&boot_classes){
     	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
     }else{
     	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, class_name, TRUE );
+    	class_HC = table->hash_count;
     }
+
+
     return entry;
 }
 
@@ -418,7 +424,7 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                 READ_U2(method->max_locals, ptr, len);
 
                 READ_U4(code_length, ptr, len);
-            	/*	XXX NVM CHANGE 004.001.018 - CODE !!! */
+            	/*	XXX NVM CHANGE 004.001.018 */
                 method->code = sysMalloc_persistent(code_length);
                 memcpy(method->code, ptr, code_length);
                 ptr += code_length;
@@ -975,7 +981,6 @@ void linkClass(Class *class) {
        else  {
            /* Set the bottom bit of the pointer to indicate the
               method is unprepared */
-    	   // todo MASK !!
            mb->code = ((char*)mb->code) + 1;
        }
 #endif
@@ -1456,7 +1461,7 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 
     /* Do not add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.003  */
-    if ((unsigned int)table == (unsigned int)&boot_classes){
+    if ((unsigned long)table == (unsigned long)&boot_classes){
 	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, boot_name, TRUE );
    }else{
 	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, class_name, TRUE );
@@ -1549,6 +1554,21 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
+    /* XXX NVM CHANGE 007.000.000 - SECOND_EX FLAG
+     * Had to ensure that hash table is not created twice during executions and
+     * that it can be used on second execution in persistent mode
+     */
+
+	if( (is_persistent) && (access( class_name, F_OK ) != -1) && (second_ex == FALSE)){
+		Object *vmdata = INST_DATA(loader, Object*, ldr_vmdata_offset);
+		HashTable *table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
+        initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
+        OPC *ph_value = get_opc_ptr();
+        table->hash_count = ph_value->classes_hash_count;
+        second_ex = TRUE;
+	}
+
+
     Class *class = findHashedClass(classname, loader);
 
     if(class == NULL) {
@@ -1846,8 +1866,8 @@ int parseBootClassPath(char *cp_var) {
     char *cp, *pntr, *start;
     int i, j, len, max = 0;
     struct stat info;
-   	/*	XXX NVM CHANGE 004.001.022 */
-    cp = sysMalloc_persistent(strlen(cp_var)+1);
+
+    cp = sysMalloc(strlen(cp_var)+1);
     strcpy(cp, cp_var);
 
     for(i = 0, start = pntr = cp; *pntr; pntr++) {
@@ -2052,11 +2072,15 @@ out:
     return res;
 }
 
+void set_prim_classes(){
+	OPC *ph_values = get_opc_ptr();
+	memcpy(prim_classes, ph_values->prim_classes, sizeof(prim_classes));
+}
+
 void initialiseClass(InitArgs *args) {
     if(args->testing_mode == TRUE)
-    {
     	testing_mode = TRUE;
-    }
+
 	char *bcp = setBootClassPath(args->bootpath, args->bootpathopt);
     FieldBlock *hashtable = NULL;
     Class *loader_data_class;
@@ -2078,6 +2102,15 @@ void initialiseClass(InitArgs *args) {
     /* XXX NVM CHANGE 005.001.002 - BC/BP HT - Y/Y*/
     initHashTable(boot_classes,  CLASS_INITSZE, TRUE, boot_name,  TRUE);
     initHashTable(boot_packages, PCKG_INITSZE,  TRUE, bootp_name, TRUE);
+
+    /* XXX DOC CHANGE */
+    if(is_persistent){
+    	OPC *ph_value = get_opc_ptr();
+    	boot_classes.hash_count = ph_value->boot_classes_hash_count;
+    	boot_packages.hash_count = ph_value->boot_packages_hash_count;
+    	set_prim_classes();
+    }
+
     loader_data_class = findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData));
     if(loader_data_class != NULL) {
         ldr_new_unloader = findMethod(loader_data_class, SYMBOL(newLibraryUnloader),
@@ -2110,7 +2143,40 @@ void initialiseClass(InitArgs *args) {
         exitVM(1);
     }
 
+
+
     /* Register the address of where the java.lang.Class ref _will_ be */
     registerStaticClassRef(&java_lang_Class);
 }
 
+/*	XXX NVM CHANGE 009.002.000	*/
+int get_ldr_vmdata_offset(){
+	return ldr_vmdata_offset;
+}
+/*	XXX NVM CHANGE 009.002.001	*/
+void set_ldr_vmdata_offset(int ldr){
+	ldr_vmdata_offset = ldr;
+}
+
+
+/*	XXX NVM CHANGE 009.002.002	*/
+int get_BC_HC()
+{
+	return boot_classes.hash_count;
+}
+
+/*	XXX NVM CHANGE 009.002.003	*/
+int get_BP_HC()
+{
+	return boot_packages.hash_count;
+}
+
+/*	XXX NVM CHANGE 009.002.004	*/
+int get_CL_HC()
+{
+	return class_HC;
+}
+
+Class ** get_prim_classes(){
+	return prim_classes;
+}

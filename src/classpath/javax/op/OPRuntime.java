@@ -1,0 +1,99 @@
+package javax.op;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Iterator;
+import gnu.java.nio.FileChannelImpl;
+
+// XXX NVM CHANGE - added
+
+/**
+ * This class registers OPResumeListener objects for execution upon JVM re-initialization.
+ */
+public class OPRuntime {
+
+	private static Set<OPResumeListener> listeners = null;
+
+	private static Set<Class<?>> staticListeners = null;
+
+	static {
+		// FIXME: GAMBIARRA
+		//staticListeners = new HashSet<Class<?>>();
+		//staticListeners.add(FileChannelImpl.class);
+	}
+	
+	
+	/**
+	 * Adds a new listener.
+   	 */
+	public static void addListener(OPResumeListener listener) {
+		// initialize listeners set if necessary
+		if (listeners == null) {
+			listeners = new HashSet<OPResumeListener>();
+		}
+		// add listener to listeners set
+		listeners.add(listener);
+	}
+
+	/**
+	 * Adds a new listener to a class that has a static resume() method.
+   	 */
+	public static void addStaticListener(Class<?> clazz) {
+		// initialize listeners set if necessary
+		if (staticListeners == null) {
+			staticListeners = new HashSet<Class<?>>();
+		}
+		// add listener to listeners set
+		staticListeners.add(clazz);
+	}
+	
+
+	/**
+	 * Method called by the JVM runtime to re-initialize OPResumeListener objects.
+	 */
+	public static void resumeAllListeners() {
+		//System.out.println("OP - Resuming all OPResumeListener objects");
+		// resume all listeners
+		if (listeners != null) {
+			Iterator<OPResumeListener> it = listeners.iterator();
+			while(it.hasNext()) {
+				OPResumeListener listener = it.next();
+				listener.resume();
+			}
+		}
+		// resume all static listeners
+		if (staticListeners != null) {
+			Iterator<Class<?>> it = staticListeners.iterator();
+			while(it.hasNext()) {
+				Class<?> clazz = it.next();
+				Method method;
+				try {
+					//System.out.println("Getting resume method from class "+clazz);
+										
+					method = clazz.getMethod("resume", null);
+
+					//System.out.println("Invoking static resume() method on class "+clazz);
+					
+					method.invoke(null, (Object[])null);
+				} catch (NoSuchMethodException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (SecurityException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IllegalArgumentException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (InvocationTargetException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+}

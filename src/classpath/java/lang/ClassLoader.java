@@ -792,8 +792,9 @@ public abstract class ClassLoader
     if (sm != null)
       {
 	ClassLoader cl = VMStackWalker.getCallingClassLoader();
-	if (cl != null && cl != StaticData.systemClassLoader)
-	  sm.checkPermission(new RuntimePermission("getClassLoader"));
+	if (cl != null && cl != StaticData.systemClassLoader) {
+  	  sm.checkPermission(new RuntimePermission("getClassLoader"));
+	}
       }
 
     return StaticData.systemClassLoader;

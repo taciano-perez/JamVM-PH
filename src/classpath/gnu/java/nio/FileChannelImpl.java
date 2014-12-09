@@ -55,6 +55,9 @@ import java.nio.channels.NonWritableChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
+import javax.op.OPResumeListener;
+import javax.op.OPRuntime;
+
 /**
  * This file is not user visible !
  * But alas, Java does not have a concept of friendly packages
@@ -74,14 +77,21 @@ public final class FileChannelImpl extends FileChannel
   public static final int SYNC   = 16;
   public static final int DSYNC  = 32;
 
-  public static final FileChannelImpl in;
-  public static final FileChannelImpl out;
-  public static final FileChannelImpl err;
+  // XXX NVM CHANGE - removed FINAL modifier to be able to call it from within the resume() method
+  public static FileChannelImpl in;
+  public static FileChannelImpl out;
+  public static FileChannelImpl err;
 
   //private static native void init();
 
   static
   {
+    // XXX NVM CHANGE - moved initialization block code to resume() method, which implements the OPResumeListener
+    resume();
+    OPRuntime.addStaticListener(FileChannelImpl.class);
+  }
+
+  public static void resume() {
     if (Configuration.INIT_LOAD_LIBRARY)
       {
         System.loadLibrary("javanio");

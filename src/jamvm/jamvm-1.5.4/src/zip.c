@@ -172,8 +172,7 @@ ZipFile *processArchive(char *path) {
        Do not create lock -- we're single threaded (bootstrapping)
        and once entries are added, table is read-only */
 
-   	/*	XXX NVM CHANGE 004.001.023 */
-    hash_table = sysMalloc_persistent(sizeof(HashTable));
+    hash_table = sysMalloc(sizeof(HashTable));
 
     /* XXX NVM CHANGE 005.001.010 - Files HT - N - NW!!*/
     initHashTable((*hash_table), HASHTABSZE, FALSE, zip_name, FALSE);

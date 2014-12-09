@@ -68,6 +68,7 @@ extern char *symbol_values[];
     action(addThread, "addThread"), \
     action(returnType, "returnType"), \
     action(removeThread, "removeThread"), \
+    action(resumeAllListeners, "resumeAllListeners"), \
     action(declaringClass, "declaringClass"), \
     action(parameterTypes, "parameterTypes"), \
     action(printStackTrace, "printStackTrace"), \
