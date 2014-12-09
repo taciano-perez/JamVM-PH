@@ -339,7 +339,7 @@ void initialiseNVM(){
 		write(nvm_fd,"",1);
 	}
 	nvm = (char*) mmap(NVM_ADDRESS, nvmCurrentSize, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, nvm_fd, 0);
-	nvm = nvm + sizeof(PHIV);
+	nvm = nvm + sizeof(OPC);
 	msync(nvm, nvmCurrentSize, MS_SYNC);
 	nvm_limit = (unsigned long) nvm + nvmCurrentSize;
 
@@ -376,7 +376,7 @@ void initialiseNVM(){
 void initialiseAlloc(InitArgs *args) {
 	int fd;
 	int file = FALSE;
-	PHIV *ph_value;
+	OPC *ph_value;
 	uintptr_t largest;
 
 	maxHeap = args->max_heap;
@@ -425,7 +425,7 @@ void initialiseAlloc(InitArgs *args) {
 		freelist->header = heapfree = heaplimit-heapbase;
 		freelist->next = NULL;
 	}else{
-		ph_value = (char*)(nvm-sizeof(PHIV));
+		ph_value = (char*)(nvm-sizeof(OPC));
 		*chunkpp = ph_value->chunkpp;
 		markbits = ph_value->markbits;
 		freelist->header = ph_value->freelist_header;
@@ -2620,9 +2620,9 @@ unsigned long get_chunkpp()
 }
 
 /*	XXX NVM CHANGE 009.001.002	*/
-PHIV *get_phiv_ptr()
+OPC *get_opc_ptr()
 {
-	return (PHIV*)((char*)nvm-sizeof(PHIV));
+	return (OPC*)((char*)nvm-sizeof(OPC));
 }
 
 /*	XXX NVM CHANGE 009.001.003	*/

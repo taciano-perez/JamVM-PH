@@ -1152,7 +1152,7 @@ void exitVM(int status) {
 	main_exited = TRUE;
 	/*	XXX NVM CHANGE 009.000.002	*/
 	if(is_persistent == TRUE){
-		PHIV *ph_values = get_phiv_ptr();
+		OPC *ph_values = get_opc_ptr();
 		ph_values->chunkpp = get_chunkpp();
 		ph_values->freelist_header = get_freelist_header();
 		ph_values->freelist_next = get_freelist_next();

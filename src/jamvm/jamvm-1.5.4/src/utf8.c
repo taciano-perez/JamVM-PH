@@ -156,7 +156,7 @@ void initialiseUtf8(InitArgs *args) {
     initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
     /* XXX DOC CHANGE */
     if(is_persistent){
-    	PHIV *ph_value = get_phiv_ptr();
+    	OPC *ph_value = get_opc_ptr();
     	hash_table.hash_count = ph_value->utf8_hash_count;
     }
 }

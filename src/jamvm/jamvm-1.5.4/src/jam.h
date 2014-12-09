@@ -677,10 +677,10 @@ typedef struct InitArgs {
 #endif
 } InitArgs;
 
-/* XXX NVM CHANGE 009.000.000 - PHIV
- * Persistent Heap Important Values
+/* XXX NVM CHANGE 009.000.000 - OPC
+ * Orthogonal Persistence Context
 */
-typedef struct phiv {
+typedef struct opc {
 	int ldr_vmdata_offset;
 	Class *java_lang_Class;
 	unsigned long chunkpp;
@@ -695,7 +695,7 @@ typedef struct phiv {
 	int string_hash_count;
 	int utf8_hash_count;
 	Class *prim_classes[9];
-} PHIV;
+} OPC;
 
 #define CLASS_CB(classRef)           ((ClassBlock*)(classRef+1))
 
@@ -814,7 +814,7 @@ extern void sysFree_persistent(void *addr);
 extern void *sysRealloc_persistent(void *ptr, int n);
 
 /*	XXX NVM CHANGE 009.000.001	*/
-extern PHIV *get_phiv_ptr();
+extern OPC *get_opc_ptr();
 
 extern unsigned long get_chunkpp();
 extern uintptr_t get_freelist_header();

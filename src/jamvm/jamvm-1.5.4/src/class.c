@@ -1563,7 +1563,7 @@ Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
 		Object *vmdata = INST_DATA(loader, Object*, ldr_vmdata_offset);
 		HashTable *table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
         initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
-        PHIV *ph_value = get_phiv_ptr();
+        OPC *ph_value = get_opc_ptr();
         table->hash_count = ph_value->classes_hash_count;
         second_ex = TRUE;
 	}
@@ -2073,7 +2073,7 @@ out:
 }
 
 void set_prim_classes(){
-	PHIV *ph_values = get_phiv_ptr();
+	OPC *ph_values = get_opc_ptr();
 	memcpy(prim_classes, ph_values->prim_classes, sizeof(prim_classes));
 }
 
@@ -2105,7 +2105,7 @@ void initialiseClass(InitArgs *args) {
 
     /* XXX DOC CHANGE */
     if(is_persistent){
-    	PHIV *ph_value = get_phiv_ptr();
+    	OPC *ph_value = get_opc_ptr();
     	boot_classes.hash_count = ph_value->boot_classes_hash_count;
     	boot_packages.hash_count = ph_value->boot_packages_hash_count;
     	set_prim_classes();
