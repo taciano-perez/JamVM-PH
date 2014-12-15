@@ -269,7 +269,7 @@ void initialiseDll(InitArgs *args) {
 	if(args->testing_mode == TRUE)
 		testing_mode = TRUE;
 
-	if(args->testing_mode == TRUE)
+	if(args->persistent_heap == TRUE)
 		is_persistent = TRUE;
 
 	verbose = args->verbosedll;
