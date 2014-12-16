@@ -316,7 +316,7 @@ void allocMarkBits() {
 	markbit_size = (no_of_bits+MARKSIZEBITS-1)>>LOG_MARKSIZEBITS;
 
 	/*	TODO CHECK THIS	*/
-	markbits = file ? markbits : sysMalloc_persistent(markbit_size * sizeof(*markbits));
+	markbits = sysMalloc(markbit_size * sizeof(*markbits));
 
 	TRACE_GC("Allocated mark bits - size is %d\n", markbit_size);
 }
@@ -427,7 +427,6 @@ void initialiseAlloc(InitArgs *args) {
 	}else{
 		ph_value = (char*)(nvm-sizeof(OPC));
 		*chunkpp = ph_value->chunkpp;
-		markbits = ph_value->markbits;
 		freelist->header = ph_value->freelist_header;
 		freelist->next = ph_value->freelist_next;
 		heapfree = ph_value->heapfree;
@@ -1666,7 +1665,7 @@ void expandHeap(int min) {
        the mark bits to cover new area */
 
 	/* XXX NVM CHANGE 004.003.004 */
-	sysFree_persistent(markbits);
+	sysFree(markbits);
 	allocMarkBits();
 }
 
@@ -2645,10 +2644,3 @@ unsigned int get_heapfree(){
 unsigned int get_nvmFreeSpace(){
 	return nvmFreeSpace;
 }
-
-/*	XXX NVM CHANGE 009.001.007	*/
-unsigned int *get_markbits()
-{
-	return markbits;
-}
-

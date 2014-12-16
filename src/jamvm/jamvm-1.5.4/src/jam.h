@@ -688,7 +688,6 @@ typedef struct opc {
 	struct chunk *freelist_next;
 	unsigned int heapfree;
 	unsigned int nvmFreeSpace;
-	unsigned int *markbits;
 	int boot_classes_hash_count;
 	int boot_packages_hash_count;
 	int classes_hash_count;
@@ -823,7 +822,6 @@ extern unsigned int get_heapfree();
 extern unsigned int get_nvmFreeSpace();
 extern int get_ldr_vmdata_offset();
 extern void set_ldr_vmdata_offset(int ldr);
-extern unsigned int *get_markbits();
 extern Class ** get_prim_classes();
 extern void set_prim_classes();
 
