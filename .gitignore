@@ -8,6 +8,7 @@
 *.lib
 *.a
 *.lo
+*.Plo
 *.la
 
 # Shared objects (inc. Windows DLLs)
