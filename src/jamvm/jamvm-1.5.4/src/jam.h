@@ -694,6 +694,9 @@ typedef struct opc {
 	int string_hash_count;
 	int utf8_hash_count;
 	Class *prim_classes[9];
+	Object **has_finaliser_list;
+	int has_finaliser_count;
+	int has_finaliser_size;
 } OPC;
 
 #define CLASS_CB(classRef)           ((ClassBlock*)(classRef+1))
@@ -824,6 +827,10 @@ extern int get_ldr_vmdata_offset();
 extern void set_ldr_vmdata_offset(int ldr);
 extern Class ** get_prim_classes();
 extern void set_prim_classes();
+extern void set_has_finaliser_list();
+extern int get_has_finaliser_count();
+extern int get_has_finaliser_size();
+extern Object ** get_has_finaliser_list();
 
 
 extern int get_string_HC();

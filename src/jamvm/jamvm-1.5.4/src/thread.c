@@ -1166,6 +1166,10 @@ void exitVM(int status) {
 		ph_values->utf8_hash_count = get_utf8_HC();
 		ph_values->classes_hash_count = get_CL_HC();
 		memcpy(ph_values->prim_classes, get_prim_classes(), sizeof(ph_values->prim_classes));
+		ph_values->has_finaliser_count = get_has_finaliser_count();
+		ph_values->has_finaliser_size = get_has_finaliser_size();
+		ph_values->has_finaliser_list = sysMalloc_persistent(ph_values->has_finaliser_size*sizeof(Object*));
+		memcpy(ph_values->has_finaliser_list, get_has_finaliser_list(), ph_values->has_finaliser_size*sizeof(Object*));
 	}
 
     /* Execute System.exit() to run any registered shutdown hooks.

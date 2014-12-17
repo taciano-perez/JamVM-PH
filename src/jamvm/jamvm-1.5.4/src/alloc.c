@@ -107,6 +107,7 @@
 /*	XXX	NVM VARIABLES - ALLOC.C	*/
 static int is_persistent = FALSE;
 static int testing_mode = FALSE;
+static int second_ex = FALSE;
 
 uintptr_t get_freelist_header();
 struct chunk *get_freelist_next();
@@ -390,6 +391,7 @@ void initialiseAlloc(InitArgs *args) {
 		if( access(args->heap_file, F_OK ) != -1 ) {
 			fd = open (args->heap_file, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
 			file = TRUE;
+			second_ex = TRUE;
 		}else{
 			fd = open (args->heap_file, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
 			lseek (fd, args->max_heap-1, SEEK_SET);
@@ -1906,25 +1908,40 @@ void referenceHandlerThreadLoop(Thread *self) {
 			"<GC: enqueuing %d references>\n", self, &self);
 }
 
+void set_has_finaliser_list(){
+	OPC *ph_values = get_opc_ptr();
+	has_finaliser_count = ph_values->has_finaliser_count;
+	has_finaliser_size = ph_values->has_finaliser_size;
+	has_finaliser_list = sysMalloc(has_finaliser_size*sizeof(Object*));
+    memcpy(has_finaliser_list, ph_values->has_finaliser_list, has_finaliser_size*sizeof(Object*));
+    sysFree_persistent(ph_values->has_finaliser_list);
+}
+
+
 void initialiseGC(InitArgs *args) {
 
-	/* Pre-allocate an OutOfMemoryError exception object - we throw it
-	 * when we're really low on heap space, and can create FA... */
-
 	MethodBlock *init;
-	Class *oom_clazz = findSystemClass(SYMBOL(java_lang_OutOfMemoryError));
+
 	if(exceptionOccurred()) {
 		printException();
 		exitVM(1);
 	}
+	if(second_ex == FALSE){
+		/* Pre-allocate an OutOfMemoryError exception object - we throw it
+			 * when we're really low on heap space, and can create FA... */
+		Class *oom_clazz = findSystemClass(SYMBOL(java_lang_OutOfMemoryError));
+		/* Initialize it */
+		init = lookupMethod(oom_clazz, SYMBOL(object_init),
+				SYMBOL(_java_lang_String__V));
+		oom = allocObject(oom_clazz);
+		registerStaticObjectRef(&oom);
 
-	/* Initialize it */
-	init = lookupMethod(oom_clazz, SYMBOL(object_init),
-			SYMBOL(_java_lang_String__V));
-	oom = allocObject(oom_clazz);
-	registerStaticObjectRef(&oom);
+		executeMethod(oom, init, NULL);
+	}
+	else{
+		set_has_finaliser_list();
+	}
 
-	executeMethod(oom, init, NULL);
 
 	/* Create and start VM threads for the reference handler and finalizer */
 	createVMThread("Finalizer", finalizerThreadLoop);
@@ -2643,4 +2660,16 @@ unsigned int get_heapfree(){
 /*	XXX NVM CHANGE 009.001.006	*/
 unsigned int get_nvmFreeSpace(){
 	return nvmFreeSpace;
+}
+
+int get_has_finaliser_count(){
+	return has_finaliser_count;
+}
+
+int get_has_finaliser_size(){
+	return has_finaliser_size;
+}
+
+Object ** get_has_finaliser_list(){
+	return has_finaliser_list;
 }
