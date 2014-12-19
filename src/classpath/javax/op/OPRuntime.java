@@ -17,13 +17,6 @@ public class OPRuntime {
 	private static Set<OPResumeListener> listeners = null;
 
 	private static Set<Class<?>> staticListeners = null;
-
-	static {
-		// FIXME: GAMBIARRA
-		//staticListeners = new HashSet<Class<?>>();
-		//staticListeners.add(FileChannelImpl.class);
-	}
-	
 	
 	/**
 	 * Adds a new listener.
