@@ -37,7 +37,7 @@
 /*	XXX	NVM VARIABLES - DLL.C	*/
 static int testing_mode = FALSE;
 static char* dll_ht_name = "dll_ht";
-static int second_ex = FALSE;
+static int first_ex = TRUE;
 static int is_persistent = FALSE;
 
 /* Set by call to initialise -- if true, prints out
@@ -244,7 +244,7 @@ void reloadDlls(InitArgs *args){
 
 	if((args->persistent_heap) && (access("dlls.txt", F_OK) != -1 ) ){
 		/* XXX NVM CHANGE 007.000.002 */
-		second_ex = TRUE;
+		first_ex = FALSE;
 		fp = fopen("dlls.txt", "r+");
 		if (fp == NULL)
 			exit(EXIT_FAILURE);
@@ -482,7 +482,7 @@ uintptr_t *callJNIWrapper(Class *class, MethodBlock *mb, uintptr_t *ostack) {
           mb->name, mb->type);
 
 	/* XXX NVM CHANGE 007.000.003 */
-	if (second_ex)
+	if (first_ex == FALSE)
 		lookupLoadedDlls(mb);
 
     if(!initJNILrefs())

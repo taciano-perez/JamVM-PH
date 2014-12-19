@@ -107,7 +107,7 @@
 /*	XXX	NVM VARIABLES - ALLOC.C	*/
 static int is_persistent = FALSE;
 static int testing_mode = FALSE;
-static int second_ex = FALSE;
+static int first_ex = TRUE;
 
 uintptr_t get_freelist_header();
 struct chunk *get_freelist_next();
@@ -391,7 +391,7 @@ void initialiseAlloc(InitArgs *args) {
 		if( access(args->heap_file, F_OK ) != -1 ) {
 			fd = open (args->heap_file, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
 			file = TRUE;
-			second_ex = TRUE;
+			first_ex = FALSE;
 		}else{
 			fd = open (args->heap_file, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
 			lseek (fd, args->max_heap-1, SEEK_SET);
@@ -1926,7 +1926,7 @@ void initialiseGC(InitArgs *args) {
 		printException();
 		exitVM(1);
 	}
-	if(second_ex == FALSE){
+	if(first_ex == TRUE){
 		/* Pre-allocate an OutOfMemoryError exception object - we throw it
 			 * when we're really low on heap space, and can create FA... */
 		Class *oom_clazz = findSystemClass(SYMBOL(java_lang_OutOfMemoryError));

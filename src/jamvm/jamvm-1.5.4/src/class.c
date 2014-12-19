@@ -79,7 +79,7 @@ static char* boot_name = "bootCl_ht";
 static char* class_name = "classes_ht";
 static char* bootp_name = "bootPck_ht";
 static int is_persistent = 0;
-static int second_ex = FALSE;
+static int first_ex = TRUE;
 static int testing_mode = FALSE;
 static int class_HC = 0;
 
@@ -154,7 +154,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                 /* XXX NVM CHANGE 005.001.001 - Classes HT - Y*/
                 initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
                 /* XXX NVM CHANGE 007.000.001 */
-                second_ex = TRUE;
+                first_ex = FALSE;
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
@@ -1554,18 +1554,18 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
-    /* XXX NVM CHANGE 007.000.000 - SECOND_EX FLAG
+    /* XXX NVM CHANGE 007.000.000 - FIRST_EX FLAG
      * Had to ensure that hash table is not created twice during executions and
      * that it can be used on second execution in persistent mode
      */
 
-	if( (is_persistent) && (access( class_name, F_OK ) != -1) && (second_ex == FALSE)){
+	if( (is_persistent) && (access( class_name, F_OK ) != -1) && (first_ex == TRUE)){
 		Object *vmdata = INST_DATA(loader, Object*, ldr_vmdata_offset);
 		HashTable *table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
         initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
         OPC *ph_value = get_opc_ptr();
         table->hash_count = ph_value->classes_hash_count;
-        second_ex = TRUE;
+        first_ex = FALSE;
 	}
 
 
