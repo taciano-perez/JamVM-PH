@@ -95,7 +95,7 @@ static int testing_mode = FALSE;
 static Monitor *mon_free_list = NULL;
 static HashTable mon_cache;
 
-/*	XXX	NVM VARIABLES - LOCK.C	*/
+/*	XXX	NVM VARIABLES - LOCK.C - UPDATED TO 2.0.0 */
 static char* monitor_name = "monitor_ht";
 
 void monitorInit(Monitor *mon) {
@@ -331,7 +331,7 @@ Monitor *findMonitor(Object *obj) {
     else {
         Monitor *mon;
         /* Add if absent, scavenge, locked */
-        /* XXX NVM CHANGE 006.003.012  */
+        /* XXX NVM CHANGE 006.003.012 - UPDATED TO 2.0.0 */
         findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
         return mon;
     }
@@ -565,7 +565,7 @@ void initialiseMonitor(InitArgs *args) {
 		testing_mode = TRUE;
 	}
     /* Init hash table, create lock */
-    /* XXX NVM CHANGE 005.001.006 - Monitors HT - N*/
+    /* XXX NVM CHANGE 005.001.006 - Monitors HT - N - UPDATE TO 2.0.0 */
     initHashTable(mon_cache, HASHTABSZE, TRUE, monitor_name, FALSE);
 }
 

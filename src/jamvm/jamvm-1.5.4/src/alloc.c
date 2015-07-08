@@ -104,7 +104,7 @@
                                            ^ special bit
  */
 
-/*	XXX	NVM VARIABLES - ALLOC.C	*/
+/*	XXX	NVM VARIABLES - ALLOC.C	- UPDATED TO 2.0.0*/
 static int is_persistent = FALSE;
 static int testing_mode = FALSE;
 static int first_ex = TRUE;
@@ -133,7 +133,6 @@ int file = FALSE;
  static unsigned int nvmFreeSpace = 0;
  static unsigned int nvmCurrentSize = NVM_INIT_SIZE;
  static unsigned long nvm_limit;
-
 
 static int verbosegc;
 static int compact_override;
@@ -316,7 +315,7 @@ void allocMarkBits() {
 
 	markbit_size = (no_of_bits+MARKSIZEBITS-1)>>LOG_MARKSIZEBITS;
 
-	/*	TODO CHECK THIS	*/
+	/*	TODO CHECK THIS - UPDATED TO 2.0.0	*/
 	markbits = sysMalloc(markbit_size * sizeof(*markbits));
 
 	TRACE_GC("Allocated mark bits - size is %d\n", markbit_size);
@@ -326,7 +325,7 @@ void clearMarkBits() {
 	memset(markbits, 0, markbit_size * sizeof(*markbits));
 }
 
-/*XXX NVM CHANGE 002.000 - InitMem
+/*XXX NVM CHANGE 002.000 - InitMem - UPDATED TO 2.0.0
  * Added InitialiseNVM function
  */
 
@@ -371,7 +370,7 @@ void initialiseNVM(){
 		nvmfreelist->next = NULL;
 	}
 }
-/* XXX NVM CHANGE 003.000 - InitAlloc
+/* XXX NVM CHANGE 003.000 - InitAlloc - UPDATED TO 2.0.0
  * Changed InitialiseAlloc to hold persistence
  */
 void initialiseAlloc(InitArgs *args) {
@@ -485,7 +484,7 @@ void markRoot(Object *object) {
 void addConservativeRoot(Object *object) {
 	if((conservative_root_count % LIST_INCREMENT) == 0) {
 		int new_size = conservative_root_count + LIST_INCREMENT;
-		/* XXX NVM CHANGE 005.002.001  */
+		/* XXX NVM CHANGE 005.002.001 - UPDATED TO 2.0.0 */
 		conservative_roots = gcMemRealloc(conservative_roots,
 				new_size * sizeof(Object *), (char*)"cr_ht", FALSE);
 	}
@@ -839,7 +838,7 @@ static void doMark(Thread *self, int mark_soft_refs) {
 		Object *ob = has_finaliser_list[i];
 
 		if(!IS_HARD_MARKED(ob)) {
-			/* XXX NVM CHANGE 005.002.002  */
+			/* XXX NVM CHANGE 005.002.002 - UPDATED TO 2.0.0 */
 			ADD_TO_OBJECT_LIST(run_finaliser, ob);
 		} else
 			has_finaliser_list[j++] = ob;
@@ -932,7 +931,7 @@ int handleMarkedSpecial(Object *ob) {
 
 			if(INST_DATA(ob, Object*, ref_queue_offset) != NULL) {
 				TRACE_GC("FREE: Adding to list for enqueuing.\n");
-				/* XXX NVM CHANGE 005.002.003  */
+				/* XXX NVM CHANGE 005.002.003 - UPDATED TO 2.0.0 */
 				ADD_TO_OBJECT_LIST(reference, ob);
 				notify_reference_thread = TRUE;
 			}
@@ -1173,7 +1172,7 @@ void addConservativeRoots2Hash() {
 	for(i = 1; i < conservative_root_count; i <<= 1);
 	con_roots_hashtable_size = i << 1;
 
-    /* XXX NVM CHANGE 005.001.003 - Con Roots HT - N*/
+    /* XXX NVM CHANGE 005.001.003 - Con Roots HT - N - UPDATED TO 2.0.0 */
 	con_roots_hashtable = gcMemMalloc( (con_roots_hashtable_size *sizeof(uintptr_t)) , (char*)"cr_ht", FALSE );
 
 	memset(con_roots_hashtable, 0, con_roots_hashtable_size * sizeof(uintptr_t));
@@ -1411,7 +1410,7 @@ int threadChildren(Object *ob, Object *new_addr) {
 
 						if(INST_DATA(ob, Object*, ref_queue_offset) != NULL) {
 							TRACE_GC("Adding to list for enqueuing.\n");
-							/* XXX NVM CHANGE 005.002.004  */
+							/* XXX NVM CHANGE 005.002.004 - UPDATED TO 2.0.0 */
 							ADD_TO_OBJECT_LIST(reference, new_addr);
 							notify_reference_thread = TRUE;
 						}
@@ -1666,7 +1665,7 @@ void expandHeap(int min) {
 	/* The heap has increased in size - need to reallocate
        the mark bits to cover new area */
 
-	/* XXX NVM CHANGE 004.003.004 */
+	/* XXX NVM CHANGE 004.003.004 - UPDATED TO 2.0.0 - NOT CHANGED*/
 	sysFree(markbits);
 	allocMarkBits();
 }
@@ -2351,7 +2350,7 @@ unsigned long maxHeapMem() {
 /* These use mmap to avoid deadlock with threads
     suspended while holding the malloc lock */
 
-/* XXX NVM CHANGE 005.001 - GcMemMalloc
+/* XXX NVM CHANGE 005.001 - GcMemMalloc - UPDATED TO 2.0.0
  *  Added file to mmap in persistence mode
  */
 void *gcMemMalloc(int n, char* name, int create_file) {
@@ -2400,7 +2399,7 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 	return mem;
 }
 
-/* XXX NVM CHANGE 005.002 - GcMemRealloc
+/* XXX NVM CHANGE 005.002 - GcMemRealloc - UPDATED TO 2.0.0
  */
 void *gcMemRealloc(void *addr, int size, char* name, int create_file) {
 	if(addr == NULL)
@@ -2456,7 +2455,7 @@ void freePendingFrees() {
 /* ------ Allocation from system heap ------- */
 
 
-/* MREMAP MAYMOVE ISSUE */
+/* XXX MREMAP MAYMOVE ISSUE - UPDATED TO 2.0.0*/
 void expandNVM(){
 	unsigned int oldSize = nvmCurrentSize;
 	nvmChunk *new;
@@ -2503,7 +2502,7 @@ void expandNVM(){
 	}
 }
 
-/* XXX NVM CHANGE 004.001 - SysMalloc */
+/* XXX NVM CHANGE 004.001 - SysMalloc - UPDATED TO 2.0.0 */
 void *sysMalloc_persistent(int size){
 	if (is_persistent){
 		int n = size < sizeof(void*) ? sizeof(void*) : size;
@@ -2565,7 +2564,7 @@ void *sysMalloc_persistent(int size){
 		return sysMalloc(size);
 }
 
-/* XXX NVM CHANGE 004.003 - SysFree */
+/* XXX NVM CHANGE 004.003 - SysFree - UPDATED TO 2.0.0 */
 void sysFree_persistent(void* addr){
 	if(is_persistent){
 		unsigned long ptr = (unsigned long) addr;
@@ -2581,7 +2580,7 @@ void sysFree_persistent(void* addr){
 
 }
 
-/* XXX NVM CHANGE 004.002 - SysRealloc */
+/* XXX NVM CHANGE 004.002 - SysRealloc - UPDATED TO 2.0.0 */
 void *sysRealloc_persistent(void *addr, int size){
 	void *mem;
 	if (is_persistent){
@@ -2629,47 +2628,50 @@ void sysFree(void *addr) {
 	free(addr);
 }
 
-/*	XXX NVM CHANGE 009.001.001	*/
+/*	XXX NVM CHANGE 009.001.001 - UPDATED TO 2.0.0	*/
 unsigned long get_chunkpp()
 {
 	return (unsigned long)*chunkpp;
 }
 
-/*	XXX NVM CHANGE 009.001.002	*/
+/*	XXX NVM CHANGE 009.001.002 - UPDATED TO 2.0.0	*/
 OPC *get_opc_ptr()
 {
 	return (OPC*)((char*)nvm-sizeof(OPC));
 }
 
-/*	XXX NVM CHANGE 009.001.003	*/
+/*	XXX NVM CHANGE 009.001.003 - UPDATED TO 2.0.0	*/
 uintptr_t get_freelist_header(){
 
 	return freelist->header;
 }
 
-/*	XXX NVM CHANGE 009.001.004	*/
+/*	XXX NVM CHANGE 009.001.004 - UPDATED TO 2.0.0	*/
 struct chunk *get_freelist_next(){
 	return freelist->next;
 }
 
-/*	XXX NVM CHANGE 009.001.005	*/
+/*	XXX NVM CHANGE 009.001.005 - UPDATED TO 2.0.0	*/
 unsigned int get_heapfree(){
 	return heapfree;
 }
 
-/*	XXX NVM CHANGE 009.001.006	*/
+/*	XXX NVM CHANGE 009.001.006 - UPDATED TO 2.0.0	*/
 unsigned int get_nvmFreeSpace(){
 	return nvmFreeSpace;
 }
 
+/* UPDATED TO 2.0.0	*/
 int get_has_finaliser_count(){
 	return has_finaliser_count;
 }
 
+/* UPDATED TO 2.0.0	*/
 int get_has_finaliser_size(){
 	return has_finaliser_size;
 }
 
+/* UPDATED TO 2.0.0	*/
 Object ** get_has_finaliser_list(){
 	return has_finaliser_list;
 }

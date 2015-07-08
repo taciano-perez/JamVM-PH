@@ -124,7 +124,7 @@ static int main_exited = FALSE;
 static unsigned int *tidBitmap = NULL;
 static int tidBitmapSize = 0;
 
-/*	XXX	NVM VARIABLES - THREAD.C	*/
+/*	XXX	NVM VARIABLES - THREAD.C - UPDATED TO 2.0.0 */
 static char* thread_name = "thread_ht";
 
 /* Mark a threadID value as no longer used */
@@ -435,7 +435,7 @@ Thread *findHashedThread(Thread *thread, long long id) {
     Thread *ptr;
 
     /* Add if absent, scavenge, locked */
-    /* XXX NVM CHANGE 006.003.013  */
+    /* XXX NVM CHANGE 006.003.013 - UPDATED TO 2.0.0 */
     findHashEntry(thread_id_map, id, ptr, (thread != NULL), TRUE, TRUE, thread_name, FALSE);
 
     return ptr;
@@ -1239,7 +1239,7 @@ void initialiseThreadStage1(InitArgs *args) {
         pthread_attr_setstacksize(&attributes, 1*MB);
 
     monitorInit(&sleep_mon);
-    /* XXX NVM CHANGE 005.001.008 - ThreadMap HT - N*/
+    /* XXX NVM CHANGE 005.001.008 - ThreadMap HT - N - UPDATED TO 2.0.0 */
     initHashTable(thread_id_map, HASHTABSZE, TRUE, thread_name, FALSE);
 
     /* We need to cache field and method offsets to create and initialise

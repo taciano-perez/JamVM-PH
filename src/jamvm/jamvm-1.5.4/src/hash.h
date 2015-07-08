@@ -32,15 +32,14 @@ typedef struct hash_table {
     int hash_count;
     VMLock lock;
 } HashTable;
-/* XXX NVM CHANGE 006.000 - Hash Functions
- * Changed functions args
- */
+
+// XXX NVM CHANGE 006.000 - Hash Functions -Changed functions args - UPDATED TO 2.0.0
 extern void resizeHash(HashTable *table, int new_size, char* name, int create_file);
 extern void lockHashTable0(HashTable *table, Thread *self);
 extern void unlockHashTable0(HashTable *table, Thread *self);
 
-/* XXX NVM CHANGE 006.001 - Init HT = GMM */
-//todo Memset
+/* XXX NVM CHANGE 006.001 - Init HT = GMM - UPDATED TO 2.0.0*/
+//todo Memset - UPDATED TO 2.0.0
 //memset(table.hash_table, 0, sizeof(HashEntry)*initial_size);                   \
 
 #define initHashTable(table, initial_size, create_lock, name, create_file)         \
@@ -61,7 +60,7 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
 #define hashTableCount(table)                                                      \
     table.hash_count
 
-/* XXX NVM CHANGE 006.003 - Find Hash */
+/* XXX NVM CHANGE 006.003 - Find Hash - UPDATED TO 2.0.0 */
 #define findHashEntry(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)           \
 {                                                                                  \
     int hash = HASH(ptr);                                                          \

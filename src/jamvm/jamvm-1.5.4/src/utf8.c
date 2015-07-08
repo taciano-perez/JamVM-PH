@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include "jam.h"
 #include "hash.h"
-// todo HT SIZE
+// todo HT SIZE - UPDATED TO 2.0.0
 //1 << 10
 //Changed Default size of UTF8 hash 1 << 10
 #define HASHTABSZE 1<<13
@@ -36,7 +36,7 @@
 
 static HashTable hash_table;
 
-/*XXX NVM VARIABLES - UTF8.C */
+/*XXX NVM VARIABLES - UTF8.C - UPDATED TO 2.0.0 */
 static char* utf8_name = "utf8_ht";
 static int testing_mode = FALSE;
 static int is_persistent = FALSE;
@@ -101,18 +101,18 @@ int utf8Comp(char *ptr, char *ptr2) {
 char *findHashedUtf8(char *string, int add_if_absent) {
     char *interned = NULL;
     /* Add if absent, no scavenge, locked */
-    /* XXX NVM CHANGE 006.003.008  */
+    /* XXX NVM CHANGE 006.003.008 - UPDATED TO 2.0.0 */
    		findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
    	return interned;
 }
 
 char *copyUtf8(char *string) {
-	/*XXX NVM CHANGE 004.001.030	*/
+	/*XXX NVM CHANGE 004.001.030 - UPDATED TO 2.0.0	*/
     char *buff = strcpy(sysMalloc_persistent(strlen(string) + 1), string);
     char *found = findHashedUtf8(buff, TRUE);
 
     if(found != buff)
-   	/*XXX NVM CHANGE 004.003.003	*/
+   	/*XXX NVM CHANGE 004.003.003 - UPDATED TO 2.0.0	*/
         sysFree_persistent(buff);
 
     return found;
@@ -152,9 +152,9 @@ void initialiseUtf8(InitArgs *args) {
 		is_persistent = TRUE;
 	}
     /* Init hash table, and create lock */
-    /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y*/
+    /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y - UPDATED TO 2.0.0 */
     initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
-    /* XXX DOC CHANGE */
+    /* XXX DOC CHANGE - UPDATED TO 2.0.0 */
     if(is_persistent){
     	OPC *ph_value = get_opc_ptr();
     	hash_table.hash_count = ph_value->utf8_hash_count;

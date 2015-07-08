@@ -240,7 +240,7 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
                 goto exit;
             }
 
-			/* XXX NVM CHANGE 001.001 */
+			/* XXX NVM CHANGE 001.001 - UPDATED TO 2.0.0*/
 		} else if (strncmp(argv[i], "-persistentheap:", 16) == 0) {
 			args->persistent_heap = TRUE;
 			args->heap_file = argv[i] + 16;
@@ -354,7 +354,7 @@ exit:
 }
 
 
-
+/* XXX NVM CHANGE 069.069 - UPDATED TO 2.0.0*/
 int resumeAllListeners(Object *system_loader)
 {
 	Class *op_runtime = findClassFromClassLoader("javax.op.OPRuntime", system_loader);

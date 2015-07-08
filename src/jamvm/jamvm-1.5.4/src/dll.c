@@ -232,7 +232,7 @@ typedef struct {
     Object *loader;
 } DllEntry;
 
-/* XXX NVM CHANGE 008.000.000 - RELOAD DLL
+/* XXX NVM CHANGE 008.000.000 - RELOAD DLL - UPDATED TO 2.0.0
  * Created method to reload dlls used on previous run
  */
 void reloadDlls(InitArgs *args){
@@ -243,7 +243,7 @@ void reloadDlls(InitArgs *args){
 	ssize_t read;
 
 	if((args->persistent_heap) && (access("dlls.txt", F_OK) != -1 ) ){
-		/* XXX NVM CHANGE 007.000.002 */
+		/* XXX NVM CHANGE 007.000.002 - UPDATED TO 2.0.0 */
 		first_ex = FALSE;
 		fp = fopen("dlls.txt", "r+");
 		if (fp == NULL)
@@ -260,7 +260,7 @@ void reloadDlls(InitArgs *args){
 void initialiseDll(InitArgs *args) {
 #ifndef NO_JNI
     /* Init hash table, and create lock */
-    /* XXX NVM CHANGE 005.001.004 - DLL HT - N */
+    /* XXX NVM CHANGE 005.001.004 - DLL HT - N - UPDATED TO 2.0.0 */
 	initHashTable(hash_table, HASHTABSZE, TRUE, dll_ht_name, FALSE);
 	reloadDlls(args);
 
@@ -286,7 +286,7 @@ int dllNameHash(char *name) {
 
 int resolveDll(char *name, Object *loader) {
     DllEntry *dll;
-    /* XXX NVM CHANGE 008.000.001	*/
+    /* XXX NVM CHANGE 008.000.001 - UPDATED TO 2.0.0	*/
     if(is_persistent){
     	FILE *f = fopen("dlls.txt","a+");
     }
@@ -302,7 +302,7 @@ int resolveDll(char *name, Object *loader) {
 
 
     /* Do not add if absent, no scavenge, locked */
-    /* XXX NVM CHANGE 006.003.005  */
+    /* XXX NVM CHANGE 006.003.005 - UPDATED TO 2.0.0 */
     findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, dll_ht_name, FALSE);
 
     if(dll == NULL) {
@@ -348,9 +348,9 @@ int resolveDll(char *name, Object *loader) {
                   ((hash1 == hash2) && (strcmp(ptr1->name, ptr2->name) == 0))
 
         /* Add if absent, no scavenge, locked */
-        /* XXX NVM CHANGE 006.003.006  */
+        /* XXX NVM CHANGE 006.003.006 - UPDATED TO 2.0.0 */
         findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, dll_ht_name, FALSE);
-        /* XXX NVM CHANGE 008.000.002	*/
+        /* XXX NVM CHANGE 008.000.002 - UPDATED TO 2.0.0 */
         if (is_persistent){
         	FILE * fp;
         	fp = fopen("dlls.txt", "a+");
@@ -470,7 +470,7 @@ void unloadClassLoaderDlls(Object *loader) {
 
         /* Ensure new table is less than 2/3 full */
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
-        /* XXX NVM CHANGE 006.002.002  */
+        /* XXX NVM CHANGE 006.002.002 - UPDATED TO 2.0.0 */
         resizeHash(&hash_table, size, dll_ht_name, FALSE);
     }
 }
@@ -481,7 +481,7 @@ uintptr_t *callJNIWrapper(Class *class, MethodBlock *mb, uintptr_t *ostack) {
 	TRACE("<DLL: Calling JNI method %s.%s%s>\n", CLASS_CB(class)->name,
           mb->name, mb->type);
 
-	/* XXX NVM CHANGE 007.000.003 */
+	/* XXX NVM CHANGE 007.000.003 - UPDATED TO 2.0.0 */
 	if (first_ex == FALSE)
 		lookupLoadedDlls(mb);
 

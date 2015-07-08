@@ -38,9 +38,9 @@ void unlockHashTable0(HashTable *table, Thread *self) {
     unlockVMLock(table->lock, self);
 }
 
-/* XXX NVM CHANGE 006.002 - Resize Hash */
+/* XXX NVM CHANGE 006.002 - Resize Hash - UPDATED TO 2.0.0 */
 void resizeHash(HashTable *table, int new_size, char* name , int create_file) {
-    /* XXX NVM CHANGE 005.001.011 - Resize Hash*/
+    /* XXX NVM CHANGE 005.001.011 - Resize Hash - UPDATED TO 2.0.0*/
 	HashEntry *new_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*new_size, name, create_file);
     int i;
 

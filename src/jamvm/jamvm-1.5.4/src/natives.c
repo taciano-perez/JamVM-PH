@@ -1682,11 +1682,11 @@ uintptr_t *nativeUnloadDll(Class *class, MethodBlock *mb, uintptr_t *ostack) {
     return ostack;
 }
 
-/*	XXX NVM CHANGE 009.002.002	*/
+/*	XXX NVM CHANGE 009.002.002 - UPDATED TO 2.0.0	*/
 Class* get_java_lang_class(){
 	return java_lang_Class;
 }
-/*	XXX NVM CHANGE 009.002.003	*/
+/*	XXX NVM CHANGE 009.002.003 - UPDATED TO 2.0.0	*/
 void set_java_lang_class(Class *clazz){
 	java_lang_Class = clazz;
 }
