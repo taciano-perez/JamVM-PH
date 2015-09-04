@@ -120,19 +120,19 @@ struct chunk *get_freelist_next();
 int nvm_file_exists = FALSE;
 
 // Defines
-#define HEAPADDR 				0xaf497000
-#define NVM_ADDRESS 			0xaeb0d000
-#define INCREASE_VALUE 			1000000
-#define NVM_INIT_SIZE 			10000000
-#define NVM_FILE 				"Memory"
+#define HEAPADDR                 0xaf497000
+#define NVM_ADDRESS             0xaeb0d000
+#define INCREASE_VALUE             1000000
+#define NVM_INIT_SIZE             10000000
+#define NVM_FILE                 "Memory"
 static char *CON_ROOTS_NAME   = "cr_ht";
 static char *HARD_MARKED_NAME = "add_ob";
 
  typedef struct nvmChunk
  {
- 	int alloc_bit;
- 	unsigned int chunk_size;
- 	struct nvmChunk *next;
+     int alloc_bit;
+     unsigned int chunk_size;
+     struct nvmChunk *next;
 
  } nvmChunk;
 
@@ -145,7 +145,7 @@ static char *HARD_MARKED_NAME = "add_ob";
  static unsigned int nvm_current_size = NVM_INIT_SIZE;
  static unsigned long nvm_limit;
 
-// End of Modification
+// End of modification
 
 static int verbosegc;
 static int compact_override;
@@ -352,151 +352,151 @@ void clearMarkBits() {
 
 void initialiseNVM()
 {
-	if( access( NVM_FILE, F_OK ) != -1 )
-	{
-		nvm_fd = open ( NVM_FILE, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
-		nvm_file_exists = TRUE;
-	}
-	else
-	{
-		nvm_fd = open ( NVM_FILE, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
-		lseek (nvm_fd, (nvm_current_size - 1), SEEK_SET);
-		write(nvm_fd,"",1);
-	}
+    if( access( NVM_FILE, F_OK ) != -1 )
+    {
+        nvm_fd = open ( NVM_FILE, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
+        nvm_file_exists = TRUE;
+    }
+    else
+    {
+        nvm_fd = open ( NVM_FILE, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+        lseek (nvm_fd, (nvm_current_size - 1), SEEK_SET);
+        write(nvm_fd,"",1);
+    }
 
-	nvm = (char*) mmap(NVM_ADDRESS, nvm_current_size, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, nvm_fd, 0);
-	nvm = nvm + sizeof(OPC);
-	msync(nvm, nvm_current_size, MS_SYNC);
-	nvm_limit = (unsigned long) nvm + nvm_current_size;
+    nvm = (char*) mmap(NVM_ADDRESS, nvm_current_size, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, nvm_fd, 0);
+    nvm = nvm + sizeof(OPC);
+    msync(nvm, nvm_current_size, MS_SYNC);
+    nvm_limit = (unsigned long) nvm + nvm_current_size;
 
-	if(nvm == -1)
-	{
-		int errsv = errno;
+    if(nvm == -1)
+    {
+        int errsv = errno;
 
-		switch (errsv)
-		{
+        switch (errsv)
+        {
 
-		case EAGAIN: printf("ERROR: EAGAIN\n");
-					 break;
-		case EFAULT: printf("ERROR: EFAULT\n");
-					 break;
-		case EINVAL: printf("ERROR: EINVAL\n");
-					 break;
-		case ENOMEM: printf("ERROR: ENOMEM\n");
-					 break;
-		}
-	}
+        case EAGAIN: printf("ERROR: EAGAIN\n");
+                     break;
+        case EFAULT: printf("ERROR: EFAULT\n");
+                     break;
+        case EINVAL: printf("ERROR: EINVAL\n");
+                     break;
+        case ENOMEM: printf("ERROR: ENOMEM\n");
+                     break;
+        }
+    }
 
-	/* 1st chunk =  all mem */
-	nvm_free_list = (nvmChunk*) nvm;
+    /* 1st chunk =  all mem */
+    nvm_free_list = (nvmChunk*) nvm;
 
-	if (!nvm_file_exists)
-	{
-		nvm_free_list->chunk_size = nvm_free_space = (nvm_current_size - nvm_header_size);
-		nvm_free_list->alloc_bit = 0;
-		nvm_free_list->next = NULL;
-	}
+    if (!nvm_file_exists)
+    {
+        nvm_free_list->chunk_size = nvm_free_space = (nvm_current_size - nvm_header_size);
+        nvm_free_list->alloc_bit = 0;
+        nvm_free_list->next = NULL;
+    }
 }
 
-// End of Modification
+// End of modification
 
 // JaPHa Modification
 // Changed InitialiseAlloc to save the heap
 
 int initialiseAlloc(InitArgs *args)
 {
-	int heap_fd;
-	int heap_file_exists = FALSE;
-	OPC *ph_value;
-	uintptr_t largest;
+    int heap_fd;
+    int heap_file_exists = FALSE;
+    OPC *ph_value;
+    uintptr_t largest;
 
-	max_heap = args->max_heap;
-	unsigned long volatile * const heap_mem_addr = (unsigned long *) HEAPADDR;
+    max_heap = args->max_heap;
+    unsigned long volatile * const heap_mem_addr = (unsigned long *) HEAPADDR;
 
-	if(args->persistent_heap == TRUE)
-	{
-		persistent_mode = TRUE;
+    if(args->persistent_heap == TRUE)
+    {
+        persistent_mode = TRUE;
 
-		if( access(args->heap_file, F_OK ) != -1 )
-		{
-			heap_fd = open (args->heap_file, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
-			heap_file_exists = TRUE;
-			first_execution = FALSE;
-		}
-		else
-		{
-			heap_fd = open (args->heap_file, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
-			lseek (heap_fd, args->max_heap - 1, SEEK_SET);
+        if( access(args->heap_file, F_OK ) != -1 )
+        {
+            heap_fd = open (args->heap_file, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
+            heap_file_exists = TRUE;
+            first_execution = FALSE;
+        }
+        else
+        {
+            heap_fd = open (args->heap_file, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+            lseek (heap_fd, args->max_heap - 1, SEEK_SET);
 
-			// Write Dummy Byte
-			write(heap_fd,"",1);
-		}
+            // Write Dummy Byte
+            write(heap_fd,"",1);
+        }
 
-		heap_mem = (char*)mmap(heap_mem_addr, args->max_heap, PROT_READ|PROT_WRITE, MAP_SHARED, heap_fd, 0);
+        heap_mem = (char*)mmap(heap_mem_addr, args->max_heap, PROT_READ|PROT_WRITE, MAP_SHARED, heap_fd, 0);
 
-		initialiseNVM();
-		msync(heap_mem, args->max_heap, MS_SYNC);
-	}
-	else
-	{
-		heap_mem = (char*)mmap(0, args->max_heap, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
-	}
+        initialiseNVM();
+        msync(heap_mem, args->max_heap, MS_SYNC);
+    }
+    else
+    {
+        heap_mem = (char*)mmap(0, args->max_heap, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+    }
 
-	if(heap_mem == MAP_FAILED)
-	{
-		perror("Couldn't allocate the heap; try reducing the max heap size (-Xmx)\n");
-		exitVM(1);
-	}
+    if(heap_mem == MAP_FAILED)
+    {
+        perror("Couldn't allocate the heap; try reducing the max heap size (-Xmx)\n");
+        exitVM(1);
+    }
 
-	/* Align heapbase so that start of heap + HEADER_SIZE is object aligned */
-	heapbase = (char*)(((uintptr_t)heap_mem+HEADER_SIZE+OBJECT_GRAIN-1)&~(OBJECT_GRAIN-1))-HEADER_SIZE;
+    /* Align heapbase so that start of heap + HEADER_SIZE is object aligned */
+    heapbase = (char*)(((uintptr_t)heap_mem+HEADER_SIZE+OBJECT_GRAIN-1)&~(OBJECT_GRAIN-1))-HEADER_SIZE;
 
-	/* Ensure size of heap is multiple of OBJECT_GRAIN */
-	heaplimit = heapbase+((args->min_heap-(heapbase-heap_mem))&~(OBJECT_GRAIN-1));
-	heapmax = heapbase+((args->max_heap-(heapbase-heap_mem))&~(OBJECT_GRAIN-1));
+    /* Ensure size of heap is multiple of OBJECT_GRAIN */
+    heaplimit = heapbase+((args->min_heap-(heapbase-heap_mem))&~(OBJECT_GRAIN-1));
+    heapmax = heapbase+((args->max_heap-(heapbase-heap_mem))&~(OBJECT_GRAIN-1));
 
-	/* Set initial free-list to one block covering entire heap */
-	freelist = (Chunk*)heapbase;
+    /* Set initial free-list to one block covering entire heap */
+    freelist = (Chunk*)heapbase;
 
-	// Creating Free List and OPC
-	if(heap_file_exists == FALSE)
-	{
-		freelist->header = heapfree = heaplimit-heapbase;
-		freelist->next = NULL;
-	}
-	else
-	{
-		ph_value = (char*)(nvm-sizeof(OPC));
-		*chunkpp = ph_value->chunkpp;
-		freelist->header = ph_value->freelist_header;
-		freelist->next = ph_value->freelist_next;
-		heapfree = ph_value->heapfree;
-		nvm_free_space = ph_value->nvmFreeSpace;
-		set_java_lang_class(ph_value->java_lang_Class);
-		set_ldr_vmdata_offset(ph_value->ldr_vmdata_offset);
-	}
+    // Creating Free List and OPC
+    if(heap_file_exists == FALSE)
+    {
+        freelist->header = heapfree = heaplimit-heapbase;
+        freelist->next = NULL;
+    }
+    else
+    {
+        ph_value = (char*)(nvm-sizeof(OPC));
+        *chunkpp = ph_value->chunkpp;
+        freelist->header = ph_value->freelist_header;
+        freelist->next = ph_value->freelist_next;
+        heapfree = ph_value->heapfree;
+        nvm_free_space = ph_value->nvmFreeSpace;
+        set_java_lang_class(ph_value->java_lang_Class);
+        set_ldr_vmdata_offset(ph_value->ldr_vmdata_offset);
+    }
 
 
-	TRACE_GC("Alloced heap size %p\n", heaplimit-heapbase);
-	allocMarkBits();
+    TRACE_GC("Alloced heap size %p\n", heaplimit-heapbase);
+    allocMarkBits();
 
-	/* Initialise GC locks */
-	initVMLock(heap_lock);
-	initVMLock(has_fnlzr_lock);
-	initVMLock(registered_refs_lock);
-	initVMWaitLock(run_finaliser_lock);
-	initVMWaitLock(reference_lock);
+    /* Initialise GC locks */
+    initVMLock(heap_lock);
+    initVMLock(has_fnlzr_lock);
+    initVMLock(registered_refs_lock);
+    initVMWaitLock(run_finaliser_lock);
+    initVMWaitLock(reference_lock);
 
-	/* Cache system page size -- used for internal GC lists */
-	sys_page_size = getpagesize();
+    /* Cache system page size -- used for internal GC lists */
+    sys_page_size = getpagesize();
 
-	/* Set verbose option from initialisation arguments */
-	verbosegc = args->verbosegc;
+    /* Set verbose option from initialisation arguments */
+    verbosegc = args->verbosegc;
 
-	return TRUE;
+    return TRUE;
 }
 
-// End of Modification
+// End of modification
 
 /* ------------------------- MARK PHASE ------------------------- */
   
@@ -529,10 +529,8 @@ void markRoot(Object *object) {
         MARK(object, HARD_MARK);
 }
 
-void addConservativeRoot(Object *object)
-{
-    if((conservative_root_count % LIST_INCREMENT) == 0)
-    {
+void addConservativeRoot(Object *object) {
+    if((conservative_root_count % LIST_INCREMENT) == 0) {
         int new_size = conservative_root_count + LIST_INCREMENT;
 
         // JaPHa Modification
@@ -829,7 +827,7 @@ void markChildren(Object *ob, int mark, int mark_soft_refs) {
         list##_end = list##_size;                                        \
         list##_start = list##_size += LIST_INCREMENT;                    \
         list##_list = gcMemRealloc(list##_list, list##_size *            \
-        				sizeof(Object*), HARD_MARKED_NAME, FALSE);        \
+                       sizeof(Object*), HARD_MARKED_NAME, FALSE);        \
     }                                                                    \
     list##_end = list##_end%list##_size;                                 \
     list##_list[list##_end++] = ob;                                      \
@@ -1251,9 +1249,10 @@ static void addConservativeRoots2Hash() {
 
     con_roots_hashtable = gcMemMalloc( (con_roots_hashtable_size *sizeof(uintptr_t)) , CON_ROOTS_NAME, FALSE );
 
-    // End of Modification
+    // End of modification
 
-    memset(con_roots_hashtable, 0, con_roots_hashtable_size * sizeof(uintptr_t));
+    memset(con_roots_hashtable, 0, con_roots_hashtable_size *
+                                   sizeof(uintptr_t));
 
     for(i = 0; i < conservative_root_count; i++) {
         uintptr_t data = ((uintptr_t)conservative_roots[i]) >> LOG_BYTESPERMARK;
@@ -2041,10 +2040,10 @@ void referenceHandlerThreadLoop(Thread *self) {
 
 void set_has_finaliser_list()
 {
-	OPC *ph_values = get_opc_ptr();
-	has_finaliser_count = ph_values->has_finaliser_count;
-	has_finaliser_size = ph_values->has_finaliser_size;
-	has_finaliser_list = sysMalloc(has_finaliser_size*sizeof(Object*));
+    OPC *ph_values = get_opc_ptr();
+    has_finaliser_count = ph_values->has_finaliser_count;
+    has_finaliser_size = ph_values->has_finaliser_size;
+    has_finaliser_list = sysMalloc(has_finaliser_size*sizeof(Object*));
     memcpy(has_finaliser_list, ph_values->has_finaliser_list, has_finaliser_size*sizeof(Object*));
     sysFree_persistent(ph_values->has_finaliser_list);
 }
@@ -2056,30 +2055,30 @@ int initialiseGC(InitArgs *args) {
      * when we're really low on heap space, and can create FA... */
 
     MethodBlock *init;
-    if(exceptionOccurred())
-    {
+    if(exceptionOccurred()) {
         printException();
         return FALSE;
     }
 
     if(first_execution == TRUE)
     {
-		/* Pre-allocate an OutOfMemoryError exception object - we throw it
-			 * when we're really low on heap space, and can create FA... */
-		Class *oom_clazz = findSystemClass(SYMBOL(java_lang_OutOfMemoryError));
+        /* Pre-allocate an OutOfMemoryError exception object - we throw it
+             * when we're really low on heap space, and can create FA... */
+        Class *oom_clazz = findSystemClass(SYMBOL(java_lang_OutOfMemoryError));
 
-		/* Initialize it */
-		init = lookupMethod(oom_clazz, SYMBOL(object_init), SYMBOL(_java_lang_String__V));
-		oom = allocObject(oom_clazz);
-		registerStaticObjectRef(&oom);
-		executeMethod(oom, init, NULL);
-	}
-	else
-	{
-		set_has_finaliser_list();
-	}
+    /* Initialize it */
+    init = lookupMethod(oom_clazz, SYMBOL(object_init),
+                                   SYMBOL(_java_lang_String__V));
+    oom = allocObject(oom_clazz);
+    registerStaticObjectRef(&oom);
+        executeMethod(oom, init, NULL);
+    }
+    else
+    {
+        set_has_finaliser_list();
+    }
 
-    executeMethod(oom, init, NULL);
+    //executeMethod(oom, init, NULL);
 
     /* Create and start VM threads for the reference handler and finalizer */
     createVMThread("Finalizer", finalizerThreadLoop);
@@ -2503,95 +2502,94 @@ unsigned long maxHeapMem() {
 // Modified functions
 
 // Added file to mmap in persistence mode
-void *gcMemMalloc(int n, char* name, int create_file)
-{
-	uintptr_t size = n + sizeof(uintptr_t);
-	uintptr_t *mem;
-	int fd;
+void *gcMemMalloc(int n, char* name, int create_file) {
+    uintptr_t size = n + sizeof(uintptr_t);
+    uintptr_t *mem;
+    int fd;
 
-	if (persistent_mode && create_file)
-	{
-		unsigned long buffer[1];
-		size = size + sizeof(unsigned long);
+    if (persistent_mode && create_file)
+    {
+        unsigned long buffer[1];
+        size = size + sizeof(unsigned long);
 
-		if( access( name, F_OK ) != -1 )
-		{
-			fd = open (name, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
+        if( access( name, F_OK ) != -1 )
+        {
+            fd = open (name, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
 
-			read(fd, &buffer, sizeof(unsigned long)+sizeof(uintptr_t));
+            read(fd, &buffer, sizeof(unsigned long)+sizeof(uintptr_t));
 
-			mem = (uintptr_t*)mmap((unsigned long)buffer[0],buffer[1], PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+            mem = (uintptr_t*)mmap((unsigned long)buffer[0],buffer[1], PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 
-			*mem++ = (unsigned long)mem;
-		}
-		else
-		{
-			fd = open (name, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
-			lseek (fd, size-1, SEEK_SET);
-			write(fd,"",1);
-			mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-			*mem++ = (unsigned long)mem;
-		}
+            *mem++ = (unsigned long)mem;
+        }
+        else
+        {
+            fd = open (name, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+            lseek (fd, size-1, SEEK_SET);
+            write(fd,"",1);
+            mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+            *mem++ = (unsigned long)mem;
+        }
 
-		msync(mem, size, MS_SYNC);
+        msync(mem, size, MS_SYNC);
 
-	}
-	else
-	{
-		mem = mmap(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
-	}
+    }
+    else
+    {
+        mem = mmap(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+    }
 
-	if(mem == MAP_FAILED)
-	{
-		jam_fprintf(stderr, "Mmap failed - aborting VM...\n");
-		exitVM(1);
-	}
-	*mem++ = size;
-	return mem;
+    if(mem == MAP_FAILED)
+    {
+        jam_fprintf(stderr, "Mmap failed - aborting VM...\n");
+        exitVM(1);
+    }
+    *mem++ = size;
+    return mem;
 }
 
 // Memory Realloc
 void *gcMemRealloc(void *addr, int size, char* name, int create_file)
 {
-	uintptr_t copy_size;
+    uintptr_t copy_size;
 
-	if(addr == NULL)
-	{
-		return gcMemMalloc(size, name, FALSE);
-	}
-	else
-	{
-		uintptr_t *mem = addr;
-		uintptr_t old_size = *--mem;
-		uintptr_t new_size = size + sizeof(uintptr_t);
+    if(addr == NULL)
+    {
+        return gcMemMalloc(size, name, FALSE);
+    }
+    else
+    {
+        uintptr_t *mem = addr;
+        uintptr_t old_size = *--mem;
+        uintptr_t new_size = size + sizeof(uintptr_t);
 
-		if(old_size/sys_page_size == new_size/sys_page_size)
-		{
-			*mem = new_size;
-			return addr;
-		}
-		else
-		{
-			if(  new_size > old_size )
-			{
-				copy_size = old_size;
-			}
-			else
-			{
-				copy_size = new_size;
-			}
+        if(old_size/sys_page_size == new_size/sys_page_size)
+        {
+            *mem = new_size;
+            return addr;
+        }
+        else
+        {
+            if(  new_size > old_size )
+            {
+                copy_size = old_size;
+            }
+            else
+            {
+                copy_size = new_size;
+            }
 
-			void *new_mem = gcMemMalloc(size, name , FALSE);
+            void *new_mem = gcMemMalloc(size, name , FALSE);
 
-			memcpy(new_mem, addr, copy_size - sizeof(uintptr_t));
-			munmap(mem, old_size);
+            memcpy(new_mem, addr, copy_size - sizeof(uintptr_t));
+            munmap(mem, old_size);
 
-			return new_mem;
-		}
-	}
+            return new_mem;
+        }
+    }
 }
 
-// End of Modification
+// End of modification
 
 void gcMemFree(void *addr) {
     if(addr != NULL) {
@@ -2627,192 +2625,191 @@ void freePendingFrees() {
 // Expand non volatile memory
 void expandNVM()
 {
-	unsigned int old_size = nvm_current_size;
-	nvmChunk *new;
-	nvmChunk *chunk;
-	nvm_current_size = nvm_current_size + INCREASE_VALUE;
-	nvm_limit = (unsigned int) nvm + nvm_current_size;
-	lseek (nvm_fd, (nvm_current_size - 1), SEEK_SET);
-	write(nvm_fd,"",1);
+    unsigned int old_size = nvm_current_size;
+    nvmChunk *new;
+    nvmChunk *chunk;
+    nvm_current_size = nvm_current_size + INCREASE_VALUE;
+    nvm_limit = (unsigned int) nvm + nvm_current_size;
+    lseek (nvm_fd, (nvm_current_size - 1), SEEK_SET);
+    write(nvm_fd,"",1);
 
-	/* REMAP WITH MAYMOVE, may move */
-	nvm = (char*) mremap(nvm, old_size, nvm_current_size, MREMAP_FIXED|MREMAP_MAYMOVE, NVM_ADDRESS);
+    /* REMAP WITH MAYMOVE, may move */
+    nvm = (char*) mremap(nvm, old_size, nvm_current_size, MREMAP_FIXED|MREMAP_MAYMOVE, NVM_ADDRESS);
 
-	if (nvm == -1)
-	{
-		int errsv = errno;
+    if (nvm == -1)
+    {
+        int errsv = errno;
 
-		switch (errsv)
-		{
-			case EAGAIN: printf("EAGAIN\n");
-			break;
-			case EFAULT: printf("EFAULT\n");
-			break;
-			case EINVAL: printf("EINVAL\n");
-			break;
-			case ENOMEM: printf("ENOMEM\n");
-			break;
-		}
-	}
-	memset((nvm + old_size), 0, INCREASE_VALUE);
+        switch (errsv)
+        {
+            case EAGAIN: printf("EAGAIN\n");
+            break;
+            case EFAULT: printf("EFAULT\n");
+            break;
+            case EINVAL: printf("EINVAL\n");
+            break;
+            case ENOMEM: printf("ENOMEM\n");
+            break;
+        }
+    }
+    memset((nvm + old_size), 0, INCREASE_VALUE);
 
-	/* goto last chunk */
-	for (chunk = nvm_free_list; chunk->next !=NULL; chunk = chunk->next);
+    /* goto last chunk */
+    for (chunk = nvm_free_list; chunk->next !=NULL; chunk = chunk->next);
 
-	/* if isnt allocated attach new offset */
-	if (!chunk->alloc_bit)
-	{
-		chunk->chunk_size = chunk->chunk_size + INCREASE_VALUE;
-		nvm_free_space = nvm_free_space + INCREASE_VALUE;
-	}
-	else
-	{
-		/* create new chunk and add to the list
-							 ptr + header + chunk len 	*/
-		new = ((unsigned int)new + nvm_header_size + new->chunk_size);
-		new->alloc_bit = 0;
-		new->chunk_size = INCREASE_VALUE;
-		new->next = NULL;
-		chunk->next = new;
-		nvm_free_space = nvm_free_space + INCREASE_VALUE - nvm_header_size;
-	}
+    /* if isnt allocated attach new offset */
+    if (!chunk->alloc_bit)
+    {
+        chunk->chunk_size = chunk->chunk_size + INCREASE_VALUE;
+        nvm_free_space = nvm_free_space + INCREASE_VALUE;
+    }
+    else
+    {
+        /* create new chunk and add to the list
+                             ptr + header + chunk len     */
+        new = ((unsigned int)new + nvm_header_size + new->chunk_size);
+        new->alloc_bit = 0;
+        new->chunk_size = INCREASE_VALUE;
+        new->next = NULL;
+        chunk->next = new;
+        nvm_free_space = nvm_free_space + INCREASE_VALUE - nvm_header_size;
+    }
 }
 
 // Persistent Allocation Functions
 void *sysMalloc_persistent(int size)
 {
-	int n;
+    int n;
 
-	if(persistent_mode)
-	{
-		if( size < sizeof(void*) )
-		{
-			n = sizeof(void*);
-		}
-		else
-		{
-			n = size;
-		}
+    if(persistent_mode)
+    {
+        if( size < sizeof(void*) )
+        {
+            n = sizeof(void*);
+        }
+        else
+        {
+            n = size;
+        }
 
-		void *ret_addr = NULL;
-		nvmChunk *found = NULL;
-		nvmChunk **iterate  = &nvm_free_list;
-		int shift = 0;
+        void *ret_addr = NULL;
+        nvmChunk *found = NULL;
+        nvmChunk **iterate  = &nvm_free_list;
+        int shift = 0;
 
-		while(*iterate)
-		{
-			/*	search unallocated chunk		*/
-			if((*iterate)->alloc_bit == 1)
-			{
-				iterate = &(*iterate)->next;
-				continue;
-			}
-			unsigned int len = (*iterate)->chunk_size;
+        while(*iterate)
+        {
+            /*    search unallocated chunk        */
+            if((*iterate)->alloc_bit == 1)
+            {
+                iterate = &(*iterate)->next;
+                continue;
+            }
+            unsigned int len = (*iterate)->chunk_size;
 
-			if(len > n)
-			{
-				found = *iterate;
-				found->alloc_bit = 1;
-				/*	check if remaining space can hold a chunk		*/
-				if((int)(len - (nvm_header_size + n)) >= min_size)
-				{
-					nvmChunk *rem = NULL;
-					/*	ptr +	header	+ content = OK	*/
-					rem = ((char*)found + nvm_header_size + n);
+            if(len > n)
+            {
+                found = *iterate;
+                found->alloc_bit = 1;
+                /*    check if remaining space can hold a chunk        */
+                if((int)(len - (nvm_header_size + n)) >= min_size)
+                {
+                    nvmChunk *rem = NULL;
+                    /*    ptr +    header    + content = OK    */
+                    rem = ((char*)found + nvm_header_size + n);
 
-					if (shift = (unsigned int)rem & 0x3)
-					{
-						shift = (0x4 - shift);
-						memset(rem, 0 , shift);
-						rem = ((char*)rem + shift);
-					}
-					rem->alloc_bit = 0;
-					rem->chunk_size = len - (shift + nvm_header_size + n);
-					rem->next = found->next;
+                    if (shift = (unsigned int)rem & 0x3)
+                    {
+                        shift = (0x4 - shift);
+                        memset(rem, 0 , shift);
+                        rem = ((char*)rem + shift);
+                    }
+                    rem->alloc_bit = 0;
+                    rem->chunk_size = len - (shift + nvm_header_size + n);
+                    rem->next = found->next;
 
-					found->chunk_size = n;
-					/* A -> Found -> Rem -> Found->next */
-					found->next = rem;
-					nvm_free_space = nvm_free_space - nvm_header_size - shift;
-				}
-				ret_addr = ((void*)found + nvm_header_size);
-				break;
-			}
+                    found->chunk_size = n;
+                    /* A -> Found -> Rem -> Found->next */
+                    found->next = rem;
+                    nvm_free_space = nvm_free_space - nvm_header_size - shift;
+                }
+                ret_addr = ((void*)found + nvm_header_size);
+                break;
+            }
 
-			if(len == n)
-			{
-				found = *iterate;
-				found->alloc_bit = 1;
-				ret_addr = ((void*)found + nvm_header_size);
-				break;
-			}
-			iterate = &(*iterate)->next;
-		}
+            if(len == n)
+            {
+                found = *iterate;
+                found->alloc_bit = 1;
+                ret_addr = ((void*)found + nvm_header_size);
+                break;
+            }
+            iterate = &(*iterate)->next;
+        }
 
-		nvm_free_space = nvm_free_space - found->chunk_size;
-		/* clear chunk */
-		memset(ret_addr, 0, found->chunk_size);
-		msync(nvm, nvm_current_size, MS_SYNC);
-		return ret_addr;
-	}
-	else
-	{
-		return sysMalloc(size);
-	}
+        nvm_free_space = nvm_free_space - found->chunk_size;
+        /* clear chunk */
+        memset(ret_addr, 0, found->chunk_size);
+        msync(nvm, nvm_current_size, MS_SYNC);
+        return ret_addr;
+    }
+    else
+    {
+        return sysMalloc(size);
+    }
 }
 
 void sysFree_persistent(void* addr)
 {
-	if(persistent_mode)
-	{
-		unsigned long ptr = (unsigned long) addr;
+    if(persistent_mode)
+    {
+        unsigned long ptr = (unsigned long) addr;
 
-		/*	chunk = ptr - header */
-		nvmChunk *toFree = (ptr-nvm_header_size);
-		toFree->alloc_bit = 0;
-		nvm_free_space = nvm_free_space + toFree->chunk_size;
+        /*    chunk = ptr - header */
+        nvmChunk *toFree = (ptr-nvm_header_size);
+        toFree->alloc_bit = 0;
+        nvm_free_space = nvm_free_space + toFree->chunk_size;
 
-		/* clear chunk */
-		memset(ptr, 0, toFree->chunk_size);
-		msync(nvm, nvm_current_size, MS_SYNC);
-	}
-	else
-	{
-		sysFree(addr);
-	}
+        /* clear chunk */
+        memset(ptr, 0, toFree->chunk_size);
+        msync(nvm, nvm_current_size, MS_SYNC);
+    }
+    else
+    {
+        sysFree(addr);
+    }
 }
 
 void *sysRealloc_persistent(void *addr, int size)
 {
-	void *mem;
-	if (persistent_mode)
-	{
-		/*	chunk = ptr - header */
-		nvmChunk *to_realloc = (addr-nvm_header_size);
-		mem = sysMalloc_persistent(size);
+    void *mem;
+    if (persistent_mode)
+    {
+        /*    chunk = ptr - header */
+        nvmChunk *to_realloc = (addr-nvm_header_size);
+        mem = sysMalloc_persistent(size);
 
-		if (addr != NULL)
-		{
-			if ((to_realloc->chunk_size <= size))
-			{
-				memcpy(mem, ((void*)to_realloc+nvm_header_size), to_realloc->chunk_size);
-			}
-			else
-			{
-				memcpy(mem, ((void*)to_realloc+nvm_header_size), size);
-			}
-			sysFree_persistent(addr);
-		}
-		return mem;
-	}
-	else
-	{
-		return sysRealloc(addr, size);
-	}
+        if (addr != NULL)
+        {
+            if ((to_realloc->chunk_size <= size))
+            {
+                memcpy(mem, ((void*)to_realloc+nvm_header_size), to_realloc->chunk_size);
+            }
+            else
+            {
+                memcpy(mem, ((void*)to_realloc+nvm_header_size), size);
+            }
+            sysFree_persistent(addr);
+        }
+        return mem;
+    }
+    else
+    {
+    return sysRealloc(addr, size);
+    }
 }
 
-// End of Modification
-
+// End of modification
 
 void *sysMalloc(int size) {
     int n = size < sizeof(void*) ? sizeof(void*) : size;
@@ -2843,46 +2840,46 @@ void sysFree(void *addr) {
 
 unsigned long get_chunkpp()
 {
-	return (unsigned long)*chunkpp;
+    return (unsigned long)*chunkpp;
 }
 
 OPC *get_opc_ptr()
 {
-	return (OPC*)((char*)nvm-sizeof(OPC));
+    return (OPC*)((char*)nvm-sizeof(OPC));
 }
 
 uintptr_t get_freelist_header()
 {
 
-	return freelist->header;
+    return freelist->header;
 }
 
 struct chunk *get_freelist_next()
 {
-	return freelist->next;
+    return freelist->next;
 }
 
 unsigned int get_heapfree()
 {
-	return heapfree;
+    return heapfree;
 }
 
 unsigned int get_nvmFreeSpace()
 {
-	return nvm_free_space;
+    return nvm_free_space;
 }
 
 int get_has_finaliser_count()
 {
-	return has_finaliser_count;
+    return has_finaliser_count;
 }
 
 int get_has_finaliser_size()
 {
-	return has_finaliser_size;
+    return has_finaliser_size;
 }
 
 Object ** get_has_finaliser_list()
 {
-	return has_finaliser_list;
+    return has_finaliser_list;
 }

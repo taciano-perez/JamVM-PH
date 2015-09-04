@@ -24,7 +24,7 @@
 #include "jam.h"
 #include "hash.h"
 
-#define HASHTABSZE 1<<10
+#define HASHTABSZE 1<<13
 #define HASH(ptr) utf8Hash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (ptr1 == ptr2) || \
                   ((hash1 == hash2) && utf8Comp(ptr1, ptr2))
@@ -51,26 +51,26 @@ static HashTable hash_table;
 // JaPHa Modification
 // Constants and Variables
 
-static char* UTF8_NAME 		= "utf8_ht";
-static int persistent_mode 	= FALSE;
+static char* UTF8_NAME         = "utf8_ht";
+static int persistent_mode     = FALSE;
 
 // End of Modification
 
 int initialiseUtf8(InitArgs *args)
 {
 
-	// JaPHa Modification
-	// Persistent mode flag
+    // JaPHa Modification
+    // Persistent mode flag
 
-	if(args->persistent_heap == TRUE)
-	{
-		persistent_mode = TRUE;
-	}
+    if(args->persistent_heap == TRUE)
+    {
+        persistent_mode = TRUE;
+    }
 
-	// End of Modification
+    // End of Modification
 
-	// JaPHa Modification
-	// Added initialization arguments
+    // JaPHa Modification
+    // Added initialization arguments
 
     /* Init hash table, and create lock */
     initHashTable(hash_table, HASHTABSZE, TRUE, UTF8_NAME, TRUE);
@@ -78,13 +78,13 @@ int initialiseUtf8(InitArgs *args)
     // End of Modification
 
     // JaPHa Modification
-	// Setting hash count
+    // Setting hash count
 
     if(persistent_mode)
     {
-		OPC *ph_value = get_opc_ptr();
-		hash_table.hash_count = ph_value->utf8_hash_count;
-	}
+        OPC *ph_value = get_opc_ptr();
+        hash_table.hash_count = ph_value->utf8_hash_count;
+    }
 
     // End of Modification
 
@@ -151,7 +151,7 @@ char *findHashedUtf8(char *string, int add_if_absent) {
 char *copyUtf8(char *string)
 {
     // JaPHa Modification
-	// Changed to persistent call
+    // Changed to persistent call
 
     char *buff = strcpy(sysMalloc_persistent(strlen(string) + 1), string);
 
@@ -163,9 +163,7 @@ char *copyUtf8(char *string)
     // Changed to persistent call
 
     if(found != buff)
-    {
-    	sysFree_persistent(buff);
-    }
+        sysFree_persistent(buff);
 
     // End of Modification
 

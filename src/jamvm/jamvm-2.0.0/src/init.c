@@ -100,24 +100,24 @@ int initVM(InitArgs *args) {
     initialiseHooks(args);
     initialiseProperties(args);
     initialiseAlloc(args);
-	initialiseThreadStage1(args);
-	initialiseUtf8(args);
-	initialiseSymbol();
-	initialiseClassStage1(args);
-	initialiseDll(args);
-	initialiseMonitor(args);
-	initialiseString(args);
-	initialiseException();
-	initialiseNatives();
-	initialiseAccess();
-	initialiseFrame();
-	initialiseJNI();
-	initialiseInterpreter(args);
-	initialiseClassStage2(args);
-	initialiseThreadStage2(args);
-	initialiseGC(args);
+    initialiseThreadStage1(args);
+    initialiseUtf8(args);
+    initialiseSymbol();
+    initialiseClassStage1(args);
+    initialiseDll(args);
+    initialiseMonitor(args);
+    initialiseString(args);
+    initialiseException();
+    initialiseNatives();
+    initialiseAccess();
+    initialiseFrame();
+    initialiseJNI();
+    initialiseInterpreter(args);
+    initialiseClassStage2(args);
+    initialiseThreadStage2(args);
+    initialiseGC(args);
 
-	status = TRUE;
+    status = TRUE;
 
     VM_initing = FALSE;
     return status;
@@ -240,13 +240,13 @@ int parseCommonOpts(char *string, InitArgs *args, int is_jni) {
 
     else if(strncmp(string, "-persistentheap:", 16) == 0)
     {
-    			args->persistent_heap = TRUE;
-    			args->heap_file = string + 16;
-    }
+                args->persistent_heap = TRUE;
+                args->heap_file = string + 16;
+    
 
     // End of Modification
 
-    else if(strncmp(string, "-D", 2) == 0) {
+    } else if(strncmp(string, "-D", 2) == 0) {
         char *key = strcpy(sysMalloc(strlen(string + 2) + 1), string + 2);
         char *pntr;
 

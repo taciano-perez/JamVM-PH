@@ -74,6 +74,8 @@ void initVM(InitArgs *args) {
     initialisePlatform();
 
     /* Initialise the VM modules -- ordering is important! */
+
+    // JaPHa Modification
     /* XXX NVM CHANGE 010.000.000
      * Changed initialise order
      * Alloc - DLL - UTF8
@@ -95,6 +97,8 @@ void initVM(InitArgs *args) {
     initialiseInterpreter(args);
     initialiseThreadStage2(args);
     initialiseGC(args);
+
+    // End of modification
 
     VM_initing = FALSE;
 }

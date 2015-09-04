@@ -461,7 +461,7 @@ int resolveDll(char *name, Object *loader) {
         // Added arguments and persistent file generator
 
         /* Add if absent, no scavenge, locked */
-		findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, DLL_HT_NAME, FALSE);
+        findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, DLL_HT_NAME, FALSE);
 
 		if(persistent_mode == TRUE)
 		{

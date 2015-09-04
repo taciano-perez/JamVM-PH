@@ -51,14 +51,14 @@
 // JaPHa Constants and Variables
 
 // Persistent Mode Flag
-static int persistent_mode 	= FALSE;
-static int first_execution 	= FALSE;
-static char* CLASS_HT_NAME 	= "classes_ht";
-static char* BOOT_NAME 		= "bootCl_ht";
-static char* BOOTP_NAME 	= "bootPck_ht";
-static char* CLASS_NAME 	= "classes_ht";
-static int CLASS_HC 		= 0;
-int ldr_vmdata_offset 		= -1;
+static int persistent_mode     = FALSE;
+static int first_execution     = FALSE;
+static char* CLASS_HT_NAME     = "classes_ht";
+static char* BOOT_NAME         = "bootCl_ht";
+static char* BOOTP_NAME     = "bootPck_ht";
+static char* CLASS_NAME     = "classes_ht";
+static int CLASS_HC         = 0;
+int ldr_vmdata_offset         = -1;
 
 // End of Modification
 
@@ -99,7 +99,7 @@ int enqueue_mtbl_idx;
 
 /* hash table containing classes loaded by the boot loader and
    internally created arrays */
-#define CLASS_INITSZE 1<<8
+#define CLASS_INITSZE 1<<9
 static HashTable boot_classes;
 
 /* Array large enough to hold all primitive classes -
@@ -124,21 +124,15 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
             CLASS_CB((Class *)ptr1)->name == CLASS_CB((Class *)ptr2)->name
 
     if(class_loader == NULL)
-    {
         table = &boot_classes;
-    }
-    else
-    {
+    else {
         table = classlibLoaderTable(class_loader);
 
-        if(table == NULL)
-        {
+        if(table == NULL) {
             table = classlibCreateLoaderTable(class_loader, CLASS_HT_NAME, TRUE);
 
             if(table == NULL)
-            {
                 return NULL;
-            }
         }
     }
 
@@ -146,17 +140,17 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
     // Define the place to search
 
     /* Add if absent, no scavenge, locked */
-	if ((unsigned long)table == (unsigned long)&boot_classes)
-	{
-		findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, BOOT_NAME, TRUE );
-	}
-	else
-	{
-		findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, CLASS_HT_NAME, TRUE );
-		CLASS_HC = table->hash_count;
-	}
+    if ((unsigned long)table == (unsigned long)&boot_classes)
+    {
+        findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, BOOT_NAME, TRUE );
+    }
+    else
+    {
+        findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, CLASS_HT_NAME, TRUE );
+        CLASS_HC = table->hash_count;
+    }
 
-	// End of Modification
+// End of modification
 
     return entry;
 }
@@ -267,7 +261,6 @@ static void setIndexedAttributeData(AttributeData ***attributes,
     (*attributes)[index]->len = len;
     (*attributes)[index]->data = sysMalloc_persistent(len);
     memcpy((*attributes)[index]->data, data, len);
-
 }
 
 // End of Modification
@@ -320,9 +313,9 @@ Class *parseClass(char *classname, char *data, int offset, int len,
     // Changed to persistent call
 
     constant_pool->type = sysMalloc_persistent(cp_count);
-	constant_pool->info = sysMalloc_persistent(cp_count * sizeof(ConstantPoolEntry));
+    constant_pool->info = sysMalloc_persistent(cp_count * sizeof(ConstantPoolEntry));
 
-	// End of Modification
+    // End of Modification
 
     for(i = 1; i < cp_count; i++) {
         u1 tag;
@@ -401,9 +394,7 @@ Class *parseClass(char *classname, char *data, int offset, int len,
                // Changed to persistent call
 
                if(utf8 != buff)
-               {
-            	   sysFree_persistent(buff);
-               }
+                   sysFree_persistent(buff);
 
                // End of Modification
 
@@ -448,7 +439,7 @@ Class *parseClass(char *classname, char *data, int offset, int len,
     classblock->class_loader = class_loader;
 
     READ_U2(intf_count = classblock->interfaces_count, ptr, len);
-
+	
     // JaPHa Modification
     // Changed to persistent call
 
@@ -745,12 +736,12 @@ Class *parseClass(char *classname, char *data, int offset, int len,
 
                 if(classblock->inner_class_count)
                 {
-                	// JaPHa Modification
-                	// Changed to persistent call
+                    // JaPHa Modification
+                    // Changed to persistent call
 
-                	classblock->inner_classes = sysMalloc_persistent(classblock->inner_class_count*sizeof(u2));
+                    classblock->inner_classes = sysMalloc_persistent(classblock->inner_class_count*sizeof(u2));
 
-                	// End of Modification
+                    // End of Modification
 
                     memcpy(classblock->inner_classes, &inner_classes[0],
                            classblock->inner_class_count * sizeof(u2));
@@ -1265,7 +1256,7 @@ void linkClass(Class *class) {
    if(!(cb->access_flags & ACC_INTERFACE))
    {
        // JaPHa Modification
-	   // Changed to persistent call
+       // Changed to persistent call
 
        method_table = sysMalloc_persistent(method_table_size * sizeof(MethodBlock*));
 
@@ -1339,11 +1330,11 @@ void linkClass(Class *class) {
    if(!(cb->access_flags & ACC_INTERFACE))
    {
        // JaPHa Modification
-	   // Changed to persistent call
+       // Changed to persistent call
 
-	   int *offsets_pntr = sysMalloc_persistent(itbl_offset_count * sizeof(int));
+       int *offsets_pntr = sysMalloc_persistent(itbl_offset_count * sizeof(int));
 
-	   // End of Modification
+       // End of Modification
 
        Miranda *mirandas = NULL;
        int new_mtbl_count = 0;
@@ -1439,9 +1430,7 @@ void linkClass(Class *class) {
 
                    /* Extend the Miranda cache if it's full */
                    if((miranda_count % MRNDA_CACHE_INCR) == 0)
-                   {
                        mirandas = sysRealloc_persistent(mirandas, (miranda_count + MRNDA_CACHE_INCR) * sizeof(Miranda));
-                   }
 
                    // End of Modification
 
@@ -1476,14 +1465,13 @@ void linkClass(Class *class) {
            }
        }
 
-       if(miranda_count > 0)
-       {
+       if(miranda_count > 0) {
            /* We've created some new Miranda methods.  Add them to
               the method area.  The method table may also need expanding
               if they are not all overrides */
    
-    	   // JaPHa Modification
-    	   // Changed to persistent call
+           // JaPHa Modification
+           // Changed to persistent call
 
            mb = sysRealloc_persistent(cb->methods, (cb->methods_count + miranda_count) * sizeof(MethodBlock) );
 
@@ -1501,10 +1489,9 @@ void linkClass(Class *class) {
            memset(mb, 0, miranda_count * sizeof(MethodBlock));
 
            // JaPHa Modification
-		   // Changed to persistent call
+           // Changed to persistent call
 
-           if(new_mtbl_count > 0)
-           {
+           if(new_mtbl_count > 0) {
                method_table_size += new_mtbl_count;
                method_table = sysRealloc_persistent(method_table, method_table_size * sizeof(MethodBlock*) );
            }
@@ -1852,17 +1839,17 @@ Class *findHashedClass(char *classname, Object *class_loader) {
     // JaPHa Modification
     // Added arguments
 
-	/* Do not add if absent, no scavenge, locked */
-	if( (unsigned long)table == (unsigned long)&boot_classes )
-	{
-		findHashEntry((*table), name, class, FALSE, FALSE, TRUE, BOOT_NAME, TRUE );
-	}
-	else
-	{
-	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, CLASS_NAME, TRUE );
-	}
+    /* Do not add if absent, no scavenge, locked */
+    if( (unsigned long)table == (unsigned long)&boot_classes )
+    {
+        findHashEntry((*table), name, class, FALSE, FALSE, TRUE, BOOT_NAME, TRUE );
+    }
+    else
+    {
+       findHashEntry((*table), name, class, FALSE, FALSE, TRUE, CLASS_NAME, TRUE );
+    }
 
-	// End Modification
+    // End Modification
 
    return class;
 }
@@ -1986,16 +1973,15 @@ Class *findPrimitiveClass(char prim_type) {
    return prim ? prim : createPrimClass(classname, index);
 }
 
-Class *findNonArrayClassFromClassLoader(char *classname, Object *loader)
-{
-	if( (persistent_mode) && (access( CLASS_NAME, F_OK ) != -1) && (first_execution == TRUE))
-	{
-		HashTable *table = classlibLoaderTable(loader);
-		initHashTable((*table), CLASS_INITSZE, TRUE, CLASS_NAME, TRUE);
-		OPC *ph_value = get_opc_ptr();
-		table->hash_count = ph_value->classes_hash_count;
-		first_execution = FALSE;
-	}
+Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
+    if( (persistent_mode) && (access( CLASS_NAME, F_OK ) != -1) && (first_execution == TRUE))
+    {
+        HashTable *table = classlibLoaderTable(loader);
+        initHashTable((*table), CLASS_INITSZE, TRUE, CLASS_NAME, TRUE);
+        OPC *ph_value = get_opc_ptr();
+        table->hash_count = ph_value->classes_hash_count;
+        first_execution = FALSE;
+    }
 
 
     Class *class = findHashedClass(classname, loader);
@@ -2527,8 +2513,8 @@ out:
 
 void set_prim_classes()
 {
-	OPC *ph_values = get_opc_ptr();
-	memcpy(prim_classes, ph_values->prim_classes, sizeof(prim_classes));
+    OPC *ph_values = get_opc_ptr();
+    memcpy(prim_classes, ph_values->prim_classes, sizeof(prim_classes));
 }
 
 // End of Modification
@@ -2541,7 +2527,7 @@ int initialiseClassStage1(InitArgs *args) {
 
     if(args->persistent_heap == TRUE)
     {
-		persistent_mode = TRUE;
+        persistent_mode = TRUE;
     }
 
     // End of Modification
@@ -2555,25 +2541,25 @@ int initialiseClassStage1(InitArgs *args) {
     // Added parameters to the initialization
 
     /* Init hash table, and create lock for the bootclassloader classes */
-	initHashTable(boot_classes,  CLASS_INITSZE, TRUE, BOOT_NAME,  TRUE);
+    initHashTable(boot_classes,  CLASS_INITSZE, TRUE, BOOT_NAME,  TRUE);
 
     /* Init hash table, and create lock for the bootclassloader packages */
-	initHashTable(boot_packages, PCKG_INITSZE,  TRUE, BOOTP_NAME, TRUE);
+    initHashTable(boot_packages, PCKG_INITSZE,  TRUE, BOOTP_NAME, TRUE);
 
     // End of Modification
 
-	// JaPHa Modification
-	// Setting hash counts
+    // JaPHa Modification
+    // Setting hash counts
 
-	if(persistent_mode)
-	{
-		OPC *ph_value = get_opc_ptr();
-		boot_classes.hash_count = ph_value->boot_classes_hash_count;
-		boot_packages.hash_count = ph_value->boot_packages_hash_count;
-		set_prim_classes();
-	}
+    if(persistent_mode)
+    {
+        OPC *ph_value = get_opc_ptr();
+        boot_classes.hash_count = ph_value->boot_classes_hash_count;
+        boot_packages.hash_count = ph_value->boot_packages_hash_count;
+        set_prim_classes();
+    }
 
-	// End of Modification
+    // End of Modification
 
     /* Register the address of where the java.lang.Class ref _will_ be */
     registerStaticClassRef(&java_lang_Class);
@@ -2614,26 +2600,26 @@ int initialiseClassStage2(InitArgs *args) {
 // Gets and Sets for the OPC
 
 int get_ldr_vmdata_offset(){
-	return ldr_vmdata_offset;
+    return ldr_vmdata_offset;
 }
 
 void set_ldr_vmdata_offset(int ldr){
-	ldr_vmdata_offset = ldr;
+    ldr_vmdata_offset = ldr;
 }
 
 int get_BC_HC()
 {
-	return boot_classes.hash_count;
+    return boot_classes.hash_count;
 }
 
 int get_BP_HC()
 {
-	return boot_packages.hash_count;
+    return boot_packages.hash_count;
 }
 
 int get_CL_HC()
 {
-	return CLASS_HC;
+    return CLASS_HC;
 }
 
 // End of Modifications

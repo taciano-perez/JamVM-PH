@@ -149,12 +149,12 @@ retry:
 
         if(pass == 1)
         {
-        	// JaPHa Modification
-        	// Changed to persistent call
+            // JaPHa Modification
+            // Changed to persistent call
 
-        	new_code = sysMalloc_persistent((ins_count + 1) * sizeof(Instruction));
+        new_code = sysMalloc_persistent((ins_count + 1) * sizeof(Instruction));
 
-        	// End of Modification
+            // End of Modification
         }
 
         for(ins_count = 0, pc = 0; pc < code_len; ins_count++) {
@@ -953,9 +953,7 @@ retry:
 
     /* We don't need the old bytecode stream anymore */
     if(!(mb->access_flags & (ACC_ABSTRACT | ACC_MIRANDA)))
-    {
-    	sysFree_persistent(code);
-    }
+        sysFree_persistent(code);
 
     // End of Modification
 }

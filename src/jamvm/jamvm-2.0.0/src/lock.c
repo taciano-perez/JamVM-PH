@@ -334,11 +334,8 @@ Monitor *findMonitor(Object *obj) {
     uintptr_t lockword = LOCKWORD_READ(&obj->lock);
 
     if(lockword & SHAPE_BIT)
-    {
         return (Monitor*) (lockword & ~SHAPE_BIT);
-    }
-    else
-    {
+    else {
         Monitor *mon;
 
         // JaPHa Modification
@@ -581,9 +578,9 @@ int initialiseMonitor(InitArgs *args)
 	// Added initialization arguments
 
     /* Init hash table, create lock */
-	initHashTable(mon_cache, HASHTABSZE, TRUE, MONITOR_NAME, FALSE);
+    initHashTable(mon_cache, HASHTABSZE, TRUE, MONITOR_NAME, FALSE);
 
-	// End of Modification
+    // End of Modification
 
     return TRUE;
 }

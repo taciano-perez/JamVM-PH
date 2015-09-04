@@ -649,10 +649,14 @@ typedef struct InitArgs {
     unsigned long min_heap;
     unsigned long max_heap;
 
-    /* XXX NVM CHANGE 001.000 - Parameter - UPDATED TO 2.0.0  */
+    // JaPHa Modification
+    // XXX NVM CHANGE 001.000 - Parameter - UPDATED TO 2.0.0
+
     int persistent_heap;
     char *heap_file;
     int testing_mode; //not necessary in 2.0.0
+
+    // End of modification
 
     Property *commandline_props;
     int props_count;
@@ -677,9 +681,11 @@ typedef struct InitArgs {
 #endif
 } InitArgs;
 
-/* XXX NVM CHANGE 009.000.000 - OPC - Updated to 2.0.0
+// JaPHa Modification
+/* NVM CHANGE 009.000.000 - OPC - Updated to 2.0.0
  * Orthogonal Persistence Context
 */
+
 typedef struct opc {
 	int ldr_vmdata_offset;
 	Class *java_lang_Class;
@@ -698,6 +704,8 @@ typedef struct opc {
 	int has_finaliser_count;
 	int has_finaliser_size;
 } OPC;
+
+// End of modification
 
 #define CLASS_CB(classRef)           ((ClassBlock*)(classRef+1))
 
@@ -807,15 +815,19 @@ extern void *sysMalloc(int n);
 extern void sysFree(void *ptr);
 extern void *sysRealloc(void *ptr, int n);
 
-
-//XXX NVM CHANGE 004.000 - P.A.F - UPDATED TO 2.0.0
-//Added functions
+// JaPHa Modification
+// NVM CHANGE 004.000 - P.A.F - UPDATED TO 2.0.0
+// Added functions
 
 extern void *sysMalloc_persistent(int n);
 extern void sysFree_persistent(void *addr);
 extern void *sysRealloc_persistent(void *ptr, int n);
 
-/*	XXX NVM CHANGE 009.000.001 - ADDED TO 2.0.0 */
+// End of modification
+
+// JaPHa Modification
+// XXX NVM CHANGE 009.000.001 - ADDED TO 2.0.0
+
 extern OPC *get_opc_ptr();
 
 extern unsigned long get_chunkpp();
@@ -843,12 +855,17 @@ extern int get_CL_HC();
 extern Class* get_java_lang_class();
 extern void set_java_lang_class(Class *clazz);
 
+// End of modification
 
+// JaPHa Modification
 /* XXX NVM CHANGE 005.000 - GcMem A.F - UPDATED TO 2.0.0
  * Changed functions args
  */
+
 extern void *gcMemMalloc(int n, char* name, int create_file);
 extern void *gcMemRealloc(void *ptr, int n, char* name, int create_file);
+
+// End of modification
 
 extern void gcMemFree(void *ptr);
 

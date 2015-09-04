@@ -31,7 +31,7 @@ MethodBlock *findMethod(Class *class, char *methodname, char *type) {
    int i;
 
    for(i = 0; i < cb->methods_count; i++,mb++)
-	   if(mb->name == methodname && mb->type == type)
+       if(mb->name == methodname && mb->type == type)
           return mb;
 
    return NULL;
@@ -41,14 +41,13 @@ MethodBlock *findMethod(Class *class, char *methodname, char *type) {
    types, we used to give up if we found a field with the right name but wrong
    type.  However, obfuscators rename fields, breaking this optimisation.
 */
-
 FieldBlock *findField(Class *class, char *fieldname, char *type) {
     ClassBlock *cb = CLASS_CB(class);
     FieldBlock *fb = cb->fields;
     int i;
 
     for(i = 0; i < cb->fields_count; i++,fb++)
-    	if(fb->name == fieldname && fb->type == type)
+        if(fb->name == fieldname && fb->type == type)
             return fb;
 
     return NULL;

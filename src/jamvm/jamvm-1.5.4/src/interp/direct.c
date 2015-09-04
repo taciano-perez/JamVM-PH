@@ -55,7 +55,6 @@
 #define UNPREPARED 1
 #define PREPARING  2
 
-
 /* Global lock for method preparation */
 static VMWaitLock prepare_lock;
 
@@ -105,6 +104,7 @@ void prepare(MethodBlock *mb, const void ***handlers) {
 
 retry:
     code = mb->code;
+
     switch((uintptr_t)code & 0x3) {
         case PREPARED:
             unlockVMWaitLock(prepare_lock, self);
@@ -155,8 +155,12 @@ retry:
         int pc;
 
         if(pass == 1)
-            /* XXX NVM CHANGE 004.001.027 */
+            // JaPHa Modification
+            // XXX NVM CHANGE 004.001.027
+
             new_code = sysMalloc_persistent((ins_count + 1) * sizeof(Instruction));
+
+            // End of modification
 
         for(ins_count = 0, pc = 0; pc < code_len; ins_count++) {
             int quickened = FALSE;

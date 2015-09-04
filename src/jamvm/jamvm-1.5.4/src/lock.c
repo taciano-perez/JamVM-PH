@@ -34,8 +34,11 @@
 #include "symbol.h"
 #include "excep.h"
 
-/*	XXX	NVM VARIABLES - LOCK.C	*/
+// JaPHa modification
+//	XXX	NVM VARIABLES - LOCK.C
 static int testing_mode = FALSE;
+
+// End of modification
 
 /* Trace lock operations and inflation/deflation */
 #ifdef TRACELOCK
@@ -95,8 +98,12 @@ static int testing_mode = FALSE;
 static Monitor *mon_free_list = NULL;
 static HashTable mon_cache;
 
-/*	XXX	NVM VARIABLES - LOCK.C - UPDATED TO 2.0.0 */
+// JaPHa Modification
+//	XXX	NVM VARIABLES - LOCK.C - UPDATED TO 2.0.0
+
 static char* monitor_name = "monitor_ht";
+
+// End of modification
 
 void monitorInit(Monitor *mon) {
     memset(mon, 0, sizeof(Monitor));
@@ -331,8 +338,14 @@ Monitor *findMonitor(Object *obj) {
     else {
         Monitor *mon;
         /* Add if absent, scavenge, locked */
-        /* XXX NVM CHANGE 006.003.012 - UPDATED TO 2.0.0 */
+
+        // JaPHa Modification
+        /* NVM CHANGE 006.003.012 - UPDATED TO 2.0.0 */
+
         findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
+
+        // End of modification
+
         return mon;
     }
 }
@@ -559,15 +572,18 @@ Thread *objectLockedBy(Object *obj) {
     return owner;
 }
 
+    // JaPHa Modification
+    // XXX NVM CHANGE 005.001.006 - Monitors HT - N - UPDATE TO 2.0.0
+
 void initialiseMonitor(InitArgs *args) {
-	if(args->testing_mode == TRUE)
-	{
-		testing_mode = TRUE;
-	}
+    if(args->testing_mode == TRUE)
+    {
+        testing_mode = TRUE;
+    }
     /* Init hash table, create lock */
-    /* XXX NVM CHANGE 005.001.006 - Monitors HT - N - UPDATE TO 2.0.0 */
     initHashTable(mon_cache, HASHTABSZE, TRUE, monitor_name, FALSE);
 }
+    // End of modification
 
 /* Heap compaction support */
 

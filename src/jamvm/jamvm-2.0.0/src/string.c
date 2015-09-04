@@ -46,8 +46,8 @@ static int offset_offset;
 // JaPHa Modification
 // Constants and Variables
 
-static char* STRING_NAME 	= "string_ht";
-static int persistent_mode 	= FALSE;
+static char* STRING_NAME     = "string_ht";
+static int persistent_mode     = FALSE;
 
 // End of Modification
 
@@ -119,7 +119,7 @@ Object *findInternedString(Object *string) {
     if(string == NULL)
         return NULL;
 
-	// JaPHa Modification
+    // JaPHa Modification
     // Added arguments
 
     /* Add if absent, no scavenge, locked */
@@ -198,15 +198,15 @@ char *String2Cstr(Object *string) {
 
 int initialiseString(InitArgs *args)
 {
-	// JaPHa Modification
-	// Persistent mode flag
+    // JaPHa Modification
+    // Persistent mode flag
 
-	if(args->persistent_heap == TRUE)
-	{
-		persistent_mode = TRUE;
-	}
+    if(args->persistent_heap == TRUE)
+    {
+        persistent_mode = TRUE;
+    }
 
-	// End of Modification
+    // End of Modification
 
     FieldBlock *value;
 
@@ -241,13 +241,12 @@ int initialiseString(InitArgs *args)
     /* Init hash table and create lock */
     initHashTable(hash_table, HASHTABSZE, TRUE, STRING_NAME, TRUE);
 
-
     //setting hash count
     if(persistent_mode == TRUE)
     {
-		OPC *ph_value = get_opc_ptr();
-		hash_table.hash_count = ph_value->string_hash_count;
-	}
+        OPC *ph_value = get_opc_ptr();
+        hash_table.hash_count = ph_value->string_hash_count;
+    }
 
     // End of Modification
 

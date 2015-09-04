@@ -216,8 +216,7 @@ int checkRelocatability() {
 int initialiseInlining(InitArgs *args) {
     enabled = args->codemem > 0 ? checkRelocatability() : FALSE;
 
-    if(enabled)
-    {
+    if(enabled) {
         initVMLock(rewrite_lock);
 
         // JaPHa Modification
@@ -544,15 +543,14 @@ CodeBlockHeader *findCodeBlock(TestCodeBlock *block) {
 
     if(branch_patching_dup && block->patchers != NULL)
         ret_block = newDuplicateBlock(block);
-    else
-    {
-    	// JaPHa Modification
-    	// Added arguments
+    else {
+        // JaPHa Modification
+        // Added arguments
 
         /* Search hash table.  Add if absent, scavenge and not locked */
-    	findHashEntry(code_hash_table, block, ret_block, TRUE, TRUE, FALSE, INLINE_NAME, FALSE );
+        findHashEntry(code_hash_table, block, ret_block, TRUE, TRUE, FALSE, INLINE_NAME, FALSE );
 
-    	// End of Modification
+        // End of Modification
     }
 
     unlockHashTable(code_hash_table);

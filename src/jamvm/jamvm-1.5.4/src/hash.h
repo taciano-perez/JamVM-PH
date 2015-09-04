@@ -33,23 +33,32 @@ typedef struct hash_table {
     VMLock lock;
 } HashTable;
 
-// XXX NVM CHANGE 006.000 - Hash Functions -Changed functions args - UPDATED TO 2.0.0
+// JaPHa Modification
+// NVM CHANGE 006.000 - Hash Functions -Changed functions args - UPDATED TO 2.0.0
+
 extern void resizeHash(HashTable *table, int new_size, char* name, int create_file);
+
+// End of modification
+
 extern void lockHashTable0(HashTable *table, Thread *self);
 extern void unlockHashTable0(HashTable *table, Thread *self);
 
-/* XXX NVM CHANGE 006.001 - Init HT = GMM - UPDATED TO 2.0.0*/
+// JaPHa Modification
+// XXX NVM CHANGE 006.001 - Init HT = GMM - UPDATED TO 2.0.0
 //todo Memset - UPDATED TO 2.0.0
 //memset(table.hash_table, 0, sizeof(HashEntry)*initial_size);                   \
 
 #define initHashTable(table, initial_size, create_lock, name, create_file)         \
 {                                                                                  \
-    table.hash_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*initial_size, name, create_file);    \
+    table.hash_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*initial_size,     \
+                                                            name, create_file);    \
     table.hash_size = initial_size;                                                \
     table.hash_count = 0;                                                          \
     if(create_lock)                                                                \
         initVMLock(table.lock);                                                    \
 }
+
+// End of modification
 
 #define lockHashTable(table)                                                       \
     lockHashTable0(&table, threadSelf());
@@ -60,8 +69,11 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
 #define hashTableCount(table)                                                      \
     table.hash_count
 
-/* XXX NVM CHANGE 006.003 - Find Hash - UPDATED TO 2.0.0 */
-#define findHashEntry(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)           \
+// JaPHa Modification
+// XXX NVM CHANGE 006.003 - Find Hash - UPDATED TO 2.0.0
+
+#define findHashEntry(table, ptr, ptr2, add_if_absent, scavenge, locked,           \
+                                                      name, create_file)           \
 {                                                                                  \
     int hash = HASH(ptr);                                                          \
     int i;                                                                         \
@@ -122,6 +134,7 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
         unlockHashTable0(&table, self);                                            \
 }
 
+// End of modification
 
 #define deleteHashEntry(table, ptr, locked)                                        \
 {                                                                                  \

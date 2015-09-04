@@ -40,10 +40,15 @@ static int value_offset;
 static int offset_offset;
 
 static HashTable hash_table;
-/*	XXX	NVM VARIABLES - STRING.C - UPDATED TO 2.0.0 */
+
+// JaPHa Modification
+//	XXX	NVM VARIABLES - STRING.C - UPDATED TO 2.0.0
+
 static char* string_name = "string_ht";
 static int testing_mode = FALSE;
 static int is_persistent = FALSE;
+
+// End of modification
 
 int stringHash(Object *ptr) {
     int len = INST_DATA(ptr, int, count_offset);
@@ -100,9 +105,15 @@ Object *createString(char *utf8) {
 
 Object *findInternedString(Object *string) {
     Object *interned;
+
     /* Add if absent, no scavenge, locked */
-    /* XXX NVM CHANGE 006.003.007 - UPDATED TO 2.0.0 */
+
+    // JaPHa Modification
+    // XXX NVM CHANGE 006.003.007 - UPDATED TO 2.0.0
+
     findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, string_name, TRUE);
+
+   // End of modification
 
     return interned;
 }
@@ -129,8 +140,13 @@ void freeInternedStrings() {
 
         /* Ensure new table is less than 2/3 full */
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
-        /* XXX NVM CHANGE 006.002.001 - UPDATED TO 2.0.0 */
+
+        // JaPHa Modification
+        // XXX NVM CHANGE 006.002.001 - UPDATED TO 2.0.0
+
         resizeHash(&hash_table, size, string_name, TRUE);
+
+        // End of modification
     }
 }
 
@@ -169,13 +185,13 @@ char *String2Cstr(Object *string) {
 }
 
 void initialiseString(InitArgs *args) {
-	if(args->testing_mode == TRUE)
-	{
-		testing_mode = TRUE;
-	}
-	if(args->persistent_heap == TRUE){
-		is_persistent = TRUE;
-	}
+    if(args->testing_mode == TRUE)
+    {
+        testing_mode = TRUE;
+    }
+    if(args->persistent_heap == TRUE){
+        is_persistent = TRUE;
+    }
     FieldBlock *count = NULL, *value = NULL, *offset = NULL;
 
     string_class = findSystemClass0(SYMBOL(java_lang_String));
@@ -198,13 +214,23 @@ void initialiseString(InitArgs *args) {
     offset_offset = offset->u.offset;
 
     /* Init hash table and create lock */
-    /* XXX NVM CHANGE 005.001.007 - Strings HT - Y - UPDATED TO 2.0.0 */
+
+    // JaPHa Modification
+    // XXX NVM CHANGE 005.001.007 - Strings HT - Y - UPDATED TO 2.0.0
+
     initHashTable(hash_table, HASHTABSZE, TRUE, string_name, TRUE);
-    /* XXX DOC CHANGE - UPDATED TO 2.0.0 */
+
+    // End of modification
+
+    // JaPHa Modification
+    // XXX DOC CHANGE - UPDATED TO 2.0.0
     if(is_persistent){
     	OPC *ph_value = get_opc_ptr();
     	hash_table.hash_count = ph_value->string_hash_count;
     }
+
+    // End of modification
+
 }
 
 #ifndef NO_JNI
@@ -256,8 +282,12 @@ char *String2Utf8(Object *string) {
 }
 #endif
 
-/*	XXX NVM CHANGE 009.003.001	*/
+// JaPHa Modification
+// XXX NVM CHANGE 009.003.001
+
 int get_string_HC()
 {
 	return hash_table.hash_count;
 }
+
+// End of modification

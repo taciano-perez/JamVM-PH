@@ -29,17 +29,21 @@
 #define HASHTABSZE 1<<13
 #define HASH(ptr) utf8Hash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (ptr1 == ptr2) || \
-                  (utf8Comp(ptr1, ptr2) && (hash1 == hash2))
+                  ((hash1 == hash2) && utf8Comp(ptr1, ptr2))
 #define PREPARE(ptr) ptr
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
 
 static HashTable hash_table;
 
-/*XXX NVM VARIABLES - UTF8.C - UPDATED TO 2.0.0 */
+// JaPHa Modification
+// NVM VARIABLES - UTF8.C - UPDATED TO 2.0.0
+
 static char* utf8_name = "utf8_ht";
 static int testing_mode = FALSE;
 static int is_persistent = FALSE;
+
+// End of modification
 
 #define GET_UTF8_CHAR(ptr, c)                         \
 {                                                     \
@@ -84,7 +88,7 @@ int utf8Hash(char *utf8) {
 }
 
 int utf8Comp(char *ptr, char *ptr2) {
-     while(*ptr && *ptr2) {
+    while(*ptr && *ptr2) {
         unsigned short c, c2;
 
         GET_UTF8_CHAR(ptr, c);
@@ -101,22 +105,37 @@ int utf8Comp(char *ptr, char *ptr2) {
 char *findHashedUtf8(char *string, int add_if_absent) {
     char *interned = NULL;
     /* Add if absent, no scavenge, locked */
-    /* XXX NVM CHANGE 006.003.008 - UPDATED TO 2.0.0 */
+
+    // JaPHa Modification
+    // NVM CHANGE 006.003.008 - UPDATED TO 2.0.0
+
    		findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
-   	return interned;
+
+    // End of modification
+
+	return interned;
 }
 
 char *copyUtf8(char *string) {
-	/*XXX NVM CHANGE 004.001.030 - UPDATED TO 2.0.0	*/
+
+    // JaPHa Modification
+	// NVM CHANGE 004.001.030 - UPDATED TO 2.0.0
+
     char *buff = strcpy(sysMalloc_persistent(strlen(string) + 1), string);
+
+    // End of modification
+
     char *found = findHashedUtf8(buff, TRUE);
 
+// JaPHa Modification
+// NVM CHANGE 004.003.003 - UPDATED TO 2.0.0
     if(found != buff)
-   	/*XXX NVM CHANGE 004.003.003 - UPDATED TO 2.0.0	*/
         sysFree_persistent(buff);
 
     return found;
 }
+
+// End of modification
 
 char *slash2dots(char *utf8) {
     int len = strlen(utf8);
@@ -144,6 +163,10 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
     return buff;
 }
 
+// JaPHa Modification
+// NVM CHANGE 005.001.009 - UTF8 HT - Y - UPDATED TO 2.0.0
+// DOC CHANGE - UPDATED TO 2.0.0
+
 void initialiseUtf8(InitArgs *args) {
 	if(args->testing_mode == TRUE){
 		testing_mode = TRUE;
@@ -152,14 +175,14 @@ void initialiseUtf8(InitArgs *args) {
 		is_persistent = TRUE;
 	}
     /* Init hash table, and create lock */
-    /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y - UPDATED TO 2.0.0 */
     initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
-    /* XXX DOC CHANGE - UPDATED TO 2.0.0 */
     if(is_persistent){
     	OPC *ph_value = get_opc_ptr();
     	hash_table.hash_count = ph_value->utf8_hash_count;
     }
 }
+
+// End of modification
 
 #ifndef NO_JNI
 /* Functions used by JNI */
@@ -196,9 +219,12 @@ char *unicode2Utf8(unsigned short *unicode, int len, char *utf8) {
 }
 #endif
 
+// JaPHa Modification
+//	XXX NVM CHANGE 009.004.001
 
-/*	XXX NVM CHANGE 009.004.001	*/
 int get_utf8_HC()
 {
 	return hash_table.hash_count;
 }
+
+// End of modification

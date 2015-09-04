@@ -74,7 +74,10 @@ static Class *package_array_class;
 /* hash table containing packages loaded by the boot loader */
 #define PCKG_INITSZE 1<<6
 static HashTable boot_packages;
-/*	XXX	NVM VARIABLES - CLASS.C	- UPDATED TO 2.0.0*/
+
+// JaPHa Modification
+// NVM VARIABLES - CLASS.C	- UPDATED TO 2.0.0
+
 static char* boot_name = "bootCl_ht";
 static char* class_name = "classes_ht";
 static char* bootp_name = "bootPck_ht";
@@ -82,6 +85,8 @@ static int is_persistent = 0;
 static int first_ex = TRUE;
 static int testing_mode = FALSE;
 static int class_HC = 0;
+
+// End of modification
 
 /* Hashtable entry for each package defined by the boot loader */
 typedef struct package_entry {
@@ -130,34 +135,40 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
             CLASS_CB((Class *)ptr1)->name == CLASS_CB((Class *)ptr2)->name
 
     if(class_loader == NULL)
-    {
         table = &boot_classes;
-    }
-    else
-    {
+    else {
         Object *vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
 
-        if(vmdata == NULL)
-        {
+        if(vmdata == NULL) {
             objectLock(class_loader);
             vmdata = INST_DATA(class_loader, Object*, ldr_vmdata_offset);
 
-            if(vmdata == NULL)
-            {
-                if((vmdata = allocObject(ldr_new_unloader->class)) == NULL)
-                {
+            if(vmdata == NULL) {
+                if((vmdata = allocObject(ldr_new_unloader->class)) == NULL) {
                     objectUnlock(class_loader);
                     return NULL;
                 }
 
-                /* XXX NVM CHANGE 004.001.001 - UPDATED TO 2.0.0   */
+                // JaPHa Modification
+                // NVM CHANGE 004.001.001 - UPDATED TO 2.0.0
+
                 table = sysMalloc_persistent(sizeof(HashTable));
 
-                /* XXX NVM CHANGE 005.001.001 - Classes HT - Y - UPDATED TO 2.0.0 */
+                // End of modification
+
+                // JaPHa Modification
+                // NVM CHANGE 005.001.001 - Classes HT - Y - UPDATED TO 2.0.0
+
                 initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
 
-                /* XXX NVM CHANGE 007.000.001 - UPDATED TO 2.0.0 */
+                // End of modification
+
+                // JaPHa Modification
+                // NVM CHANGE 007.000.001 - UPDATED TO 2.0.0
+
                 first_ex = FALSE;
+
+                // End of modification
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
@@ -169,9 +180,10 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
         table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
     }
 
-
     /* Add if absent, no scavenge, locked */
-    /* XXX NVM CHANGE 006.003.001 - UPDATED TO 2.0.0 */
+    // JaPHa Modification
+    // NVM CHANGE 006.003.001 - UPDATED TO 2.0.0
+
     if ((unsigned long)table == (unsigned long)&boot_classes){
     	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
     }else{
@@ -179,6 +191,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
     	class_HC = table->hash_count;
     }
 
+// End of modification
 
     return entry;
 }
@@ -196,9 +209,9 @@ static void prepareClass(Class *class) {
     }
 }
 
-
 Class *defineClass(char *classname, char *data, int offset, int len,
                    Object *class_loader) {
+
     u2 major_version, minor_version, this_idx, super_idx;
     unsigned char *ptr = (unsigned char *)data + offset;
     int cp_count, intf_count, i;
@@ -227,9 +240,14 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     READ_U2(cp_count, ptr, len);
 
     constant_pool = &classblock->constant_pool;
-	/*	XXX NVM CHANGE 004.001.004 - UPDATED TO 2.0.0 */
+
+	// JaPHa Modification
+	// NVM CHANGE 004.001.004 - UPDATED TO 2.0.0
+
     constant_pool->type = sysMalloc_persistent(cp_count);
     constant_pool->info = sysMalloc_persistent(cp_count*sizeof(ConstantPoolEntry));
+
+    // End of modification
 
     for(i = 1; i < cp_count; i++) {
         u1 tag;
@@ -277,16 +295,26 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                char *buff, *utf8;
 
                READ_U2(length, ptr, len);
-               /* XXX NVM CHANGE 004.001.028 - UPDATED TO 2.0.0 */
+
+               // JaPHa Modification
+               //NVM CHANGE 004.001.028 - UPDATED TO 2.0.0
+
                buff = is_persistent ? sysMalloc_persistent(length+1) : sysMalloc(length+1);
                memcpy(buff, ptr, length);
                buff[length] = '\0';
                ptr += length;
+
                CP_INFO(constant_pool,i) = (uintptr_t) (utf8 = newUtf8(buff));
 
+            	  // End of modification
+
                if(utf8 != buff)
-            	  /* XXX NVM CHANGE 005.000.001	- UPDATED TO 2.0.0 */
+            	  // JaPHa Modification
+            	  // NVM CHANGE 005.000.001	- UPDATED TO 2.0.0
+
                   is_persistent ? sysFree_persistent(buff) : sysFree(buff);
+
+            	  // End of modification
 
                break;
            }
@@ -330,8 +358,13 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     classblock->class_loader = class_loader;
 
     READ_U2(intf_count = classblock->interfaces_count, ptr, len);
-	/*	XXX NVM CHANGE 004.001.005 - UPDATED TO 2.0.0 */
+	
+    // JaPHa Modification
+    // NVM CHANGE 004.001.005 - UPDATED TO 2.0.0
+
     interfaces = classblock->interfaces = sysMalloc_persistent(intf_count * sizeof(Class *));
+
+    // End of modification
 
     memset(interfaces, 0, intf_count * sizeof(Class *));
     for(i = 0; i < intf_count; i++) {
@@ -343,8 +376,13 @@ Class *defineClass(char *classname, char *data, int offset, int len,
     }
 
     READ_U2(classblock->fields_count, ptr, len);
-	/*	XXX NVM CHANGE 004.001.006 - UPDATED TO 2.0.0 */
+
+    // JaPHa Modification
+    // NVM CHANGE 004.001.006 - UPDATED TO 2.0.0
+
     classblock->fields = sysMalloc_persistent(classblock->fields_count * sizeof(FieldBlock));
+
+    // End of modification
 
     for(i = 0; i < classblock->fields_count; i++) {
         u2 name_idx, type_idx;
@@ -377,7 +415,10 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                     classblock->fields[i].signature = CP_UTF8(constant_pool, signature_idx);
                 } else
                     if(attr_name == SYMBOL(RuntimeVisibleAnnotations)) {
-                    	/*	XXX NVM CHANGE 004.001.007 - UPDATED TO 2.0.0 */
+
+                    	// JaPHa Modification
+                    	// NVM CHANGE 004.001.007 - UPDATED TO 2.0.0
+
                         classblock->fields[i].annotations = sysMalloc_persistent(sizeof(AnnotationData));
                         classblock->fields[i].annotations->len = attr_length;
                         classblock->fields[i].annotations->data = sysMalloc_persistent(attr_length);
@@ -385,12 +426,19 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                         ptr += attr_length;
                     } else
                         ptr += attr_length;
+
+                    	// End of modification
+
         }
     }
 
     READ_U2(classblock->methods_count, ptr, len);
-	/*	XXX NVM CHANGE 004.001.008 - UPDATED TO 2.0.0 */
+
+	// JaPHa Modification
+	// NVM CHANGE 004.001.008 - UPDATED TO 2.0.0
     classblock->methods = sysMalloc_persistent(classblock->methods_count * sizeof(MethodBlock));
+
+	// End of modification
 
     memset(classblock->methods, 0, classblock->methods_count * sizeof(MethodBlock));
 
@@ -427,16 +475,26 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                 READ_U2(method->max_locals, ptr, len);
 
                 READ_U4(code_length, ptr, len);
-            	/*	XXX NVM CHANGE 004.001.018 - UPDATED TO 2.0.0 */
+
+            	// JaPHa Modification
+            	// NVM CHANGE 004.001.018 - UPDATED TO 2.0.0
+
                 method->code = sysMalloc_persistent(code_length);
                 memcpy(method->code, ptr, code_length);
                 ptr += code_length;
 
+            	// End of modification
+
                 method->code_size = code_length;
 
                 READ_U2(method->exception_table_size, ptr, len);
-            	/*	XXX NVM CHANGE 004.001.009 - UPDATED TO 2.0.0 */
+
+            	// JaPHa Modification
+            	// NVM CHANGE 004.001.009 - UPDATED TO 2.0.0
+
                 method->exception_table = sysMalloc_persistent(method->exception_table_size*sizeof(ExceptionTableEntry));
+
+            	// End of modification
 
                 for(j = 0; j < method->exception_table_size; j++) {
                     ExceptionTableEntry *entry = &method->exception_table[j];              
@@ -458,8 +516,13 @@ Class *defineClass(char *classname, char *data, int offset, int len,
 
                     if(attr_name == SYMBOL(LineNumberTable)) {
                         READ_U2(method->line_no_table_size, ptr, len);
-                    	/*	XXX NVM CHANGE 004.001.010 - UPDATED TO 2.0.0 */
+
+                    	// JaPHa Modification
+                    	// NVM CHANGE 004.001.010 - UPDATED TO 2.0.0 */
+
                         method->line_no_table = sysMalloc_persistent(method->line_no_table_size*sizeof(LineNoTableEntry));
+
+                    	// End of modification
 
                         for(j = 0; j < method->line_no_table_size; j++) {
                             LineNoTableEntry *entry = &method->line_no_table[j];              
@@ -475,8 +538,14 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                     int j;
 
                     READ_U2(method->throw_table_size, ptr, len);
-                	/*	XXX NVM CHANGE 004.001.011 - UPDATED TO 2.0.0 */
+
+                	// JaPHa Modification
+                	// NVM CHANGE 004.001.011 - UPDATED TO 2.0.0 */
+
                     method->throw_table = sysMalloc_persistent(method->throw_table_size*sizeof(u2));
+
+                	// End of modification
+
                     for(j = 0; j < method->throw_table_size; j++) {
                         READ_U2(method->throw_table[j], ptr, len);
                     }
@@ -487,36 +556,60 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                         method->signature = CP_UTF8(constant_pool, signature_idx);
                     } else
                         if(attr_name == SYMBOL(RuntimeVisibleAnnotations)) {
-                        	/*	XXX NVM CHANGE 004.001.012 - UPDATED TO 2.0.0 */
+
+                            // JaPHa Modification
+                            // NVM CHANGE 004.001.012 - UPDATED TO 2.0.0
+
                             annos.annotations = sysMalloc_persistent(sizeof(AnnotationData));
                             annos.annotations->len = attr_length;
                             annos.annotations->data = sysMalloc_persistent(attr_length);
                             memcpy(annos.annotations->data, ptr, attr_length);
                             ptr += attr_length;
+
+                            // End of modification
+
                         } else
                             if(attr_name == SYMBOL(RuntimeVisibleParameterAnnotations)) {
-                            	/*	XXX NVM CHANGE 004.001.013 - UPDATED TO 2.0.0 */
+                            	
+                                // JaPHa Modification
+                                // NVM CHANGE 004.001.013 - UPDATED TO 2.0.0
+
                                 annos.parameters = sysMalloc_persistent(sizeof(AnnotationData));
                                 annos.parameters->len = attr_length;
                                 annos.parameters->data = sysMalloc_persistent(attr_length);
                                 memcpy(annos.parameters->data, ptr, attr_length);
                                 ptr += attr_length;
+
+                                // End of modification
+
                             } else
                                 if(attr_name == SYMBOL(AnnotationDefault)) {
-                                	/*	XXX NVM CHANGE 004.001.014 - UPDATED TO 2.0.0  */
+
+                                    // JaPHa Modification
+                                    // NVM CHANGE 004.001.01 - UPDATED TO 2.0.0
+
                                     annos.dft_val = sysMalloc_persistent(sizeof(AnnotationData));
                                     annos.dft_val->len = attr_length;
                                     annos.dft_val->data = sysMalloc_persistent(attr_length);
                                     memcpy(annos.dft_val->data, ptr, attr_length);
                                     ptr += attr_length;
+
+                                // End of modification
+
                                 } else
                                     ptr += attr_length;
         }
         if(annos.annotations != NULL || annos.parameters != NULL
                                      || annos.dft_val != NULL) {
-        	/*	XXX NVM CHANGE 004.001.015 - UPDATED TO 2.0.0  */
+
+        	// JaPHa Modification
+        	// NVM CHANGE 004.001.015 - UPDATED TO 2.0.0
+
             method->annotations = sysMalloc_persistent(sizeof(MethodAnnotationData));
             memcpy(method->annotations, &annos, sizeof(MethodAnnotationData));
+
+        	// End of modification
+
         }
     }
 
@@ -566,10 +659,16 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                     }
 
                     if(classblock->inner_class_count) {
-                    	/*	XXX NVM CHANGE 004.001.016 - UPDATED TO 2.0.0 */
+
+                    	// JaPHa Modification
+                    	// NVM CHANGE 004.001.016 - UPDATED TO 2.0.0
+
                         classblock->inner_classes = sysMalloc_persistent(classblock->inner_class_count*sizeof(u2));
                         memcpy(classblock->inner_classes, &inner_classes[0],
                                                           classblock->inner_class_count*sizeof(u2));
+
+                    	// End of modification
+
                     }
                 }
             } else
@@ -586,12 +685,18 @@ Class *defineClass(char *classname, char *data, int offset, int len,
                             classblock->access_flags |= ACC_SYNTHETIC;
                         else
                             if(attr_name == SYMBOL(RuntimeVisibleAnnotations)) {
-                            	/*	XXX NVM CHANGE 004.001.017 - UPDATED TO 2.0.0 */
+
+                            	// JaPHa Modification
+                            	// NVM CHANGE 004.001.017 - UPDATED TO 2.0.0
+
                                 classblock->annotations = sysMalloc_persistent(sizeof(AnnotationData));
                                 classblock->annotations->len = attr_length;
                                 classblock->annotations->data = sysMalloc_persistent(attr_length);
                                 memcpy(classblock->annotations->data, ptr, attr_length);
                                 ptr += attr_length;
+
+                            	// End of modification
+
                             } else
                                 ptr += attr_length;
     }
@@ -630,11 +735,15 @@ Class *createArrayClass(char *classname, Object *class_loader) {
     classblock->super = findSystemClass0(SYMBOL(java_lang_Object));
     classblock->method_table = CLASS_CB(classblock->super)->method_table;
 
-    /*	XXX NVM CHANGE 004.001.003 - UPDATED TO 2.0.0 */
+    // JaPHa Modification
+    // NVM CHANGE 004.001.003 - UPDATED TO 2.0.0
+
     classblock->interfaces_count = 2;
     classblock->interfaces = sysMalloc_persistent(sizeof(Class*) * 2);
     classblock->interfaces[0] = findSystemClass0(SYMBOL(java_lang_Cloneable));
     classblock->interfaces[1] = findSystemClass0(SYMBOL(java_io_Serializable));
+
+    // End of modification
 
     classblock->state = CLASS_ARRAY;
 
@@ -853,9 +962,14 @@ void prepareFields(Class *class) {
        } else
            cb->refs_offsets_size = spr_rfs_offsts_sze + 1;
 
-      	/*	XXX NVM CHANGE 004.001.023 - UPDATED TO 2.0.0 */
+      	// JaPHa Modification
+      	// NVM CHANGE 004.001.023 - UPDATED TO 2.0.0
+
       cb->refs_offsets_table = sysMalloc_persistent(cb->refs_offsets_size *
                                          sizeof(RefsOffsetsEntry));
+
+        // End of modification
+
 
       memcpy(cb->refs_offsets_table, spr_rfs_offsts_tbl,
              spr_rfs_offsts_sze * sizeof(RefsOffsetsEntry));
@@ -870,9 +984,11 @@ void prepareFields(Class *class) {
 
 #define MRNDA_CACHE_SZE 10
 
-	/*	XXX NVM CHANGE 004.002.000 - UPDATED TO 2.0.0 - ??*/
+    // JaPHa Modification
+	// NVM CHANGE 004.002.000 - UPDATED TO 2.0.0
+
 #define resizeMTable(method_table, method_table_size, miranda, count)  \
-{                                            						   \
+{                                                                      \
     method_table = (MethodBlock**)sysRealloc_persistent(method_table,  \
                   (method_table_size + count) * sizeof(MethodBlock*)); \
                                                                        \
@@ -880,6 +996,8 @@ void prepareFields(Class *class) {
                                count * sizeof(MethodBlock*));          \
     method_table_size += count;                                        \
 }
+
+	// End of modification
 
 #define fillinMTable(method_table, methods, methods_count)             \
 {                                                                      \
@@ -913,7 +1031,6 @@ void linkClass(Class *class) {
    int new_itable_count;
    int itbl_idx, i, j;
    int spr_flags = 0;
-
 
    if(cb->state >= CLASS_LINKED)
        return;
@@ -1012,8 +1129,10 @@ void linkClass(Class *class) {
 
    method_table_size = spr_mthd_tbl_sze + new_methods_count;
 
+    // JaPHa Modification
+   	// NVM CHANGE 004.001.019 - UPDATED TO 2.0.0
+
    if(!(cb->access_flags & ACC_INTERFACE)) {
-   	/*	XXX NVM CHANGE 004.001.019 - UPDATED TO 2.0.0 */
        method_table = sysMalloc_persistent(method_table_size * sizeof(MethodBlock*));
 
        /* Copy parents method table to the start */
@@ -1024,6 +1143,8 @@ void linkClass(Class *class) {
        mb = cb->methods;
        fillinMTable(method_table, mb, cb->methods_count);
    }
+
+   	// End of modification
 
    /* setup interface method table */
 
@@ -1036,8 +1157,12 @@ void linkClass(Class *class) {
        new_itable_count += CLASS_CB(cb->interfaces[i])->imethod_table_size;
 
    cb->imethod_table_size = spr_imthd_tbl_sze + new_itable_count;
-  	/*	XXX NVM CHANGE 004.001.020 - UPDATED TO 2.0.0 */
+  	// JaPHa Modification
+    //	XXX NVM CHANGE 004.001.020 - UPDATED TO 2.0.0
+
    cb->imethod_table = sysMalloc_persistent(cb->imethod_table_size * sizeof(ITableEntry));
+
+    // End of modification
 
    /* copy parent's interface table - the offsets into the method table won't change */
 
@@ -1065,8 +1190,10 @@ void linkClass(Class *class) {
 
    /* if we're an interface all finished - offsets aren't used */
 
+   // JaPHa Modification
+   // NVM CHANGE 004.001.021 - UPDATED TO 2.0.0
+
    if(!(cb->access_flags & ACC_INTERFACE)) {
-	   	/*	XXX NVM CHANGE 004.001.021 - UPDATED TO 2.0.0 */
        int *offsets_pntr = sysMalloc_persistent(itbl_offset_count * sizeof(int));
        int old_mtbl_size = method_table_size;
        MethodBlock *miranda[MRNDA_CACHE_SZE];
@@ -1114,7 +1241,6 @@ void linkClass(Class *class) {
 
                    if(k == miranda_count) {
                        if(miranda_count == MRNDA_CACHE_SZE) {
-                    	   	/*	XXX NVM CHANGE 004.002.001 - UPDATED TO 2.0.0 - ??*/
                            resizeMTable(method_table, method_table_size, miranda, MRNDA_CACHE_SZE);
                            miranda_count = 0;
                        }
@@ -1125,13 +1251,12 @@ void linkClass(Class *class) {
        }
 
        if(miranda_count > 0)
-   	   	/*	XXX NVM CHANGE 004.002.002 - UPDATED TO 2.0.0 - ?? */
-    	   resizeMTable(method_table, method_table_size, miranda, miranda_count);
+           resizeMTable(method_table, method_table_size, miranda, miranda_count);
 
        if(old_mtbl_size != method_table_size) {
            /* We've created some abstract methods */
            int num_mirandas = method_table_size - old_mtbl_size;
-   	   	/*	XXX NVM CHANGE 004.002.003 - UPDATED TO 2.0.0 */
+   
            mb = (MethodBlock *) sysRealloc_persistent(cb->methods,
                    (cb->methods_count + num_mirandas) * sizeof(MethodBlock));
 
@@ -1158,6 +1283,8 @@ void linkClass(Class *class) {
            }
        }
    }
+
+   // End of modification
 
    cb->method_table = method_table;
    cb->method_table_size = method_table_size;
@@ -1383,8 +1510,13 @@ void defineBootPackage(char *classname, int index) {
             utf8Comp(((PackageEntry*)ptr1)->name, ((PackageEntry*)ptr2)->name))
 
         /* Add if absent, no scavenge, locked */
-        /* XXX NVM CHANGE 006.003.002 - UPDATED TO 2.0.0 */
+
+        // JaPHa Modification
+        // NVM CHANGE 006.003.002 - UPDATED TO 2.0.0
+
         findHashEntry(boot_packages, package, hashed, TRUE, FALSE, TRUE, bootp_name, TRUE);
+
+        // End of modification
 
         if(package != hashed)
             sysFree(package);
@@ -1463,12 +1595,17 @@ Class *findHashedClass(char *classname, Object *class_loader) {
             (ptr1 == CLASS_CB((Class *)ptr2)->name)
 
     /* Do not add if absent, no scavenge, locked */
-    /* XXX NVM CHANGE 006.003.003 - UPDATED TO 2.0.0 */
+
+    // JaPHa Modification
+    // NVM CHANGE 006.003.003 - UPDATED TO 2.0.0
+
     if ((unsigned long)table == (unsigned long)&boot_classes){
 	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, boot_name, TRUE );
    }else{
 	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, class_name, TRUE );
    }
+
+    // End of modification
 
    return class;
 }
@@ -1557,6 +1694,8 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
+
+    // JaPHa Modification
     /* XXX NVM CHANGE 007.000.000 - FIRST_EX FLAG - UPDATED TO 2.0.0
      * Had to ensure that hash table is not created twice during executions and
      * that it can be used on second execution in persistent mode
@@ -1571,6 +1710,7 @@ Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
         first_ex = FALSE;
 	}
 
+    // End of modification
 
     Class *class = findHashedClass(classname, loader);
 
@@ -1666,8 +1806,13 @@ Object *bootPackage(char *package_name) {
                                  utf8Comp(ptr1, ((PackageEntry*)ptr2)->name))
 
     /* Do not add if absent, no scavenge, locked */
-    /* XXX NVM CHANGE 006.003.004 - UPDATED TO 2.0.0 */
+
+    // JaPHa Modification
+    // XXX NVM CHANGE 006.003.004 - UPDATED TO 2.0.0
+
     findHashEntry(boot_packages, package_name, hashed, FALSE, FALSE, TRUE, bootp_name, TRUE);
+
+    // End of modification
 
     if(hashed != NULL)
         return createBootPackage(hashed);
@@ -1945,8 +2090,13 @@ void scanDirForJars(char *dir) {
         while(--n >= 0) {
             char *buff;
             bootpathlen += strlen(namelist[n]->d_name) + dirlen + 2;
-           	/*	XXX NVM CHANGE 004.001.025 - UPDATED TO 2.0.0 */
+
+           	// JaPHa Modification
+           	//	XXX NVM CHANGE 004.001.025 - UPDATED TO 2.0.0
+
             buff = sysMalloc_persistent(bootpathlen);
+
+            // End of modification
 
             strcat(strcat(strcat(strcat(strcpy(buff, dir), "/"),
                                  namelist[n]->d_name), ":"), bootpath);
@@ -2075,24 +2225,32 @@ out:
     return res;
 }
 
-// xxx Setting primary classes -UPDATED TO 2.0.0
+// JaPHa Modification
+// Setting primary classes -UPDATED TO 2.0.0
+
 void set_prim_classes(){
 	OPC *ph_values = get_opc_ptr();
 	memcpy(prim_classes, ph_values->prim_classes, sizeof(prim_classes));
 }
 
+// End of modification
+
 void initialiseClass(InitArgs *args) {
     if(args->testing_mode == TRUE)
     	testing_mode = TRUE;
 
-	char *bcp = setBootClassPath(args->bootpath, args->bootpathopt);
+    char *bcp = setBootClassPath(args->bootpath, args->bootpathopt);
     FieldBlock *hashtable = NULL;
     Class *loader_data_class;
     Class *vm_loader_class;
 
-    /* XXX NVM CHANGE 001.002 - UPDATED TO 2.0.0 */
+    // JaPHa Modification
+    // NVM CHANGE 001.002 - UPDATED TO 2.0.0
+
 	if(args->persistent_heap == TRUE)
 		is_persistent = 1;
+
+    // End of modification
 
     if(!(bcp && parseBootClassPath(bcp))) {
         jam_fprintf(stderr, "bootclasspath is empty!\n");
@@ -2103,17 +2261,26 @@ void initialiseClass(InitArgs *args) {
     setClassPath(args->classpath);
 
     /* Init hash table, and create lock */
-    /* XXX NVM CHANGE 005.001.002 - BC/BP HT - Y/Y - UPDATED TO 2.0.0 */
+
+    // JaPHa Modification
+    // XXX NVM CHANGE 005.001.002 - BC/BP HT - Y/Y - UPDATED TO 2.0.0
+
     initHashTable(boot_classes,  CLASS_INITSZE, TRUE, boot_name,  TRUE);
     initHashTable(boot_packages, PCKG_INITSZE,  TRUE, bootp_name, TRUE);
 
-    /* XXX DOC CHANGE - UPDATED TO 2.0.0 */
+    // End of modification
+
+    // JaPHa Modification
+    // DOC CHANGE - UPDATED TO 2.0.0
+
     if(is_persistent){
     	OPC *ph_value = get_opc_ptr();
     	boot_classes.hash_count = ph_value->boot_classes_hash_count;
     	boot_packages.hash_count = ph_value->boot_packages_hash_count;
     	set_prim_classes();
     }
+
+    // End of modification
 
     loader_data_class = findSystemClass0(SYMBOL(jamvm_java_lang_VMClassLoaderData));
     if(loader_data_class != NULL) {
@@ -2147,39 +2314,52 @@ void initialiseClass(InitArgs *args) {
         exitVM(1);
     }
 
-
-
     /* Register the address of where the java.lang.Class ref _will_ be */
     registerStaticClassRef(&java_lang_Class);
 }
 
-/*	XXX NVM CHANGE 009.002.000 - UPDATED TO 2.0.0	*/
+// JaPHa Modification
+// NVM CHANGE 009.002.000 - UPDATED TO 2.0.0	*/
 int get_ldr_vmdata_offset(){
 	return ldr_vmdata_offset;
 }
-/*	XXX NVM CHANGE 009.002.001 - UPDATED TO 2.0.0	*/
+
+// End of modification
+
+// JaPHa Modification
+// NVM CHANGE 009.002.001 - UPDATED TO 2.0.0	*/
 void set_ldr_vmdata_offset(int ldr){
 	ldr_vmdata_offset = ldr;
 }
 
+// End of modification
 
-/*	XXX NVM CHANGE 009.002.002 - UPDATED TO 2.0.0	*/
+// JaPHa Modification
+// NVM CHANGE 009.002.002 - UPDATED TO 2.0.0	*/
 int get_BC_HC()
 {
 	return boot_classes.hash_count;
 }
 
-/*	XXX NVM CHANGE 009.002.003 - UPDATED TO 2.0.0	*/
+// End of modification
+
+// JaPHa Modification
+// NVM CHANGE 009.002.003 - UPDATED TO 2.0.0	*/
 int get_BP_HC()
 {
 	return boot_packages.hash_count;
 }
 
-/*	XXX NVM CHANGE 009.002.004 - UPDATED TO 2.0.0	*/
+// End of modification
+
+// JaPHa Modification
+// NVM CHANGE 009.002.004 - UPDATED TO 2.0.0	*/
 int get_CL_HC()
 {
 	return class_HC;
 }
+
+// End of modification
 
 Class ** get_prim_classes(){
 	return prim_classes;

@@ -124,14 +124,22 @@ static int main_exited = FALSE;
 static unsigned int *tidBitmap = NULL;
 static int tidBitmapSize = 0;
 
-/*	XXX	NVM VARIABLES - THREAD.C - UPDATED TO 2.0.0 */
+// JaPHa Modification
+// XXX	NVM VARIABLES - THREAD.C - UPDATED TO 2.0.0
+
 static char* thread_name = "thread_ht";
+
+// End of modification
 
 /* Mark a threadID value as no longer used */
 #define freeThreadID(n) tidBitmap[(n-1)>>5] &= ~(1<<((n-1)&0x1f))
 
+// JaPHa Modification
 // NVM CHANGE PERSISTENT "BOOL"
+
 static int is_persistent = 0;
+
+// End of modification
 
 /* Generate a new thread ID - assumes the thread queue
  * lock is held */
@@ -435,8 +443,13 @@ Thread *findHashedThread(Thread *thread, long long id) {
     Thread *ptr;
 
     /* Add if absent, scavenge, locked */
-    /* XXX NVM CHANGE 006.003.013 - UPDATED TO 2.0.0 */
+
+    // JaPHa Modification
+    // XXX NVM CHANGE 006.003.013 - UPDATED TO 2.0.0
+
     findHashEntry(thread_id_map, id, ptr, (thread != NULL), TRUE, TRUE, thread_name, FALSE);
+
+    // End of modification
 
     return ptr;
 }
@@ -1149,28 +1162,33 @@ Thread *findRunningThreadByTid(int tid) {
 }
 
 void exitVM(int status) {
-	main_exited = TRUE;
-	/*	XXX NVM CHANGE 009.000.002	*/
-	if(is_persistent == TRUE){
-		OPC *ph_values = get_opc_ptr();
-		ph_values->chunkpp = get_chunkpp();
-		ph_values->freelist_header = get_freelist_header();
-		ph_values->freelist_next = get_freelist_next();
-		ph_values->heapfree = get_heapfree();
-		ph_values->nvmFreeSpace = get_nvmFreeSpace();
-		ph_values->java_lang_Class =  get_java_lang_class();
-		ph_values->ldr_vmdata_offset = get_ldr_vmdata_offset();
-		ph_values->boot_classes_hash_count = get_BC_HC();
-		ph_values->boot_packages_hash_count = get_BP_HC();
-		ph_values->string_hash_count = get_string_HC();
-		ph_values->utf8_hash_count = get_utf8_HC();
-		ph_values->classes_hash_count = get_CL_HC();
-		memcpy(ph_values->prim_classes, get_prim_classes(), sizeof(ph_values->prim_classes));
-		ph_values->has_finaliser_count = get_has_finaliser_count();
-		ph_values->has_finaliser_size = get_has_finaliser_size();
-		ph_values->has_finaliser_list = sysMalloc_persistent(ph_values->has_finaliser_size*sizeof(Object*));
-		memcpy(ph_values->has_finaliser_list, get_has_finaliser_list(), ph_values->has_finaliser_size*sizeof(Object*));
-	}
+    main_exited = TRUE;
+
+    // JaPHa Modification
+    // XXX NVM CHANGE 009.000.002
+
+    if(is_persistent == TRUE){
+        OPC *ph_values = get_opc_ptr();
+        ph_values->chunkpp = get_chunkpp();
+        ph_values->freelist_header = get_freelist_header();
+        ph_values->freelist_next = get_freelist_next();
+        ph_values->heapfree = get_heapfree();
+        ph_values->nvmFreeSpace = get_nvmFreeSpace();
+        ph_values->java_lang_Class =  get_java_lang_class();
+        ph_values->ldr_vmdata_offset = get_ldr_vmdata_offset();
+        ph_values->boot_classes_hash_count = get_BC_HC();
+        ph_values->boot_packages_hash_count = get_BP_HC();
+        ph_values->string_hash_count = get_string_HC();
+        ph_values->utf8_hash_count = get_utf8_HC();
+        ph_values->classes_hash_count = get_CL_HC();
+        memcpy(ph_values->prim_classes, get_prim_classes(), sizeof(ph_values->prim_classes));
+        ph_values->has_finaliser_count = get_has_finaliser_count();
+        ph_values->has_finaliser_size = get_has_finaliser_size();
+        ph_values->has_finaliser_list = sysMalloc_persistent(ph_values->has_finaliser_size*sizeof(Object*));
+        memcpy(ph_values->has_finaliser_list, get_has_finaliser_list(), ph_values->has_finaliser_size*sizeof(Object*));
+    }
+
+    // End of modification
 
     /* Execute System.exit() to run any registered shutdown hooks.
        In the unlikely event that System.exit() can't be found, or
@@ -1239,8 +1257,13 @@ void initialiseThreadStage1(InitArgs *args) {
         pthread_attr_setstacksize(&attributes, 1*MB);
 
     monitorInit(&sleep_mon);
-    /* XXX NVM CHANGE 005.001.008 - ThreadMap HT - N - UPDATED TO 2.0.0 */
+
+    // JaPHa Modification
+    // XXX NVM CHANGE 005.001.008 - ThreadMap HT - N - UPDATED TO 2.0.0
+
     initHashTable(thread_id_map, HASHTABSZE, TRUE, thread_name, FALSE);
+
+    // End of modification
 
     /* We need to cache field and method offsets to create and initialise
        threads.  However, the class loading component requires a valid

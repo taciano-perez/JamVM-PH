@@ -41,7 +41,6 @@
 static int pd_offset;
 
 void initialiseNatives() {
-
     FieldBlock *pd = findField(java_lang_Class, SYMBOL(pd),
                                SYMBOL(sig_java_security_ProtectionDomain));
 
@@ -1682,14 +1681,22 @@ uintptr_t *nativeUnloadDll(Class *class, MethodBlock *mb, uintptr_t *ostack) {
     return ostack;
 }
 
-/*	XXX NVM CHANGE 009.002.002 - UPDATED TO 2.0.0	*/
+// JaPHa Modification
+// XXX NVM CHANGE 009.002.002 - UPDATED TO 2.0.0
+
 Class* get_java_lang_class(){
 	return java_lang_Class;
 }
-/*	XXX NVM CHANGE 009.002.003 - UPDATED TO 2.0.0	*/
+
+// End of modification
+
+// JaPHa Modification
+//	XXX NVM CHANGE 009.002.003 - UPDATED TO 2.0.0
 void set_java_lang_class(Class *clazz){
 	java_lang_Class = clazz;
 }
+
+// End of modification
 
 VMMethod vm_object[] = {
     {"getClass",                    getClass},

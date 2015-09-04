@@ -84,8 +84,13 @@
 #define HASH(ptr) zipHash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) ((hash1 == hash2) && \
                                            zipComp(ptr1, ptr2)) 
-/*	XXX	NVM VARIABLES - ZIP.C - UPDATED TO 2.0.0	*/
+
+// JaPHa Modification
+//	XXX	NVM VARIABLES - ZIP.C - UPDATED TO 2.0.0
+
 static char* zip_name = "zip_ht";
+
+// End of modification
 
 /* The filenames within the zip file are added to a hash-table for faster
    access.  To save memory, the entries point directly into the zip file's
@@ -174,8 +179,12 @@ ZipFile *processArchive(char *path) {
 
     hash_table = sysMalloc(sizeof(HashTable));
 
-    /* XXX NVM CHANGE 005.001.010 - Files HT - N - NW!! - UPDATED TO 2.0.0 */
+    // JaPHa Modification
+    // XXX NVM CHANGE 005.001.010 - Files HT - N - NW!! - UPDATED TO 2.0.0
+
     initHashTable((*hash_table), HASHTABSZE, FALSE, zip_name, FALSE);
+
+    // End of modification
 
     /* Get the offset from the start of the file of the first directory entry */
     pntr = data + READ_LE_INT(pntr + END_CEN_DIR_START_OFFSET);
@@ -207,12 +216,21 @@ ZipFile *processArchive(char *path) {
         /* Skip variable fields, to point to next sig */
         pntr += path_len + extra_len + comment_len;
 
-        /* XXX NVM CHANGE 006.003.009 - UPDATED TO 2.0.0 */
+        // JaPHa Modification
+        // XXX NVM CHANGE 006.003.009 - UPDATED TO 2.0.0
+
         /* Add if absent, no scavenge, not locked */
         findHashEntry((*hash_table), pathname, found, TRUE, FALSE, FALSE, zip_name, FALSE);
+
+        // End of modification
     }
-   	/*	XXX NVM CHANGE 004.001.024 - UPDATED TO 2.0.0 */
+
+    // JaPHa Modification
+   	//	XXX NVM CHANGE 004.001.024 - UPDATED TO 2.0.0
+
     zip = sysMalloc_persistent(sizeof(ZipFile));
+
+    // End of modification
 
     zip->data = data;
     zip->length = len;
@@ -256,9 +274,13 @@ int utf8ZipComp(char *path1, char *path2) {
 char *findArchiveDirEntry(char *pathname, ZipFile *zip) {
     char *found;
 
-    /* XXX NVM CHANGE 006.003.010 - UPDATED TO 2.0.0 */
+    // JaPHa Modification
+    // XXX NVM CHANGE 006.003.010 - UPDATED TO 2.0.0
+
     /* Do not add if absent, no scavenge, not locked */
     findHashEntry((*zip->dir_hash), pathname, found, FALSE, FALSE, FALSE, zip_name, FALSE);
+
+    // End of modification
 
     return found;
 }

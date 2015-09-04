@@ -120,7 +120,7 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
                     } else                                             \
                         new_size = table.hash_size*2;                  \
                                                                        \
-				   resizeHash(&table, new_size, ht_name, create_file);    \
+                    resizeHash(&table, new_size, ht_name, create_file);    \
                 }                                                      \
             }                                                          \
         }                                                              \

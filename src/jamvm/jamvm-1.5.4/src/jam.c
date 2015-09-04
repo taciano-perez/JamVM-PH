@@ -35,7 +35,6 @@
 #define BCP_MESSAGE "<directories separated by :>"
 #endif
 
-
 void showNonStandardOptions() {
     printf("  -Xbootclasspath:%s\n", BCP_MESSAGE);
     printf("\t\t   locations where to find the system classes\n");
@@ -135,6 +134,7 @@ void showVersionAndCopyright() {
 void showFullVersion() {
     printf("java full version \"jamvm-%s\"\n", JAVA_COMPAT_VERSION);
 }
+
 int parseCommandLine(int argc, char *argv[], InitArgs *args) {
     int is_jar = FALSE;
     int status = 1;
@@ -240,13 +240,17 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
                 goto exit;
             }
 
-			/* XXX NVM CHANGE 001.001 - UPDATED TO 2.0.0*/
+            // JaPHa Modification
+            // XXX NVM CHANGE 001.001 - UPDATED TO 2.0.0
+
 		} else if (strncmp(argv[i], "-persistentheap:", 16) == 0) {
 			args->persistent_heap = TRUE;
 			args->heap_file = argv[i] + 16;
 
 		} else if (strncmp(argv[i], "-testingmode", 12) == 0) {
 			args->testing_mode = TRUE;
+
+            // End of modification
 
         } else if(strncmp(argv[i], "-D", 2) == 0) {
             char *key = strcpy(sysMalloc(strlen(argv[i] + 2) + 1), argv[i] + 2);
@@ -353,8 +357,9 @@ exit:
     exit(status);
 }
 
+// JaPHa Modification
+// XXX NVM CHANGE 069.069 - UPDATED TO 2.0.0
 
-/* XXX NVM CHANGE 069.069 - UPDATED TO 2.0.0*/
 int resumeAllListeners(Object *system_loader)
 {
 	Class *op_runtime = findClassFromClassLoader("javax.op.OPRuntime", system_loader);
@@ -390,6 +395,8 @@ int resumeAllListeners(Object *system_loader)
 
 }
 
+// End of modification
+
 int main(int argc, char *argv[]) {
     Class *array_class, *main_class;
     Object *system_loader, *array;
@@ -411,8 +418,8 @@ int main(int argc, char *argv[]) {
     initVM(&args);
     log(INFO,"VM initialized");
 
-    if ((system_loader = getSystemClassLoader()) == NULL)
-    	goto error;
+   if((system_loader = getSystemClassLoader()) == NULL)
+        goto error;
 
     mainThreadSetContextClassLoader(system_loader);
 
@@ -423,7 +430,6 @@ int main(int argc, char *argv[]) {
             *cpntr = '/';
 
     main_class = findClassFromClassLoader(argv[class_arg], system_loader);
-
     if(main_class != NULL)
         initClass(main_class);
 
