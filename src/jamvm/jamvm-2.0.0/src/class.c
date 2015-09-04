@@ -530,8 +530,15 @@ Class *parseClass(char *classname, char *data, int offset, int len,
     }
 
     READ_U2(classblock->methods_count, ptr, len);
-    classblock->methods = sysMalloc(classblock->methods_count *
+
+    // JaPHa Modification
+    // Changed to persistent call
+
+    classblock->methods = sysMalloc_persistent(classblock->methods_count *
                                     sizeof(MethodBlock));
+
+    // End of Modification
+
     memset(classblock->methods, 0, classblock->methods_count *
                                    sizeof(MethodBlock));
 
@@ -1525,7 +1532,13 @@ void linkClass(Class *class) {
                method_table[mirandas[i].mtbl_idx] = mb;
            }
 
-           sysFree(mirandas);
+           // JaPHa Modification
+           // Changed sysFree call
+
+           sysFree_persistent(mirandas);
+
+           // End of Modification
+
            cb->methods_count += miranda_count;
        }
    }
