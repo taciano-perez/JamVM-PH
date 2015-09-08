@@ -99,7 +99,14 @@ int enqueue_mtbl_idx;
 
 /* hash table containing classes loaded by the boot loader and
    internally created arrays */
+
+// JaPHa Modification
+// Changed from 1<<8 to 1<<9
+
 #define CLASS_INITSZE 1<<9
+
+// End of Modification
+
 static HashTable boot_classes;
 
 /* Array large enough to hold all primitive classes -
