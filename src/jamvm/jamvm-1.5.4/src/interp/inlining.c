@@ -111,12 +111,12 @@ static char *goto_start;
 static char **handler_entry_points[HANDLERS];
 static int branch_patch_offsets[HANDLERS][BRANCH_NUM];
 
-// JaPha Modification
-// NVM VARIABLES - INLINING.C
+// JaPHa Modification
+// Constants and Variables
 
 static char* inline_name = "inlining_ht";
 
-// End of modification
+// End of Modification
 
 char *reason(int reason) {
     switch(reason) {
@@ -215,11 +215,11 @@ int initialiseInlining(InitArgs *args) {
     if(enabled) {
         initVMLock(rewrite_lock);
         // JaPHa Modification
-        // CHANGE 005.001.005 - Inline HT - N
+        // Added initializing arguments
 
         initHashTable(code_hash_table, HASHTABSZE, TRUE, inline_name, FALSE);
 
-        // End of modification
+        // End of Modification
 
         sys_page_size = getpagesize();
         max_codemem = ROUND(args->codemem, sys_page_size);
@@ -539,14 +539,13 @@ CodeBlockHeader *findCodeBlock(TestCodeBlock *block) {
     if(branch_patching_dup && block->patchers != NULL)
         ret_block = newDuplicateBlock(block);
     else {
-        /* Search hash table.  Add if absent, scavenge and not locked
+        /* Search hash table.  Add if absent, scavenge and not locked */
         // JaPHa Modification
-        // NVM CHANGE 006.003.011 - Execution State*/
+        // Added arguments
 
         findHashEntry(code_hash_table, block, ret_block, TRUE, TRUE, FALSE, inline_name, FALSE );
 
-        // End of modificatio
-
+        // End of Modification
     }
 
     unlockHashTable(code_hash_table);
@@ -905,14 +904,7 @@ void removeFromProfile(MethodBlock *mb, BasicBlock *block) {
     if(profile_info->next)
         profile_info->next->prev = profile_info->prev;
 
-    // JaPHa Modification
-    // NVM CHANGE 004.003.002
-    /* sysFree_persistent(profile_info); */
-
-    // End of modification
-
     sysFree(profile_info);
-
 }
 
 void inlineBlock(MethodBlock *mb, BasicBlock *block, Thread *self) {
@@ -973,14 +965,6 @@ void inlineBlock(MethodBlock *mb, BasicBlock *block, Thread *self) {
    they have been executed).
 */
 void addToProfile(MethodBlock *mb, BasicBlock *block, Thread *self) {
-
-    // JaPHa Modification
-	/*XXX NVM CHANGE 004.001.029
-    ProfileInfo *info = sysMalloc_persistent(sizeof(ProfileInfo));
-    */
-
-    // End of modification
-
     ProfileInfo *info = sysMalloc(sizeof(ProfileInfo));
 
     TRACE("Adding block (start %p) to profile\n", block->start);

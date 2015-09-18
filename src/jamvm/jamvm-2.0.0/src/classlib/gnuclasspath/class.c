@@ -36,7 +36,12 @@ static int ldr_data_tbl_offset;
 static MethodBlock *vm_loader_create_package = NULL;
 static Class *package_array_class;
 
-#define CLASS_INITSZE 1<<8
+// JaPHa Modification
+// Changed from 1<<8 to 1<<9
+
+#define CLASS_INITSZE 1<<9
+
+// End of Modification
 
 void classlibCacheClassLoaderFields(Class *loader_class) {
     FieldBlock *ldr_fb = findField(loader_class, SYMBOL(vmdata),
@@ -61,7 +66,7 @@ HashTable *classlibLoaderTable(Object *class_loader) {
 }
 
 // JaPHa Modification
-// Added arguments
+// Added Persistent Arguments
 
 HashTable *classlibCreateLoaderTable(Object *class_loader, char* ht_name, int create_file) {
     Object *vmdata = allocObject(ldr_new_unloader->class);
@@ -77,7 +82,12 @@ HashTable *classlibCreateLoaderTable(Object *class_loader, char* ht_name, int cr
 
     // End of Modification
 
+    // JaPHa Modification
+    // Description
+
     initHashTable((*table), CLASS_INITSZE, TRUE, ht_name, create_file);
+
+    // End of Modification
 
     INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
     INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;

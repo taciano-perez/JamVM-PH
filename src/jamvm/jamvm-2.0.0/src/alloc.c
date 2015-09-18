@@ -113,7 +113,6 @@
 
 static int persistent_mode = FALSE;
 static int first_execution = TRUE;
-int file = FALSE;
 
 uintptr_t get_freelist_header();
 struct chunk *get_freelist_next();
@@ -128,13 +127,13 @@ int nvm_file_exists = FALSE;
 static char *CON_ROOTS_NAME   = "cr_ht";
 static char *HARD_MARKED_NAME = "add_ob";
 
- typedef struct nvmChunk
- {
-     int alloc_bit;
-     unsigned int chunk_size;
-     struct nvmChunk *next;
+typedef struct nvmChunk
+{
+    int alloc_bit;
+    unsigned int chunk_size;
+    struct nvmChunk *next;
 
- } nvmChunk;
+} nvmChunk;
 
  static nvmChunk *nvm_free_list;
  static char *nvm;
@@ -279,9 +278,6 @@ void freePendingFrees();
 void *gcMemRealloc(void *addr, int new_size, char* name, int create_file);
 void *gcMemMalloc(int n, char* name, int create_file);
 
-//void *gcMemRealloc(void *addr, int new_size);
-//void *gcMemMalloc(int size);
-
 // End of Modification
 
 void gcMemFree(void *addr);
@@ -355,11 +351,25 @@ void initialiseNVM()
     if( access( NVM_FILE, F_OK ) != -1 )
     {
         nvm_fd = open ( NVM_FILE, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
+
+        if(nvm_fd == -1)
+        {
+            perror("Couldn't Open Heap File\n");
+            exitVM(1);
+        }
+
         nvm_file_exists = TRUE;
     }
     else
     {
         nvm_fd = open ( NVM_FILE, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+
+        if(nvm_fd == -1)
+        {
+            perror("Couldn't create Heap File\n");
+            exitVM(1);
+        }
+
         lseek (nvm_fd, (nvm_current_size - 1), SEEK_SET);
         write(nvm_fd,"",1);
     }
@@ -420,12 +430,26 @@ int initialiseAlloc(InitArgs *args)
         if( access(args->heap_file, F_OK ) != -1 )
         {
             heap_fd = open (args->heap_file, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
+
+            if(heap_fd == -1)
+            {
+                perror("Couldn't open Heap File\n");
+                exitVM(1);
+            }
+
             heap_file_exists = TRUE;
             first_execution = FALSE;
         }
         else
         {
             heap_fd = open (args->heap_file, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+
+            if(heap_fd == -1)
+            {
+                perror("Couldn't create Heap File\n");
+                exitVM(1);
+            }
+
             lseek (heap_fd, args->max_heap - 1, SEEK_SET);
 
             // Write Dummy Byte
@@ -458,7 +482,9 @@ int initialiseAlloc(InitArgs *args)
     /* Set initial free-list to one block covering entire heap */
     freelist = (Chunk*)heapbase;
 
+    // JaPHa Modification
     // Creating Free List and OPC
+
     if(heap_file_exists == FALSE)
     {
         freelist->header = heapfree = heaplimit-heapbase;
@@ -476,6 +502,7 @@ int initialiseAlloc(InitArgs *args)
         set_ldr_vmdata_offset(ph_value->ldr_vmdata_offset);
     }
 
+    // End of modification
 
     TRACE_GC("Alloced heap size %p\n", heaplimit-heapbase);
     allocMarkBits();
@@ -492,7 +519,6 @@ int initialiseAlloc(InitArgs *args)
 
     /* Set verbose option from initialisation arguments */
     verbosegc = args->verbosegc;
-
     return TRUE;
 }
 
@@ -534,7 +560,7 @@ void addConservativeRoot(Object *object) {
         int new_size = conservative_root_count + LIST_INCREMENT;
 
         // JaPHa Modification
-        // Added arguments
+        // Added arguments to gcMemRealloc
 
         conservative_roots = gcMemRealloc(conservative_roots, new_size * sizeof(Object *), CON_ROOTS_NAME, FALSE);
 
@@ -930,11 +956,16 @@ static void doMark(Thread *self, int mark_soft_refs) {
     for(i = 0, j = 0; i < has_finaliser_count; i++) {
         Object *ob = has_finaliser_list[i];
   
+        // JaPHa Modification
+        // Description
+
         if(!IS_HARD_MARKED(ob)) {
             ADD_TO_OBJECT_LIST(run_finaliser, ob);
         } else
             has_finaliser_list[j++] = ob;
     }
+
+         // End of modification
 
     /* After scanning, j holds how many finalizers are left */
 
@@ -1245,7 +1276,7 @@ static void addConservativeRoots2Hash() {
     con_roots_hashtable_size = i << 1;
 
     // JaPHa Modification
-    // Added arguments
+    // Added gcMemMalloc arguments
 
     con_roots_hashtable = gcMemMalloc( (con_roots_hashtable_size *sizeof(uintptr_t)) , CON_ROOTS_NAME, FALSE );
 
@@ -1509,9 +1540,15 @@ int threadChildren(Object *ob, Object *new_addr) {
                     if(INST_DATA(ob, Object*, ref_queue_offset) != NULL) {
                         TRACE_GC("Adding to list for enqueuing.\n");
 
-                        ADD_TO_OBJECT_LIST(reference, ob);
+                        // JaPHa Modification
+                        // Changed ADD_TO_OBJECT_LIST second parameter from 'ob' to 'new_addr'
+
+                        ADD_TO_OBJECT_LIST(reference, new_addr);
                         notify_reference_thread = TRUE;
                     }
+
+                        // End of Modification
+
 out:
                     if(!cleared)
                         THREAD_REFERENCE(referent);
@@ -2055,7 +2092,8 @@ int initialiseGC(InitArgs *args) {
      * when we're really low on heap space, and can create FA... */
 
     MethodBlock *init;
-    if(exceptionOccurred()) {
+    if(exceptionOccurred())
+    {
         printException();
         return FALSE;
     }
@@ -2066,19 +2104,17 @@ int initialiseGC(InitArgs *args) {
              * when we're really low on heap space, and can create FA... */
         Class *oom_clazz = findSystemClass(SYMBOL(java_lang_OutOfMemoryError));
 
-    /* Initialize it */
-    init = lookupMethod(oom_clazz, SYMBOL(object_init),
+        /* Initialize it */
+        init = lookupMethod(oom_clazz, SYMBOL(object_init),
                                    SYMBOL(_java_lang_String__V));
-    oom = allocObject(oom_clazz);
-    registerStaticObjectRef(&oom);
+        oom = allocObject(oom_clazz);
+        registerStaticObjectRef(&oom);
         executeMethod(oom, init, NULL);
     }
     else
     {
         set_has_finaliser_list();
     }
-
-    //executeMethod(oom, init, NULL);
 
     /* Create and start VM threads for the reference handler and finalizer */
     createVMThread("Finalizer", finalizerThreadLoop);
@@ -2499,9 +2535,8 @@ unsigned long maxHeapMem() {
     suspended while holding the malloc lock */
 
 // JaPHa Modification
-// Modified functions
-
 // Added file to mmap in persistence mode
+
 void *gcMemMalloc(int n, char* name, int create_file) {
     uintptr_t size = n + sizeof(uintptr_t);
     uintptr_t *mem;
@@ -2516,15 +2551,26 @@ void *gcMemMalloc(int n, char* name, int create_file) {
         {
             fd = open (name, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
 
+            if(fd == -1)
+            {
+                perror("Couldn't Open Memory File\n");
+                exitVM(1);
+            }
+
             read(fd, &buffer, sizeof(unsigned long)+sizeof(uintptr_t));
-
             mem = (uintptr_t*)mmap((unsigned long)buffer[0],buffer[1], PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-
             *mem++ = (unsigned long)mem;
         }
         else
         {
             fd = open (name, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+
+            if(fd == -1)
+            {
+                perror("Couldn't Create Memory File\n");
+                exitVM(1);
+            }
+
             lseek (fd, size-1, SEEK_SET);
             write(fd,"",1);
             mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
@@ -2532,7 +2578,6 @@ void *gcMemMalloc(int n, char* name, int create_file) {
         }
 
         msync(mem, size, MS_SYNC);
-
     }
     else
     {
@@ -2548,11 +2593,13 @@ void *gcMemMalloc(int n, char* name, int create_file) {
     return mem;
 }
 
-// Memory Realloc
+// End of Modification
+
+// JaPHa Modification
+// GcMemRealloc
+
 void *gcMemRealloc(void *addr, int size, char* name, int create_file)
 {
-    uintptr_t copy_size;
-
     if(addr == NULL)
     {
         return gcMemMalloc(size, name, FALSE);
@@ -2570,6 +2617,8 @@ void *gcMemRealloc(void *addr, int size, char* name, int create_file)
         }
         else
         {
+            uintptr_t copy_size;
+
             if(  new_size > old_size )
             {
                 copy_size = old_size;
@@ -2617,12 +2666,12 @@ void freePendingFrees() {
         pending_free_list = next;
     }
 }
+
 /* ------ Allocation from system heap ------- */
 
 // JaPHa Modification
-// Added and Modified Functions
-
 // Expand non volatile memory
+
 void expandNVM()
 {
     unsigned int old_size = nvm_current_size;
@@ -2676,13 +2725,16 @@ void expandNVM()
     }
 }
 
-// Persistent Allocation Functions
+// End of Modification
+
+// JaPHa Modification
+// Persistent Allocation
+
 void *sysMalloc_persistent(int size)
 {
-    int n;
-
     if(persistent_mode)
     {
+        int n;
         if( size < sizeof(void*) )
         {
             n = sizeof(void*);
@@ -2759,6 +2811,11 @@ void *sysMalloc_persistent(int size)
     }
 }
 
+// End of Modification
+
+// JaPHa Modification
+// Persistent Free
+
 void sysFree_persistent(void* addr)
 {
     if(persistent_mode)
@@ -2780,10 +2837,15 @@ void sysFree_persistent(void* addr)
     }
 }
 
+// End of Modification
+
+// JaPHa Modification
+// Persistent Realloc
+
 void *sysRealloc_persistent(void *addr, int size)
 {
     void *mem;
-    if (persistent_mode)
+    if(persistent_mode)
     {
         /*    chunk = ptr - header */
         nvmChunk *to_realloc = (addr-nvm_header_size);
@@ -2805,7 +2867,7 @@ void *sysRealloc_persistent(void *addr, int size)
     }
     else
     {
-    return sysRealloc(addr, size);
+        return sysRealloc(addr, size);
     }
 }
 
@@ -2838,15 +2900,28 @@ void sysFree(void *addr) {
     free(addr);
 }
 
+// JaPHa Modification
+// Description
+
 unsigned long get_chunkpp()
 {
     return (unsigned long)*chunkpp;
 }
 
+// End of modification
+
+// JaPHa Modification
+// Description
+
 OPC *get_opc_ptr()
 {
     return (OPC*)((char*)nvm-sizeof(OPC));
 }
+
+// End of modification
+
+// JaPHa Modification
+// Description
 
 uintptr_t get_freelist_header()
 {
@@ -2854,32 +2929,64 @@ uintptr_t get_freelist_header()
     return freelist->header;
 }
 
+// End of modification
+
+// JaPHa Modification
+// Description
+
 struct chunk *get_freelist_next()
 {
     return freelist->next;
 }
+
+// End of modification
+
+// JaPHa Modification
+// Description
 
 unsigned int get_heapfree()
 {
     return heapfree;
 }
 
+// End of modification
+
+// JaPHa Modification
+// Description
+
 unsigned int get_nvmFreeSpace()
 {
     return nvm_free_space;
 }
+
+// End of modification
+
+// JaPHa Modification
+// Description
 
 int get_has_finaliser_count()
 {
     return has_finaliser_count;
 }
 
+// End of modification
+
+// JaPHa Modification
+// Description
+
 int get_has_finaliser_size()
 {
     return has_finaliser_size;
 }
 
+// End of modification
+
+// JaPHa Modification
+// Description
+
 Object ** get_has_finaliser_list()
 {
     return has_finaliser_list;
 }
+
+// End of modification

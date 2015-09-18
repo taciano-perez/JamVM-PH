@@ -42,13 +42,13 @@ static int offset_offset;
 static HashTable hash_table;
 
 // JaPHa Modification
-//	XXX	NVM VARIABLES - STRING.C - UPDATED TO 2.0.0
+// Constants and Variables
 
 static char* string_name = "string_ht";
-static int testing_mode = FALSE;
 static int is_persistent = FALSE;
+static int testing_mode = FALSE;
 
-// End of modification
+// End of Modification
 
 int stringHash(Object *ptr) {
     int len = INST_DATA(ptr, int, count_offset);
@@ -109,11 +109,11 @@ Object *findInternedString(Object *string) {
     /* Add if absent, no scavenge, locked */
 
     // JaPHa Modification
-    // XXX NVM CHANGE 006.003.007 - UPDATED TO 2.0.0
+    // Added arguments
 
     findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, string_name, TRUE);
 
-   // End of modification
+    // End of Modification
 
     return interned;
 }
@@ -142,11 +142,11 @@ void freeInternedStrings() {
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
 
         // JaPHa Modification
-        // XXX NVM CHANGE 006.002.001 - UPDATED TO 2.0.0
+        // Added arguments
 
         resizeHash(&hash_table, size, string_name, TRUE);
 
-        // End of modification
+        // End of Modification
     }
 }
 
@@ -184,14 +184,23 @@ char *String2Cstr(Object *string) {
     return String2Buff0(string, buff, len);
 }
 
-void initialiseString(InitArgs *args) {
+void initialiseString(InitArgs *args)
+{
+    // JaPHa Modification
+    // Persistent mode flag
+
     if(args->testing_mode == TRUE)
     {
         testing_mode = TRUE;
     }
-    if(args->persistent_heap == TRUE){
+
+    if(args->persistent_heap == TRUE)
+    {
         is_persistent = TRUE;
     }
+
+    // End of Modification
+
     FieldBlock *count = NULL, *value = NULL, *offset = NULL;
 
     string_class = findSystemClass0(SYMBOL(java_lang_String));
@@ -216,20 +225,22 @@ void initialiseString(InitArgs *args) {
     /* Init hash table and create lock */
 
     // JaPHa Modification
-    // XXX NVM CHANGE 005.001.007 - Strings HT - Y - UPDATED TO 2.0.0
+    // Added Init Hash Table Initialization Arguments
 
     initHashTable(hash_table, HASHTABSZE, TRUE, string_name, TRUE);
 
-    // End of modification
+    // End of Modification
 
     // JaPHa Modification
-    // XXX DOC CHANGE - UPDATED TO 2.0.0
-    if(is_persistent){
-    	OPC *ph_value = get_opc_ptr();
-    	hash_table.hash_count = ph_value->string_hash_count;
+    //Setting Hash Count
+
+    if(is_persistent)
+    {
+        OPC *ph_value = get_opc_ptr();
+        hash_table.hash_count = ph_value->string_hash_count;
     }
 
-    // End of modification
+    // End of Modification
 
 }
 
@@ -283,11 +294,11 @@ char *String2Utf8(Object *string) {
 #endif
 
 // JaPHa Modification
-// XXX NVM CHANGE 009.003.001
+// Description
 
 int get_string_HC()
 {
-	return hash_table.hash_count;
+    return hash_table.hash_count;
 }
 
 // End of modification

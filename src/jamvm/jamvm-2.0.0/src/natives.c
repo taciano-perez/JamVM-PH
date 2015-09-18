@@ -43,12 +43,17 @@ int initialiseNatives() {
 
 Class* get_java_lang_class()
 {
-	return java_lang_Class;
+    return java_lang_Class;
 }
+
+// End of modification
+
+// JaPHa Modification
+// Description
 
 void set_java_lang_class(Class *clazz)
 {
-	java_lang_Class = clazz;
+    java_lang_Class = clazz;
 }
 
 // End of Modification

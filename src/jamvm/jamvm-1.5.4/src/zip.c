@@ -86,11 +86,11 @@
                                            zipComp(ptr1, ptr2)) 
 
 // JaPHa Modification
-//	XXX	NVM VARIABLES - ZIP.C - UPDATED TO 2.0.0
+// JaPHa Constants and Variables
 
 static char* zip_name = "zip_ht";
 
-// End of modification
+// End of Modification
 
 /* The filenames within the zip file are added to a hash-table for faster
    access.  To save memory, the entries point directly into the zip file's
@@ -180,11 +180,11 @@ ZipFile *processArchive(char *path) {
     hash_table = sysMalloc(sizeof(HashTable));
 
     // JaPHa Modification
-    // XXX NVM CHANGE 005.001.010 - Files HT - N - NW!! - UPDATED TO 2.0.0
+    // Added parameters to the initialization
 
     initHashTable((*hash_table), HASHTABSZE, FALSE, zip_name, FALSE);
 
-    // End of modification
+    // End of Modification
 
     /* Get the offset from the start of the file of the first directory entry */
     pntr = data + READ_LE_INT(pntr + END_CEN_DIR_START_OFFSET);
@@ -217,20 +217,20 @@ ZipFile *processArchive(char *path) {
         pntr += path_len + extra_len + comment_len;
 
         // JaPHa Modification
-        // XXX NVM CHANGE 006.003.009 - UPDATED TO 2.0.0
+		// Added parameters to the find method
 
         /* Add if absent, no scavenge, not locked */
         findHashEntry((*hash_table), pathname, found, TRUE, FALSE, FALSE, zip_name, FALSE);
 
-        // End of modification
+        // End of Modification
     }
 
     // JaPHa Modification
-   	//	XXX NVM CHANGE 004.001.024 - UPDATED TO 2.0.0
+    // Changed to persistent call
 
     zip = sysMalloc_persistent(sizeof(ZipFile));
 
-    // End of modification
+    // End of Modification
 
     zip->data = data;
     zip->length = len;
@@ -274,13 +274,14 @@ int utf8ZipComp(char *path1, char *path2) {
 char *findArchiveDirEntry(char *pathname, ZipFile *zip) {
     char *found;
 
-    // JaPHa Modification
-    // XXX NVM CHANGE 006.003.010 - UPDATED TO 2.0.0
-
     /* Do not add if absent, no scavenge, not locked */
+
+    // JaPHa Modification
+	// Added parameters to the find method
+
     findHashEntry((*zip->dir_hash), pathname, found, FALSE, FALSE, FALSE, zip_name, FALSE);
 
-    // End of modification
+    // End of Modification
 
     return found;
 }

@@ -155,12 +155,14 @@ retry:
         int pc;
 
         if(pass == 1)
+        {
             // JaPHa Modification
-            // XXX NVM CHANGE 004.001.027
+            // Changed to Persistent Call
 
             new_code = sysMalloc_persistent((ins_count + 1) * sizeof(Instruction));
 
-            // End of modification
+            // End of Modification
+        }
 
         for(ins_count = 0, pc = 0; pc < code_len; ins_count++) {
             int quickened = FALSE;
@@ -944,9 +946,13 @@ retry:
     unlockVMWaitLock(prepare_lock, self);
     enableSuspend(self);
 
+    // JaPHa Modification
+    // Changed to persistent call
+
     /* We don't need the old bytecode stream anymore */
     if(!(mb->access_flags & ACC_ABSTRACT))
-        /* XXX NVM CHANGE 004.003.001  */
         sysFree_persistent(code);
+
+    // End of Modification
 }
 #endif

@@ -125,6 +125,13 @@ static int tidBitmapSize = 0;
 /* Mark a threadID value as no longer used */
 #define freeThreadID(n) tidBitmap[(n-1)>>5] &= ~(1<<((n-1)&0x1f))
 
+// JaPHa Modification
+// NVM CHANGE PERSISTENT "BOOL"
+
+static int persistent_mode = 0;
+
+// End of modification
+
 /* Generate a new thread ID - assumes the thread queue
  * lock is held */
 
@@ -1247,6 +1254,33 @@ Object *runningThreadObjects() {
 void exitVM(int status) {
     main_exited = TRUE;
 
+    // JaPHa Modification
+    // Description
+
+    if(persistent_mode == TRUE)
+    {
+        OPC *ph_values = get_opc_ptr();
+        ph_values->chunkpp = get_chunkpp();
+        ph_values->freelist_header = get_freelist_header();
+        ph_values->freelist_next = get_freelist_next();
+        ph_values->heapfree = get_heapfree();
+        ph_values->nvmFreeSpace = get_nvmFreeSpace();
+        ph_values->java_lang_Class =  get_java_lang_class();
+        ph_values->ldr_vmdata_offset = get_ldr_vmdata_offset();
+        ph_values->boot_classes_hash_count = get_BC_HC();
+        ph_values->boot_packages_hash_count = get_BP_HC();
+        ph_values->string_hash_count = get_string_HC();
+        ph_values->utf8_hash_count = get_utf8_HC();
+        ph_values->classes_hash_count = get_CL_HC();
+        memcpy(ph_values->prim_classes, get_prim_classes(), sizeof(ph_values->prim_classes));
+        ph_values->has_finaliser_count = get_has_finaliser_count();
+        ph_values->has_finaliser_size = get_has_finaliser_size();
+        ph_values->has_finaliser_list = sysMalloc_persistent(ph_values->has_finaliser_size*sizeof(Object*));
+        memcpy(ph_values->has_finaliser_list, get_has_finaliser_list(), ph_values->has_finaliser_size*sizeof(Object*));
+    }
+
+    // End of modification
+
     /* Execute System.exit() to run any registered shutdown hooks.
        In the unlikely event that System.exit() can't be found, or
        it returns, fall through and exit. */
@@ -1288,6 +1322,16 @@ void mainThreadSetContextClassLoader(Object *loader) {
 int initialiseThreadStage1(InitArgs *args) {
     size_t size;
 
+    // JaPHa Modification
+    // Description
+
+    if(args->persistent_heap == TRUE)
+    {
+        persistent_mode = TRUE;
+    }
+
+    // End of Modification
+
     /* Set the default size of the Java stack for each _new_ thread */
     dflt_stack_size = args->java_stack;
 
@@ -1318,7 +1362,6 @@ int initialiseThreadStage1(InitArgs *args) {
     initHashTable(thread_id_map, HASHTABSZE, TRUE, THREAD_NAME, FALSE);
 
     // End of Modification
-
 
     /* We need to cache field and method offsets to create and initialise
        threads.  However, the class loading component requires a valid

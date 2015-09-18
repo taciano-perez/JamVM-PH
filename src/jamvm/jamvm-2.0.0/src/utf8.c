@@ -24,7 +24,13 @@
 #include "jam.h"
 #include "hash.h"
 
+// JaPHa Modification
+// Changed Default size of UTF8 hash 1 << 10
+
 #define HASHTABSZE 1<<13
+
+// End of Modification
+
 #define HASH(ptr) utf8Hash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (ptr1 == ptr2) || \
                   ((hash1 == hash2) && utf8Comp(ptr1, ptr2))
@@ -51,8 +57,8 @@ static HashTable hash_table;
 // JaPHa Modification
 // Constants and Variables
 
-static char* UTF8_NAME         = "utf8_ht";
-static int persistent_mode     = FALSE;
+static char* UTF8_NAME = "utf8_ht";
+static int persistent_mode = FALSE;
 
 // End of Modification
 
@@ -135,12 +141,12 @@ int utf8Comp(char *ptr, char *ptr2) {
 }
 
 char *findHashedUtf8(char *string, int add_if_absent) {
-    char *interned;
+    char *interned = NULL;
+    /* Add if absent, no scavenge, locked */
 
     // JaPHa Modification
-    // Added arguments
+    // Added Find Hash Entry Arguments
 
-    /* Add if absent, no scavenge, locked */
     findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, UTF8_NAME, TRUE);
 
     // End of Modification
@@ -163,7 +169,9 @@ char *copyUtf8(char *string)
     // Changed to persistent call
 
     if(found != buff)
+    {
         sysFree_persistent(buff);
+    }
 
     // End of Modification
 
@@ -246,3 +254,12 @@ char *unicode2Utf8(unsigned short *unicode, int len, char *utf8) {
     return utf8;
 }
 
+// JaPHa Modification
+// Description
+
+int get_utf8_HC()
+{
+    return hash_table.hash_count;
+}
+
+// End of modification

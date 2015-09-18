@@ -21,7 +21,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-
 #include "jam.h"
 #include "hash.h"
 #include "class.h"
@@ -41,11 +40,14 @@ void unlockHashTable0(HashTable *table, Thread *self) {
     unlockVMLock(table->lock, self);
 }
 
-// JaPHa Modification
-// Resize Hash
-
 void resizeHash(HashTable *table, int new_size, char* name , int create_file) {
+    // JaPHa Modification
+    // Resize Hash
+
     HashEntry *new_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*new_size, name, create_file);
+
+    // End of modification
+
     int i;
 
     memset(new_table, 0, sizeof(HashEntry)*new_size);
@@ -68,5 +70,3 @@ void resizeHash(HashTable *table, int new_size, char* name , int create_file) {
     table->hash_table = new_table;
     table->hash_size = new_size;
 }
-
-// End of Modification

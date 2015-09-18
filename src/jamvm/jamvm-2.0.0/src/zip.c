@@ -218,6 +218,7 @@ ZipFile *processArchive(char *path) {
 
         // JaPHa Modification
 		// Added parameters to the find method
+
         /* Add if absent, no scavenge, not locked */
         findHashEntry((*hash_table), pathname, found, TRUE, FALSE, FALSE, ZIP_NAME, FALSE);
 

@@ -76,10 +76,9 @@ void initVM(InitArgs *args) {
     /* Initialise the VM modules -- ordering is important! */
 
     // JaPHa Modification
-    /* XXX NVM CHANGE 010.000.000
-     * Changed initialise order
-     * Alloc - DLL - UTF8
-     * Exception - Natives - JNI	*/
+    // Changed initialise order
+    // Alloc - DLL - UTF8
+    // Exception - Natives - JNI
 
     initialiseHooks(args);
     initialiseProperties(args);

@@ -34,19 +34,19 @@
 #include "symbol.h"
 #include "excep.h"
 
-// JaPHa Modification
-//	NVM VARIABLES - DLL.C
-
-static int testing_mode = FALSE;
-static char* dll_ht_name = "dll_ht";
-static int first_ex = TRUE;
-static int is_persistent = FALSE;
-
-// End of modification
-
 /* Set by call to initialise -- if true, prints out
     results of dynamic method resolution */
 static int verbose;
+
+// JaPHa Modification
+// NVM Variables
+
+static char* dll_ht_name = "dll_ht";
+static int testing_mode = FALSE;
+static int is_persistent = FALSE;
+static int first_ex = TRUE;
+
+// End of Modification
 
 extern int nativeExtraArg(MethodBlock *mb);
 extern uintptr_t *callJNIMethod(void *env, Class *class, char *sig, int extra,
@@ -237,55 +237,63 @@ typedef struct {
 } DllEntry;
 
 // JaPHa Modification
-/* NVM CHANGE 008.000.000 - RELOAD DLL - UPDATED TO 2.0.0
- * Created method to reload dlls used on previous run
- */
+// Created method to reload dlls used on previous run
 
-void reloadDlls(InitArgs *args){
-	DllEntry *dll;
-	FILE *fp;
-	char *name = NULL;
-	size_t len = 0;
-	ssize_t read;
+void reloadDlls(InitArgs *args)
+{
+    DllEntry *dll;
+    FILE *fp;
+    char *name = NULL;
+    size_t len = 0;
+    ssize_t read;
 
-	if((args->persistent_heap) && (access("dlls.txt", F_OK) != -1 ) ){
-		/* XXX NVM CHANGE 007.000.002 - UPDATED TO 2.0.0 */
-		first_ex = FALSE;
-		fp = fopen("dlls.txt", "r+");
-		if (fp == NULL)
-			exit(EXIT_FAILURE);
+    if((args->persistent_heap) && (access("dlls.txt", F_OK) != -1 ) )
+    {
+        first_ex = FALSE;
+        fp = fopen("dlls.txt", "r+");
 
-		while ((read = getline(&name, &len, fp)) != -1) {
-			name[strlen(name)-1] = '\0';
-			resolveDll(name,NULL);
-		}
-		fclose(fp);
-	}
+        if(fp == NULL)
+        {
+            exit(EXIT_FAILURE);
+        }
+
+        while((read = getline(&name, &len, fp)) != -1)
+        {
+            name[strlen(name)-1] = '\0';
+            resolveDll(name,NULL);
+        }
+
+        fclose(fp);
+    }
 }
 
-// End of modification
-
-// JaPHa Modification
-//NVM CHANGE 005.001.004 - DLL HT - N - UPDATED TO 2.0.0
+// End of Modification
 
 void initialiseDll(InitArgs *args) {
 #ifndef NO_JNI
     /* Init hash table, and create lock */
-	initHashTable(hash_table, HASHTABSZE, TRUE, dll_ht_name, FALSE);
-	reloadDlls(args);
+    initHashTable(hash_table, HASHTABSZE, TRUE, dll_ht_name, FALSE);
+    reloadDlls(args);
 
 #endif
 
-	if(args->testing_mode == TRUE)
-		testing_mode = TRUE;
+    // JaPHa Modification
+    // Added initialization arguments
 
-	if(args->persistent_heap == TRUE)
-		is_persistent = TRUE;
+    if(args->testing_mode == TRUE)
+    {
+        testing_mode = TRUE;
+    }
 
-	verbose = args->verbosedll;
+    if(args->persistent_heap == TRUE)
+    {
+        is_persistent = TRUE;
+    }
+
+    // End of Modification
+
+    verbose = args->verbosedll;
 }
-
-// End of modification
 
 int dllNameHash(char *name) {
     int hash = 0;
@@ -296,16 +304,18 @@ int dllNameHash(char *name) {
     return hash;
 }
 
-// JaPHa Modification
-// NVM CHANGE 008.000.001 - UPDATED TO 2.0.0
-
 int resolveDll(char *name, Object *loader) {
     DllEntry *dll;
-    if(is_persistent){
-    	FILE *f = fopen("dlls.txt","a+");
+
+    // JaPHa Modification
+    // Opening dll file
+
+    if(is_persistent)
+    {
+        FILE *f = fopen("dlls.txt","a+");
     }
 
-// End of modification
+    // End of Modification
 
     TRACE("<DLL: Attempting to resolve library %s>\n", name);
 
@@ -317,12 +327,13 @@ int resolveDll(char *name, Object *loader) {
 #define FOUND(ptr1, ptr2) ptr2
 
     /* Do not add if absent, no scavenge, locked */
+
     // JaPHa Modification
-    // XXX NVM CHANGE 006.003.005 - UPDATED TO 2.0.0
+    // Added Find Hash Entry arguments
 
     findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, dll_ht_name, FALSE);
 
-    // End of modification
+    // End of Modification
 
     if(dll == NULL) {
         DllEntry *dll2;
@@ -369,18 +380,20 @@ int resolveDll(char *name, Object *loader) {
 
         /* Add if absent, no scavenge, locked */
 
-        // JaPHa Modification
-        // XXX NVM CHANGE 006.003.006 - UPDATED TO 2.0.0
+        //JaPHa Modification
+        // Added arguments and persistent file generator
 
         findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, dll_ht_name, FALSE);
-        if (is_persistent){
-        	FILE * fp;
-        	fp = fopen("dlls.txt", "a+");
-        	fprintf(fp, "%s\n", dll->name);
-        	fclose(fp);
+
+        if (is_persistent)
+        {
+            FILE * fp;
+            fp = fopen("dlls.txt", "a+");
+            fprintf(fp, "%s\n", dll->name);
+            fclose(fp);
         }
 
-        // End of modification
+        // End of Modification
 
         /* If the library has an OnUnload function it must be
            called from a running Java thread (i.e. not within
@@ -497,11 +510,11 @@ void unloadClassLoaderDlls(Object *loader) {
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
 
         // JaPHa Modification
-        // XXX NVM CHANGE 006.002.002 - UPDATED TO 2.0.0
+        // Added Resize Hash Arguments
 
         resizeHash(&hash_table, size, dll_ht_name, FALSE);
 
-        // End of modification
+        // End of Modification
     }
 }
 
@@ -512,12 +525,14 @@ uintptr_t *callJNIWrapper(Class *class, MethodBlock *mb, uintptr_t *ostack) {
           mb->name, mb->type);
 
     // JaPHa Modification
-	/* CHANGE 007.000.003 - UPDATED TO 2.0.0 */
+    // Description
 
-	if (first_ex == FALSE)
-		lookupLoadedDlls(mb);
+    if(first_ex == FALSE)
+    {
+        lookupLoadedDlls(mb);
+    }
 
-    // End of modification
+    // End of Modification
 
     if(!initJNILrefs())
         return NULL;

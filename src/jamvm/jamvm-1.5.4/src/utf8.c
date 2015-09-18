@@ -23,27 +23,20 @@
 #include <stdlib.h>
 #include "jam.h"
 #include "hash.h"
-// todo HT SIZE - UPDATED TO 2.0.0
-//1 << 10
-//Changed Default size of UTF8 hash 1 << 10
+
+// JaPHa Modification
+// Changed Default size of UTF8 hash 1 << 10
+
 #define HASHTABSZE 1<<13
+
+// End of Modification
+
 #define HASH(ptr) utf8Hash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (ptr1 == ptr2) || \
                   ((hash1 == hash2) && utf8Comp(ptr1, ptr2))
 #define PREPARE(ptr) ptr
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
-
-static HashTable hash_table;
-
-// JaPHa Modification
-// NVM VARIABLES - UTF8.C - UPDATED TO 2.0.0
-
-static char* utf8_name = "utf8_ht";
-static int testing_mode = FALSE;
-static int is_persistent = FALSE;
-
-// End of modification
 
 #define GET_UTF8_CHAR(ptr, c)                         \
 {                                                     \
@@ -58,6 +51,17 @@ static int is_persistent = FALSE;
     } else                                            \
         c = x;                                        \
 }
+
+static HashTable hash_table;
+
+// JaPHa Modification
+// Constants and Variables
+
+static char* utf8_name = "utf8_ht";
+static int is_persistent = FALSE;
+static int testing_mode = FALSE;
+
+// End of Modification
 
 int utf8Len(char *utf8) {
     int count;
@@ -107,35 +111,38 @@ char *findHashedUtf8(char *string, int add_if_absent) {
     /* Add if absent, no scavenge, locked */
 
     // JaPHa Modification
-    // NVM CHANGE 006.003.008 - UPDATED TO 2.0.0
+    // Added Find Hash Entry Arguments
 
-   		findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
+    findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
 
-    // End of modification
+    // End of Modification
 
-	return interned;
+    return interned;
 }
 
-char *copyUtf8(char *string) {
-
+char *copyUtf8(char *string)
+{
     // JaPHa Modification
-	// NVM CHANGE 004.001.030 - UPDATED TO 2.0.0
+    // Changed to persistent call
 
     char *buff = strcpy(sysMalloc_persistent(strlen(string) + 1), string);
 
-    // End of modification
+    // End of Modification
 
     char *found = findHashedUtf8(buff, TRUE);
 
-// JaPHa Modification
-// NVM CHANGE 004.003.003 - UPDATED TO 2.0.0
+    // JaPHa Modification
+    // Changed to persistent call
+
     if(found != buff)
+    {
         sysFree_persistent(buff);
+    }
+
+    // End of Modification
 
     return found;
 }
-
-// End of modification
 
 char *slash2dots(char *utf8) {
     int len = strlen(utf8);
@@ -163,26 +170,48 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
     return buff;
 }
 
-// JaPHa Modification
-// NVM CHANGE 005.001.009 - UTF8 HT - Y - UPDATED TO 2.0.0
-// DOC CHANGE - UPDATED TO 2.0.0
+void initialiseUtf8(InitArgs *args)
+{
 
-void initialiseUtf8(InitArgs *args) {
-	if(args->testing_mode == TRUE){
-		testing_mode = TRUE;
-	}
-	if(args->persistent_heap == TRUE){
+    // JaPHa Modification
+    // Persistent mode flag
+
+	if(args->persistent_heap == TRUE)
+    {
 		is_persistent = TRUE;
 	}
+
+    // End of Modification
+
+    // JaPHa Modification
+    // Added initialization arguments
+
     /* Init hash table, and create lock */
     initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
-    if(is_persistent){
+
+    // End of Modification
+
+    // JaPHa Modification
+    // Setting hash count
+
+    if(is_persistent)
+    {
     	OPC *ph_value = get_opc_ptr();
     	hash_table.hash_count = ph_value->utf8_hash_count;
     }
-}
 
-// End of modification
+    // End of Modification
+
+    // JaPHa Modification
+    // Testing Mode Flag
+
+    if(args->testing_mode == TRUE)
+    {
+		testing_mode = TRUE;
+	}
+
+    // End of Modification
+}
 
 #ifndef NO_JNI
 /* Functions used by JNI */
@@ -220,11 +249,11 @@ char *unicode2Utf8(unsigned short *unicode, int len, char *utf8) {
 #endif
 
 // JaPHa Modification
-//	XXX NVM CHANGE 009.004.001
+// Description
 
 int get_utf8_HC()
 {
-	return hash_table.hash_count;
+    return hash_table.hash_count;
 }
 
 // End of modification

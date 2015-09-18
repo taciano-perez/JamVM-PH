@@ -337,11 +337,11 @@ Monitor *findMonitor(Object *obj) {
         return (Monitor*) (lockword & ~SHAPE_BIT);
     else {
         Monitor *mon;
+        /* Add if absent, scavenge, locked */
 
         // JaPHa Modification
-        // Added argument
+        // Added Find Hash Entry arguments
 
-        /* Add if absent, scavenge, locked */
         findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, MONITOR_NAME, FALSE);
 
         // End of Modification
@@ -574,8 +574,8 @@ Thread *objectLockedBy(Object *obj) {
 
 int initialiseMonitor(InitArgs *args)
 {
-	// JaPHa Modification
-	// Added initialization arguments
+    // JaPHa Modification
+    // Added initialization arguments
 
     /* Init hash table, create lock */
     initHashTable(mon_cache, HASHTABSZE, TRUE, MONITOR_NAME, FALSE);

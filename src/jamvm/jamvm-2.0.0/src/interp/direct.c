@@ -150,9 +150,9 @@ retry:
         if(pass == 1)
         {
             // JaPHa Modification
-            // Changed to persistent call
+            // Changed to Persistent Call
 
-        new_code = sysMalloc_persistent((ins_count + 1) * sizeof(Instruction));
+            new_code = sysMalloc_persistent((ins_count + 1) * sizeof(Instruction));
 
             // End of Modification
         }

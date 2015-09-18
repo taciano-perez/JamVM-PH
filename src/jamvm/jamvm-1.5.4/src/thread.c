@@ -47,6 +47,13 @@
 #define HASHTABSZE 1<<4
 HashTable thread_id_map;
 
+// JaPHa Modification
+// Constants and Variables
+
+static char* thread_name = "thread_ht";
+
+// End of Modification
+
 /* Size of Java stack to use if no size is given */
 static int dflt_stack_size;
 
@@ -123,13 +130,6 @@ static int main_exited = FALSE;
 #define MAP_INC 32
 static unsigned int *tidBitmap = NULL;
 static int tidBitmapSize = 0;
-
-// JaPHa Modification
-// XXX	NVM VARIABLES - THREAD.C - UPDATED TO 2.0.0
-
-static char* thread_name = "thread_ht";
-
-// End of modification
 
 /* Mark a threadID value as no longer used */
 #define freeThreadID(n) tidBitmap[(n-1)>>5] &= ~(1<<((n-1)&0x1f))
@@ -534,7 +534,7 @@ void initThread(Thread *thread, char is_daemon, void *stack_base) {
 
     threads_waiting_to_start--;
 
-    /* add to thread list... After this point (once we release the lock)
+    /* Add to thread list... After this point (once we release the lock)
        we are suspendable */
     if((thread->next = main_thread.next))
         main_thread.next->prev = thread;
@@ -1165,9 +1165,10 @@ void exitVM(int status) {
     main_exited = TRUE;
 
     // JaPHa Modification
-    // XXX NVM CHANGE 009.000.002
+    // Description
 
-    if(is_persistent == TRUE){
+    if(is_persistent == TRUE)
+    {
         OPC *ph_values = get_opc_ptr();
         ph_values->chunkpp = get_chunkpp();
         ph_values->freelist_header = get_freelist_header();
@@ -1231,9 +1232,16 @@ void mainThreadSetContextClassLoader(Object *loader) {
 void initialiseThreadStage1(InitArgs *args) {
     size_t size;
 
-    if(args->persistent_heap == TRUE){
-    	is_persistent = TRUE;
+    // JaPHa Modification
+    // Description
+
+    if(args->persistent_heap == TRUE)
+    {
+        is_persistent = TRUE;
     }
+
+    // End of Modification
+
     /* Set the default size of the Java stack for each _new_ thread */
     dflt_stack_size = args->java_stack;
 
@@ -1259,11 +1267,11 @@ void initialiseThreadStage1(InitArgs *args) {
     monitorInit(&sleep_mon);
 
     // JaPHa Modification
-    // XXX NVM CHANGE 005.001.008 - ThreadMap HT - N - UPDATED TO 2.0.0
+    // Added initialization arguments
 
     initHashTable(thread_id_map, HASHTABSZE, TRUE, thread_name, FALSE);
 
-    // End of modification
+    // End of Modification
 
     /* We need to cache field and method offsets to create and initialise
        threads.  However, the class loading component requires a valid

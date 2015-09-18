@@ -281,6 +281,14 @@ int main(int argc, char *argv[]) {
     int status;
     int i;
 
+    // JaPHa Modification
+    // Log Init
+
+    log(INFO, "Entering JamVM Main");
+    initialise_log_file();
+
+    // End of Modification
+
     setDefaultInitArgs(&args);
     class_arg = parseCommandLine(argc, argv, &args);
 
@@ -290,6 +298,13 @@ int main(int argc, char *argv[]) {
         printf("Could not initialise VM.  Aborting.\n");
         exit(1);
     }
+
+    // JaPHa Modification
+    // Log Message
+
+    log(INFO,"VM initialized");
+
+    // End of Modification
 
    if((system_loader = getSystemClassLoader()) == NULL)
         goto error;
@@ -333,6 +348,8 @@ int main(int argc, char *argv[]) {
             if(!(args[i] = Cstr2String(argv[i])))
                 break;
 
+        log(INFO, "Entering Java Main");
+
         /* Call the main method */
         if(i == argc)
             executeStaticMethod(main_class, mb, array);
@@ -346,6 +363,8 @@ error:
 
     /* Wait for all but daemon threads to die */
     mainThreadWaitToExitVM();
+
+    log(INFO, "Exit");
     exitVM(status);
 
    /* Keep the compiler happy */

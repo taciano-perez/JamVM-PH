@@ -50,15 +50,13 @@
 // JaPHa Modification
 // JaPHa Constants and Variables
 
-// Persistent Mode Flag
-static int persistent_mode     = FALSE;
-static int first_execution     = FALSE;
-static char* CLASS_HT_NAME     = "classes_ht";
 static char* BOOT_NAME         = "bootCl_ht";
-static char* BOOTP_NAME     = "bootPck_ht";
 static char* CLASS_NAME     = "classes_ht";
+static char* BOOTP_NAME     = "bootPck_ht";
+static int persistent_mode     = FALSE;
+static int first_execution     = TRUE;
+static char* CLASS_HT_NAME     = "classes_ht";
 static int CLASS_HC         = 0;
-int ldr_vmdata_offset         = -1;
 
 // End of Modification
 
@@ -79,6 +77,9 @@ static int bcp_entries;
 /* Cached offsets of fields in java.lang.ref.Reference objects */
 int ref_referent_offset = -1;
 int ref_queue_offset;
+
+/* Cached offset of vmdata field in java.lang.ClassLoader objects */
+int ldr_vmdata_offset = -1;
 
 /* hash table containing packages loaded by the boot loader */
 #define PCKG_INITSZE 1<<6
@@ -136,7 +137,13 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
         table = classlibLoaderTable(class_loader);
 
         if(table == NULL) {
+
+            // JaPHa Modification
+            // Added persistence arguments
+
             table = classlibCreateLoaderTable(class_loader, CLASS_HT_NAME, TRUE);
+
+            // End of Modification
 
             if(table == NULL)
                 return NULL;
@@ -1135,6 +1142,21 @@ int hideFieldFromGC(FieldBlock *hidden) {
     return hidden->u.offset = cb->object_size - sizeof(Object*);
 }
 
+// JaPHa Modification
+// Added ResizeMTable Method
+
+#define resizeMTable(method_table, method_table_size, miranda, count)  \
+{                                                                      \
+    method_table = (MethodBlock**)sysRealloc_persistent(method_table,  \
+                  (method_table_size + count) * sizeof(MethodBlock*)); \
+                                                                       \
+    memcpy(&method_table[method_table_size], miranda,                  \
+                               count * sizeof(MethodBlock*));          \
+    method_table_size += count;                                        \
+}
+
+// End of modification
+
 #define fillinMTable(method_table, methods, methods_count)              \
 {                                                                       \
     int i;                                                              \
@@ -1439,14 +1461,10 @@ void linkClass(Class *class) {
                        new_mtbl_idx = method_table_size + new_mtbl_count++;
                    }
 
-                   // JaPHa Modification
-                   // Changed to persistent call
-
                    /* Extend the Miranda cache if it's full */
                    if((miranda_count % MRNDA_CACHE_INCR) == 0)
-                       mirandas = sysRealloc_persistent(mirandas, (miranda_count + MRNDA_CACHE_INCR) * sizeof(Miranda));
-
-                   // End of Modification
+                       mirandas = sysRealloc(mirandas, (miranda_count +
+                                     MRNDA_CACHE_INCR) * sizeof(Miranda));
 
                    /* Add the new Miranda to the cache */
                    mirandas[miranda_count].mb = intf_mb;
@@ -1502,15 +1520,16 @@ void linkClass(Class *class) {
 
            memset(mb, 0, miranda_count * sizeof(MethodBlock));
 
-           // JaPHa Modification
-           // Changed to persistent call
-
            if(new_mtbl_count > 0) {
                method_table_size += new_mtbl_count;
-               method_table = sysRealloc_persistent(method_table, method_table_size * sizeof(MethodBlock*) );
-           }
 
-           // End of Modification
+               // JaPHa Modification
+               // Changed to Persistent Call
+
+               method_table = sysRealloc_persistent(method_table, method_table_size * sizeof(MethodBlock*) );
+
+               // End of Modification
+           }
 
            /* Now we've expanded the methods, run through the Miranda
               cache and fill them in */
@@ -1539,13 +1558,7 @@ void linkClass(Class *class) {
                method_table[mirandas[i].mtbl_idx] = mb;
            }
 
-           // JaPHa Modification
-           // Changed sysFree call
-
-           sysFree_persistent(mirandas);
-
-           // End of Modification
-
+           sysFree(mirandas);
            cb->methods_count += miranda_count;
        }
    }
@@ -1776,8 +1789,9 @@ void defineBootPackage(char *classname, int index) {
             utf8Comp(((PackageEntry*)ptr1)->name, ((PackageEntry*)ptr2)->name))
 
         /* Add if absent, no scavenge, locked */
+
         // JaPHa Modification
-        // Added arguments
+        // Added Find Hash Entry Persistence Arguments
 
         findHashEntry(boot_packages, package, hashed, TRUE, FALSE, TRUE, BOOTP_NAME, TRUE);
 
@@ -1856,20 +1870,21 @@ Class *findHashedClass(char *classname, Object *class_loader) {
 #define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2) && \
             (ptr1 == CLASS_CB((Class *)ptr2)->name)
 
-    // JaPHa Modification
-    // Added arguments
-
     /* Do not add if absent, no scavenge, locked */
+
+    // JaPHa Modification
+    // Added Find Hash Entry Arguments
+
     if( (unsigned long)table == (unsigned long)&boot_classes )
     {
-        findHashEntry((*table), name, class, FALSE, FALSE, TRUE, BOOT_NAME, TRUE );
+        findHashEntry((*table), name, class, FALSE, FALSE, TRUE, BOOT_NAME, TRUE);
     }
     else
     {
-       findHashEntry((*table), name, class, FALSE, FALSE, TRUE, CLASS_NAME, TRUE );
+        findHashEntry((*table), name, class, FALSE, FALSE, TRUE, CLASS_NAME, TRUE);
     }
 
-    // End Modification
+    // End of Modification
 
    return class;
 }
@@ -1994,6 +2009,12 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
+
+    // JaPHa Modification
+    // First Execution Flag
+    // Had to ensure that hash table is not created twice during executions and
+    // that it can be used on second execution in persistent mode
+
     if( (persistent_mode) && (access( CLASS_NAME, F_OK ) != -1) && (first_execution == TRUE))
     {
         HashTable *table = classlibLoaderTable(loader);
@@ -2003,6 +2024,7 @@ Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
         first_execution = FALSE;
     }
 
+    // End of Modification
 
     Class *class = findHashedClass(classname, loader);
 
@@ -2087,10 +2109,11 @@ Object *bootPackage(char *package_name) {
 #define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2 && \
                                  utf8Comp(ptr1, ((PackageEntry*)ptr2)->name))
 
-    // JaPHa Modifications
-    // Added arguments
-
     /* Do not add if absent, no scavenge, locked */
+
+    // JaPHa Modifications
+    // Added Find Hash Entry Arguments
+
     findHashEntry(boot_packages, package_name, hashed, FALSE, FALSE, TRUE, BOOTP_NAME, TRUE);
 
     // End of Modification
@@ -2561,10 +2584,10 @@ int initialiseClassStage1(InitArgs *args) {
     // Added parameters to the initialization
 
     /* Init hash table, and create lock for the bootclassloader classes */
-    initHashTable(boot_classes,  CLASS_INITSZE, TRUE, BOOT_NAME,  TRUE);
+    initHashTable(boot_classes, CLASS_INITSZE, TRUE, BOOT_NAME,  TRUE);
 
     /* Init hash table, and create lock for the bootclassloader packages */
-    initHashTable(boot_packages, PCKG_INITSZE,  TRUE, BOOTP_NAME, TRUE);
+    initHashTable(boot_packages, PCKG_INITSZE, TRUE, BOOTP_NAME, TRUE);
 
     // End of Modification
 
@@ -2619,11 +2642,13 @@ int initialiseClassStage2(InitArgs *args) {
 // JaPHa Modification
 // Gets and Sets for the OPC
 
-int get_ldr_vmdata_offset(){
+int get_ldr_vmdata_offset()
+{
     return ldr_vmdata_offset;
 }
 
-void set_ldr_vmdata_offset(int ldr){
+void set_ldr_vmdata_offset(int ldr)
+{
     ldr_vmdata_offset = ldr;
 }
 
@@ -2640,6 +2665,11 @@ int get_BP_HC()
 int get_CL_HC()
 {
     return CLASS_HC;
+}
+
+Class ** get_prim_classes()
+{
+	return prim_classes;
 }
 
 // End of Modifications

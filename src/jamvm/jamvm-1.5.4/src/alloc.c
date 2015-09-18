@@ -104,8 +104,9 @@
                                            ^ special bit
 */
 
+
 // JaPHa Modification
-// NVM VARIABLES - ALLOC.C	- UPDATED TO 2.0.0
+// JaPHa Constants and Variables
 
 static int is_persistent = FALSE;
 static int testing_mode = FALSE;
@@ -115,17 +116,19 @@ uintptr_t get_freelist_header();
 struct chunk *get_freelist_next();
 int file = FALSE;
 
-/* HEAP MEM ADDRESS */
-#define HEAPADDR 		0xaf497000
-#define NVM_ADDRESS 	0xaeb0d000
-#define INCREASE_VALUE 	1000000
-#define NVM_INIT_SIZE 	10000000
+// HEAP MEM ADDRESS
+#define HEAPADDR         0xaf497000
+#define NVM_ADDRESS     0xaeb0d000
+#define INCREASE_VALUE     1000000
+#define NVM_INIT_SIZE     10000000
 
-typedef struct nvmChunk{
+typedef struct nvmChunk
+{
     int allocBit;
     unsigned int chunkSize;
     struct nvmChunk *next;
-}nvmChunk;
+
+} nvmChunk;
 
 static nvmChunk *nvmfreelist;
 static char *nvm;
@@ -157,9 +160,13 @@ static char *heapbase;
 static char *heaplimit;
 static char *heapmax;
 
-/* Declared heap */
+// JaPHa Modification
+// Heap Variables
+
 static char *heapMem;
 static unsigned long maxHeap;
+
+// End of Modification
 
 static unsigned long heapfree;
 
@@ -260,8 +267,15 @@ void freePendingFrees();
 /* Similarly, allocation for internal lists within GC cannot use
    memory from the system heap.  The following functions provide
    the same API, but allocate memory via mmap */
+
+// JaPHa Modification
+// Added create file flag to garbage collector allocation functions
+
 void *gcMemRealloc(void *addr, int new_size, char* name, int create_file);
 void *gcMemMalloc(int n, char* name, int create_file);
+
+// End of Modification
+
 void gcMemFree(void *addr);
 
 /* Cached system page size (used in above functions) */
@@ -318,8 +332,6 @@ void allocMarkBits() {
     int no_of_bits = (heaplimit-heapbase)>>(LOG_BYTESPERMARK-LOG_BITSPERMARK);
 
     markbit_size = (no_of_bits+MARKSIZEBITS-1)>>LOG_MARKSIZEBITS;
-
-	/*	TODO CHECK THIS - UPDATED TO 2.0.0	*/
     markbits = sysMalloc(markbit_size * sizeof(*markbits));
 
     TRACE_GC("Allocated mark bits - size is %d\n", markbit_size);
@@ -330,56 +342,81 @@ void clearMarkBits() {
 }
 
 // JaPHa Modification
-// Added InitialiseNVM function
+// Initialise Non Volatile Memory
 
-void initialiseNVM(){
-	if( access( "Memory", F_OK ) != -1 ) {
-		nvm_fd = open ("Memory", O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
-		file = TRUE;
-	}else{
-		nvm_fd = open ("Memory", O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
-		lseek (nvm_fd, (nvmCurrentSize-1), SEEK_SET);
-		write(nvm_fd,"",1);
-	}
-	nvm = (char*) mmap(NVM_ADDRESS, nvmCurrentSize, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, nvm_fd, 0);
-	nvm = nvm + sizeof(OPC);
-	msync(nvm, nvmCurrentSize, MS_SYNC);
-	nvm_limit = (unsigned long) nvm + nvmCurrentSize;
+void initialiseNVM()
+{
+    if( access( "Memory", F_OK ) != -1 )
+    {
+        nvm_fd = open ("Memory", O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
 
-	if (nvm == -1){
-		int errsv = errno;
-		switch (errsv){
-		case EAGAIN: printf("ERROR: EAGAIN\n");
-					 break;
-		case EFAULT: printf("ERROR: EFAULT\n");
-					 break;
-		case EINVAL: printf("ERROR: EINVAL\n");
-					 break;
-		case ENOMEM: printf("ERROR: ENOMEM\n");
-					 break;
-		}
-	}
+        if(nvm_fd == -1)
+        {
+            perror("Couldn't Open Heap File\n");
+            exitVM(1);
+        }
 
-	if (testing_mode == TRUE){
-		char log_string[80];
-		sprintf(log_string, "Created NVM Memory an %p with size %d", nvm, nvmCurrentSize);
-		log(DEBUG,log_string);
-	}
-	/* 1st chunk =  all mem */
-	nvmfreelist = (nvmChunk*) nvm;
-	if (!file){
-		nvmfreelist->chunkSize = nvmFreeSpace = (nvmCurrentSize - nvmHeaderSize);
-		nvmfreelist->allocBit = 0;
-		nvmfreelist->next = NULL;
-	}
+        file = TRUE;
+    }
+    else
+    {
+        nvm_fd = open ("Memory", O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+
+        if(nvm_fd == -1)
+        {
+            perror("Couldn't create Heap File\n");
+            exitVM(1);
+        }
+
+        lseek (nvm_fd, (nvmCurrentSize-1), SEEK_SET);
+        write(nvm_fd,"",1);
+    }
+
+    nvm = (char*) mmap(NVM_ADDRESS, nvmCurrentSize, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, nvm_fd, 0);
+    nvm = nvm + sizeof(OPC);
+    msync(nvm, nvmCurrentSize, MS_SYNC);
+    nvm_limit = (unsigned long) nvm + nvmCurrentSize;
+
+    if(nvm == -1)
+    {
+        int errsv = errno;
+        switch (errsv)
+        {
+        case EAGAIN: printf("ERROR: EAGAIN\n");
+                     break;
+        case EFAULT: printf("ERROR: EFAULT\n");
+                     break;
+        case EINVAL: printf("ERROR: EINVAL\n");
+                     break;
+        case ENOMEM: printf("ERROR: ENOMEM\n");
+                     break;
+        }
+    }
+
+    if (testing_mode == TRUE)
+    {
+        char log_string[80];
+        sprintf(log_string, "Created NVM Memory an %p with size %d", nvm, nvmCurrentSize);
+        log(DEBUG,log_string);
+    }
+    /* 1st chunk =  all mem */
+    nvmfreelist = (nvmChunk*) nvm;
+
+    if (!file)
+    {
+        nvmfreelist->chunkSize = nvmFreeSpace = (nvmCurrentSize - nvmHeaderSize);
+        nvmfreelist->allocBit = 0;
+        nvmfreelist->next = NULL;
+    }
 }
 
 // End of modification
 
 // JaPHa Modification
-// Changed InitialiseAlloc to hold persistence
+// Changed InitialiseAlloc to save the heap
 
-void initialiseAlloc(InitArgs *args) {
+void initialiseAlloc(InitArgs *args)
+{
     int fd;
     int file = FALSE;
     OPC *ph_value;
@@ -389,29 +426,53 @@ void initialiseAlloc(InitArgs *args) {
     unsigned long volatile * const heapMemAddr = (unsigned long *) HEAPADDR;
 
     if(args->testing_mode == TRUE)
+    {
         testing_mode = TRUE;
+    }
 
-    if(args->persistent_heap == TRUE){
+    if(args->persistent_heap == TRUE)
+    {
         is_persistent = TRUE;
-        if( access(args->heap_file, F_OK ) != -1 ) {
+        if( access(args->heap_file, F_OK ) != -1 )
+        {
             fd = open (args->heap_file, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
+
+            if(fd == -1)
+            {
+                perror("Couldn't open Heap File\n");
+                exitVM(1);
+            }
+
             file = TRUE;
             first_ex = FALSE;
-        }else{
+        }
+        else
+        {
             fd = open (args->heap_file, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+
+            if(fd == -1)
+            {
+                perror("Couldn't create Heap File\n");
+                exitVM(1);
+            }
+
             lseek (fd, args->max_heap-1, SEEK_SET);
             // Write Dummy Byte
-        write(fd,"",1);
+            write(fd,"",1);
         }
+
         heapMem = (char*)mmap(heapMemAddr, args->max_heap, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 
         initialiseNVM();
         msync(heapMem, args->max_heap, MS_SYNC);
     }
-    else {
+    else
+    {
         heapMem = (char*)mmap(0, args->max_heap, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
     }
-    if(heapMem == MAP_FAILED) {
+
+    if(heapMem == MAP_FAILED)
+    {
         perror("Couldn't allocate the heap; try reducing the max heap size (-Xmx)\n");
         exitVM(1);
     }
@@ -427,25 +488,27 @@ void initialiseAlloc(InitArgs *args) {
     /* Set initial free-list to one block covering entire heap */
     freelist = (Chunk*)heapbase;
 
-	// JaPHa Modification
-	// Description
+    // JaPHa Modification
+    // Creating Free List and OPC
 
-	if(!file){
-		freelist->header = heapfree = heaplimit-heapbase;
-		freelist->next = NULL;
-	}else{
-		ph_value = (char*)(nvm-sizeof(OPC));
-		*chunkpp = ph_value->chunkpp;
-		freelist->header = ph_value->freelist_header;
-		freelist->next = ph_value->freelist_next;
-		heapfree = ph_value->heapfree;
-		nvmFreeSpace = ph_value->nvmFreeSpace;
-		set_java_lang_class(ph_value->java_lang_Class);
-		set_ldr_vmdata_offset(ph_value->ldr_vmdata_offset);
-	}
+    if(!file)
+    {
+        freelist->header = heapfree = heaplimit-heapbase;
+        freelist->next = NULL;
+    }
+    else
+    {
+        ph_value = (char*)(nvm-sizeof(OPC));
+        *chunkpp = ph_value->chunkpp;
+        freelist->header = ph_value->freelist_header;
+        freelist->next = ph_value->freelist_next;
+        heapfree = ph_value->heapfree;
+        nvmFreeSpace = ph_value->nvmFreeSpace;
+        set_java_lang_class(ph_value->java_lang_Class);
+        set_ldr_vmdata_offset(ph_value->ldr_vmdata_offset);
+    }
 
-	// End of modification
-
+    // End of modification
 
     TRACE_GC("Alloced heap size %p\n", heaplimit-heapbase);
     allocMarkBits();
@@ -493,19 +556,19 @@ void markRoot(Object *object) {
         MARK(object, HARD_MARK);
 }
 
-        // JaPHa Modification
-        // Description
-
 void addConservativeRoot(Object *object) {
     if((conservative_root_count % LIST_INCREMENT) == 0) {
         int new_size = conservative_root_count + LIST_INCREMENT;
-        conservative_roots = gcMemRealloc(conservative_roots,
-                                          new_size * sizeof(Object *), (char*)"cr_ht", FALSE);
+
+        // JaPHa Modification
+        // Added arguments to gcMemRealloc
+
+        conservative_roots = gcMemRealloc(conservative_roots, new_size * sizeof(Object *), (char*)"cr_ht", FALSE);
+
+        // End of Modification
     }
     conservative_roots[conservative_root_count++] = object;
 }
-
-// End of modification
 
 void markConservativeRoot(Object *object) {
     if(object == NULL)
@@ -755,6 +818,9 @@ void markChildren(Object *ob, int mark, int mark_soft_refs) {
     }
 }
 
+// JaPHa Modification
+// Added arguments in gcMemRealloc
+
 #define ADD_TO_OBJECT_LIST(list, ob)                                     \
 {                                                                        \
     if(list##_start == list##_end) {                                     \
@@ -766,6 +832,8 @@ void markChildren(Object *ob, int mark, int mark_soft_refs) {
     list##_end = list##_end%list##_size;                                 \
     list##_list[list##_end++] = ob;                                      \
 }
+
+// End of Modification
 
 #define ITERATE_OBJECT_LIST(list, action)                                \
 {                                                                        \
@@ -854,8 +922,8 @@ static void doMark(Thread *self, int mark_soft_refs) {
     for(i = 0, j = 0; i < has_finaliser_count; i++) {
         Object *ob = has_finaliser_list[i];
   
-// JaPHa Modification
-// NVM CHANGE 005.002.002 - UPDATED TO 2.0.0
+        // JaPHa Modification
+        // Description
 
         if(!IS_HARD_MARKED(ob)) {
             ADD_TO_OBJECT_LIST(run_finaliser, ob);
@@ -863,7 +931,7 @@ static void doMark(Thread *self, int mark_soft_refs) {
             has_finaliser_list[j++] = ob;
     }
 
-// End of modification
+         // End of modification
 
     /* After scanning, j holds how many finalizers are left */
 
@@ -950,9 +1018,6 @@ int handleMarkedSpecial(Object *ob) {
             /* If the reference has a queue, add it to the list for enqueuing
                by the Reference Handler thread. */
 
-// JaPHa Modification
-// NVM CHANGE 005.002.003 - UPDATED TO 2.0.0
-
             if(INST_DATA(ob, Object*, ref_queue_offset) != NULL) {
                 TRACE_GC("FREE: Adding to list for enqueuing.\n");
 
@@ -964,8 +1029,6 @@ int handleMarkedSpecial(Object *ob) {
 out:
     return cleared;
 }
-
-// End of modification
 
 void handleUnmarkedSpecial(Object *ob) {
     if(IS_CLASS(ob)) {
@@ -1135,7 +1198,7 @@ out_last_marked:
         long long pcnt_used = ((long long)heapfree)*100/size;
         jam_printf("<GC: Allocated objects: %lld>\n", (long long)marked);
         jam_printf("<GC: Freed %lld object(s) using %lld bytes",
-			(long long)unmarked, (long long)freed);
+            (long long)unmarked, (long long)freed);
         if(cleared)
             jam_printf(", cleared %lld reference(s)", (long long)cleared);
         jam_printf(">\n<GC: Largest block is %lld total free is %lld out of"
@@ -1200,7 +1263,7 @@ void addConservativeRoots2Hash() {
     con_roots_hashtable_size = i << 1;
 
     // JaPHa Modification
-    // Con Roots HT - N - UPDATED TO 2.0.0 
+    // Added gcMemMalloc arguments
 
     con_roots_hashtable = gcMemMalloc( (con_roots_hashtable_size *sizeof(uintptr_t)) , (char*)"cr_ht", FALSE );
 
@@ -1388,6 +1451,7 @@ int threadChildren(Object *ob, Object *new_addr) {
             Object **body = ARRAY_DATA(ob, Object*);
             int len = ARRAY_LEN(ob);
             int i;
+
             TRACE_COMPACT("Scanning Array object @%p class is %s len is %d\n",
                           ob, cb->name, len);
 
@@ -1443,14 +1507,14 @@ int threadChildren(Object *ob, Object *new_addr) {
                         if(INST_DATA(ob, Object*, ref_queue_offset) != NULL) {
                             TRACE_GC("Adding to list for enqueuing.\n");
 
-                            // JaPHa Modification
-                            // NVM CHANGE 005.002.004 - UPDATED TO 2.0.0
+                        // JaPHa Modification
+                        // Changed ADD_TO_OBJECT_LIST second parameter from 'ob' to 'new_addr'
 
                             ADD_TO_OBJECT_LIST(reference, new_addr);
                             notify_reference_thread = TRUE;
                         }
 
-                            // End of modification
+                        // End of Modification
 
 out:
                         if(!cleared)
@@ -1650,7 +1714,7 @@ marked_phase2:
         long long pcnt_used = ((long long)heapfree)*100/size;
         jam_printf("<GC: Allocated objects: %lld>\n", (long long)marked);
         jam_printf("<GC: Freed %lld object(s) using %lld bytes",
-			(long long)unmarked, (long long)freed);
+            (long long)unmarked, (long long)freed);
         if(cleared)
             jam_printf(", cleared %lld reference(s)", (long long)cleared);
         jam_printf(">\n<GC: Moved %lld objects, largest block is %lld total"
@@ -1703,14 +1767,8 @@ void expandHeap(int min) {
     /* The heap has increased in size - need to reallocate
        the mark bits to cover new area */
 
-// JaPHa Modification
-// NVM CHANGE 004.003.004 - UPDATED TO 2.0.0 - NOT CHANGED
-
     sysFree(markbits);
     allocMarkBits();
-
-// End of modification
-
 }
 
 
@@ -1950,39 +2008,47 @@ void referenceHandlerThreadLoop(Thread *self) {
                         "<GC: enqueuing %d references>\n", self, &self);
 }
 
-void set_has_finaliser_list(){
-	OPC *ph_values = get_opc_ptr();
-	has_finaliser_count = ph_values->has_finaliser_count;
-	has_finaliser_size = ph_values->has_finaliser_size;
-	has_finaliser_list = sysMalloc(has_finaliser_size*sizeof(Object*));
+// JaPHa Modification
+// Setting the "has finalizer" list
+
+void set_has_finaliser_list()
+{
+    OPC *ph_values = get_opc_ptr();
+    has_finaliser_count = ph_values->has_finaliser_count;
+    has_finaliser_size = ph_values->has_finaliser_size;
+    has_finaliser_list = sysMalloc(has_finaliser_size*sizeof(Object*));
     memcpy(has_finaliser_list, ph_values->has_finaliser_list, has_finaliser_size*sizeof(Object*));
     sysFree_persistent(ph_values->has_finaliser_list);
 }
 
+// End of Modification
 
 void initialiseGC(InitArgs *args) {
 
     MethodBlock *init;
-
-    if(exceptionOccurred()) {
+    if(exceptionOccurred())
+    {
         printException();
         exitVM(1);
     }
-	if(first_ex == TRUE){
-		/* Pre-allocate an OutOfMemoryError exception object - we throw it
-			 * when we're really low on heap space, and can create FA... */
-		Class *oom_clazz = findSystemClass(SYMBOL(java_lang_OutOfMemoryError));
+
+    if(first_ex == TRUE)
+    {
+        /* Pre-allocate an OutOfMemoryError exception object - we throw it
+             * when we're really low on heap space, and can create FA... */
+        Class *oom_clazz = findSystemClass(SYMBOL(java_lang_OutOfMemoryError));
+
     /* Initialize it */
     init = lookupMethod(oom_clazz, SYMBOL(object_init),
                                    SYMBOL(_java_lang_String__V));
     oom = allocObject(oom_clazz);
     registerStaticObjectRef(&oom);
-
-		executeMethod(oom, init, NULL);
-	}
-	else{
-		set_has_finaliser_list();
-	}
+        executeMethod(oom, init, NULL);
+    }
+    else
+    {
+        set_has_finaliser_list();
+    }
 
 
     /* Create and start VM threads for the reference handler and finalizer */
@@ -2401,65 +2467,96 @@ void *gcMemMalloc(int n, char* name, int create_file) {
     uintptr_t *mem;
     int fd;
 
-    if (is_persistent && create_file){
+    if (is_persistent && create_file)
+    {
         unsigned long buffer[1];
         size = size + sizeof(unsigned long);
-        if( access( name, F_OK ) != -1 ) {
+
+        if( access( name, F_OK ) != -1 )
+        {
             fd = open (name, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
+
+            if(fd == -1)
+            {
+                perror("Couldn't Open Memory File\n");
+                exitVM(1);
+            }
+
             read(fd, &buffer, sizeof(unsigned long)+sizeof(uintptr_t));
 
             mem = (uintptr_t*)mmap((unsigned long)buffer[0],buffer[1], PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+
             *mem++ = (unsigned long)mem;
-        }else{
+        }
+        else
+        {
             fd = open (name, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
+
+            if(fd == -1)
+            {
+                perror("Couldn't Create Memory File\n");
+                exitVM(1);
+            }
+
             lseek (fd, size-1, SEEK_SET);
             write(fd,"",1);
             mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
             *mem++ = (unsigned long)mem;
         }
-            if(testing_mode == TRUE){
+        
+        if(testing_mode == TRUE)
+        {
                 char log_string[80], function_string[80];
                 sprintf(log_string, "Allocated %s at %p with size %d", name, mem, size);
                 //log(DEBUG, log_string);
 
                 sprintf(function_string, "GcMemMalloc for %s", name);
-                if(mem == MAP_FAILED)				{
+                if(mem == MAP_FAILED)                {
                     log_test_results(function_string, FALSE);
                 }else{
                     log_test_results(function_string, TRUE);
                 }
-            }
+        }
         msync(mem, size, MS_SYNC);
-
-    }else
+    }
+    else
+    {
         mem = mmap(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+    }
 
-    if(mem == MAP_FAILED) {
+    if(mem == MAP_FAILED)
+    {
         jam_fprintf(stderr, "Mmap failed - aborting VM...\n");
         exitVM(1);
     }
-
     *mem++ = size;
     return mem;
 }
 
-// End of modification
+// End of Modification
 
 // JaPHa Modification
-// NVM CHANGE 005.002 - GcMemRealloc - UPDATED TO 2.0.0
+// GcMemRealloc
 
-void *gcMemRealloc(void *addr, int size, char* name, int create_file) {
+void *gcMemRealloc(void *addr, int size, char* name, int create_file)
+{
     if(addr == NULL)
+    {
         return gcMemMalloc(size, name, FALSE);
-    else {
+    }
+    else
+    {
         uintptr_t *mem = addr;
         uintptr_t old_size = *--mem;
         uintptr_t new_size = size + sizeof(uintptr_t);
 
-        if(old_size/sys_page_size == new_size/sys_page_size) {
+        if(old_size/sys_page_size == new_size/sys_page_size)
+        {
             *mem = new_size;
             return addr;
-        } else {
+        }
+        else
+        {
             uintptr_t copy_size = new_size > old_size ? old_size : new_size;
             void *new_mem = gcMemMalloc(size, name , FALSE);
 
@@ -2499,169 +2596,197 @@ void freePendingFrees() {
         pending_free_list = next;
     }
 }
-
-
 /* ------ Allocation from system heap ------- */
 
 // JaPHa Modification
-// MREMAP MAYMOVE ISSUE - UPDATED TO 2.0.0
+// Expand non volatile memory
 
-void expandNVM(){
-	unsigned int oldSize = nvmCurrentSize;
-	nvmChunk *new;
-	nvmChunk *chunk;
-	nvmCurrentSize = nvmCurrentSize + INCREASE_VALUE;
-	nvm_limit = (unsigned int) nvm + nvmCurrentSize;
-	lseek (nvm_fd, (nvmCurrentSize-1), SEEK_SET);
-	write(nvm_fd,"",1);
+void expandNVM()
+{
+    unsigned int oldSize = nvmCurrentSize;
+    nvmChunk *new;
+    nvmChunk *chunk;
+    nvmCurrentSize = nvmCurrentSize + INCREASE_VALUE;
+    nvm_limit = (unsigned int) nvm + nvmCurrentSize;
+    lseek (nvm_fd, (nvmCurrentSize-1), SEEK_SET);
+    write(nvm_fd,"",1);
 
-	/* REMAP WITH MAYMOVE, may move */
-	nvm = (char*) mremap(nvm, oldSize, nvmCurrentSize, MREMAP_FIXED|MREMAP_MAYMOVE, NVM_ADDRESS);
+    /* REMAP WITH MAYMOVE, may move */
+    nvm = (char*) mremap(nvm, oldSize, nvmCurrentSize, MREMAP_FIXED|MREMAP_MAYMOVE, NVM_ADDRESS);
 
-	if (nvm == -1){
-		int errsv = errno;
-		switch (errsv){
-		case EAGAIN: printf("EAGAIN\n");
-		break;
-		case EFAULT: printf("EFAULT\n");
-		break;
-		case EINVAL: printf("EINVAL\n");
-		break;
-		case ENOMEM: printf("ENOMEM\n");
-		break;
-		}
-	}
-	memset((nvm+oldSize), 0, INCREASE_VALUE);
+    if (nvm == -1)
+    {
+        int errsv = errno;
+        switch (errsv){
+        case EAGAIN: printf("EAGAIN\n");
+        break;
+        case EFAULT: printf("EFAULT\n");
+        break;
+        case EINVAL: printf("EINVAL\n");
+        break;
+        case ENOMEM: printf("ENOMEM\n");
+        break;
+        }
+    }
+    memset((nvm+oldSize), 0, INCREASE_VALUE);
 
-	/* goto last chunk */
-	for (chunk = nvmfreelist; chunk->next !=NULL; chunk = chunk->next);
+    /* goto last chunk */
+    for (chunk = nvmfreelist; chunk->next !=NULL; chunk = chunk->next);
 
-	/* if isnt allocated attach new offset */
-	if (!chunk->allocBit){
-		chunk->chunkSize = chunk->chunkSize + INCREASE_VALUE;
-		nvmFreeSpace = nvmFreeSpace + INCREASE_VALUE;
-	}else {
-	/* create new chunk and add to the list
-							 ptr + header + chunk len 	*/
-		new = ((unsigned int)new + nvmHeaderSize + new->chunkSize);
-		new->allocBit = 0;
-		new->chunkSize = INCREASE_VALUE;
-		new->next = NULL;
-		chunk->next = new;
-		nvmFreeSpace = nvmFreeSpace + INCREASE_VALUE - nvmHeaderSize;
-	}
+    /* if isnt allocated attach new offset */
+    if (!chunk->allocBit)
+    {
+        chunk->chunkSize = chunk->chunkSize + INCREASE_VALUE;
+        nvmFreeSpace = nvmFreeSpace + INCREASE_VALUE;
+    }
+    else
+    {
+        /* create new chunk and add to the list
+                             ptr + header + chunk len     */
+        new = ((unsigned int)new + nvmHeaderSize + new->chunkSize);
+        new->allocBit = 0;
+        new->chunkSize = INCREASE_VALUE;
+        new->next = NULL;
+        chunk->next = new;
+        nvmFreeSpace = nvmFreeSpace + INCREASE_VALUE - nvmHeaderSize;
+    }
 }
 
-// End of modification
+// End of Modification
 
 // JaPHa Modification
-// NVM CHANGE 004.001 - SysMalloc - UPDATED TO 2.0.0
+// Persistent Allocation
 
-void *sysMalloc_persistent(int size){
-	if (is_persistent){
-		int n = size < sizeof(void*) ? sizeof(void*) : size;
-		void *ret_addr = NULL;
-		nvmChunk *found = NULL;
-		nvmChunk **iterate  = &nvmfreelist;
-		int shift = 0;
+void *sysMalloc_persistent(int size)
+{
+    if(is_persistent)
+    {
+        int n = size < sizeof(void*) ? sizeof(void*) : size;
+        void *ret_addr = NULL;
+        nvmChunk *found = NULL;
+        nvmChunk **iterate  = &nvmfreelist;
+        int shift = 0;
 
-		while (*iterate){
-			/*	search unallocated chunk		*/
-			if ((*iterate)->allocBit == 1){
-				iterate = &(*iterate)->next;
-				continue;
-			}
-			unsigned int len = (*iterate)->chunkSize;
+        while(*iterate)
+        {
+            /*    search unallocated chunk        */
+            if((*iterate)->allocBit == 1)
+            {
+                iterate = &(*iterate)->next;
+                continue;
+            }
+            unsigned int len = (*iterate)->chunkSize;
 
-			if(len > n) {
-				found = *iterate;
-				found->allocBit = 1;
-				/*	check if remaining space can hold a chunk		*/
-				if((int)(len - (nvmHeaderSize + n)) >= minSize) {
-					nvmChunk *rem = NULL;
-					/*	ptr +	header	+ content = OK	*/
-					rem = ((char*)found + nvmHeaderSize + n);
+            if(len > n)
+            {
+                found = *iterate;
+                found->allocBit = 1;
+                /*    check if remaining space can hold a chunk        */
+                if((int)(len - (nvmHeaderSize + n)) >= minSize)
+                {
+                    nvmChunk *rem = NULL;
+                    /*    ptr +    header    + content = OK    */
+                    rem = ((char*)found + nvmHeaderSize + n);
 
-					if (shift = (unsigned int)rem & 0x3){
-						shift = (0x4 - shift);
-						memset(rem, 0 , shift);
-						rem = ((char*)rem + shift);
-					}
-					rem->allocBit = 0;
-					rem->chunkSize = len - (shift + nvmHeaderSize + n);
-					rem->next = found->next;
+                    if (shift = (unsigned int)rem & 0x3)
+                    {
+                        shift = (0x4 - shift);
+                        memset(rem, 0 , shift);
+                        rem = ((char*)rem + shift);
+                    }
+                    rem->allocBit = 0;
+                    rem->chunkSize = len - (shift + nvmHeaderSize + n);
+                    rem->next = found->next;
 
-					found->chunkSize = n;
-					/* A -> Found -> Rem -> Found->next */
-					found->next = rem;
-					nvmFreeSpace = nvmFreeSpace - nvmHeaderSize - shift;
-				}
-				ret_addr = ((void*)found + nvmHeaderSize);
-				break;
-			}
+                    found->chunkSize = n;
+                    /* A -> Found -> Rem -> Found->next */
+                    found->next = rem;
+                    nvmFreeSpace = nvmFreeSpace - nvmHeaderSize - shift;
+                }
+                ret_addr = ((void*)found + nvmHeaderSize);
+                break;
+            }
 
-			if(len == n) {
-				found = *iterate;
-				found->allocBit = 1;
-				ret_addr = ((void*)found + nvmHeaderSize);
-				break;
-			}
-			iterate = &(*iterate)->next;
-		}
+            if(len == n)
+            {
+                found = *iterate;
+                found->allocBit = 1;
+                ret_addr = ((void*)found + nvmHeaderSize);
+                break;
+            }
+            iterate = &(*iterate)->next;
+        }
 
-		nvmFreeSpace = nvmFreeSpace - found->chunkSize;
-		/* clear chunk */
-		memset(ret_addr, 0, found->chunkSize);
-		msync(nvm, nvmCurrentSize, MS_SYNC);
-		return ret_addr;
-	}else
-		return sysMalloc(size);
+        nvmFreeSpace = nvmFreeSpace - found->chunkSize;
+        /* clear chunk */
+        memset(ret_addr, 0, found->chunkSize);
+        msync(nvm, nvmCurrentSize, MS_SYNC);
+        return ret_addr;
+    }
+    else
+    {
+        return sysMalloc(size);
+    }
 }
 
-// End of modification
+// End of Modification
 
 // JaPHa Modification
-// NVM CHANGE 004.003 - SysFree - UPDATED TO 2.0.0
+// Persistent Free
 
-void sysFree_persistent(void* addr){
-	if(is_persistent){
-		unsigned long ptr = (unsigned long) addr;
-		/*	chunk = ptr - header */
-		nvmChunk *toFree = (ptr-nvmHeaderSize);
-		toFree->allocBit = 0;
-		nvmFreeSpace = nvmFreeSpace + toFree->chunkSize;
-		/* clear chunk */
-		memset(ptr, 0, toFree->chunkSize);
-		msync(nvm, nvmCurrentSize, MS_SYNC);
-	}else
-		sysFree(addr);
+void sysFree_persistent(void* addr)
+{
+    if(is_persistent)
+    {
+        unsigned long ptr = (unsigned long) addr;
 
+        /*    chunk = ptr - header */
+        nvmChunk *toFree = (ptr-nvmHeaderSize);
+        toFree->allocBit = 0;
+        nvmFreeSpace = nvmFreeSpace + toFree->chunkSize;
+
+        /* clear chunk */
+        memset(ptr, 0, toFree->chunkSize);
+        msync(nvm, nvmCurrentSize, MS_SYNC);
+    }
+    else
+    {
+        sysFree(addr);
+    }
 }
 
-// End of modification
+// End of Modification
 
 // JaPHa Modification
-// NVM CHANGE 004.002 - SysRealloc - UPDATED TO 2.0.0
+// Persistent Realloc
 
-void *sysRealloc_persistent(void *addr, int size){
-	void *mem;
-	if (is_persistent){
-		/*	chunk = ptr - header */
-		nvmChunk *toRealloc = (addr-nvmHeaderSize);
+void *sysRealloc_persistent(void *addr, int size)
+{
+    void *mem;
+    if(is_persistent)
+    {
+        /*    chunk = ptr - header */
+        nvmChunk *toRealloc = (addr-nvmHeaderSize);
+        mem = sysMalloc_persistent(size);
 
-		mem = sysMalloc_persistent(size);
-		if (addr != NULL){
-			if ((toRealloc->chunkSize <= size))
-				memcpy(mem, ((void*)toRealloc+nvmHeaderSize), toRealloc->chunkSize);
-			else
-				memcpy(mem, ((void*)toRealloc+nvmHeaderSize), size);
-
-			sysFree_persistent(addr);
-		}
-		return mem;
-	}
-	else
-		return sysRealloc(addr, size);
+        if (addr != NULL)
+        {
+            if ((toRealloc->chunkSize <= size))
+            {
+                memcpy(mem, ((void*)toRealloc+nvmHeaderSize), toRealloc->chunkSize);
+            }
+            else
+            {
+                memcpy(mem, ((void*)toRealloc+nvmHeaderSize), size);
+            }
+            sysFree_persistent(addr);
+        }
+        return mem;
+    }
+    else
+    {
+        return sysRealloc(addr, size);
+    }
 }
 
 // End of modification
@@ -2694,76 +2819,92 @@ void sysFree(void *addr) {
 }
 
 // JaPHa Modification
-// NVM CHANGE 009.001.001 - UPDATED TO 2.0.0	*/
+// Description
+
 unsigned long get_chunkpp()
 {
-	return (unsigned long)*chunkpp;
+    return (unsigned long)*chunkpp;
 }
 
 // End of modification
 
 // JaPHa Modification
-// NVM CHANGE 009.001.002 - UPDATED TO 2.0.0	*/
+// Description
+
 OPC *get_opc_ptr()
 {
-	return (OPC*)((char*)nvm-sizeof(OPC));
+    return (OPC*)((char*)nvm-sizeof(OPC));
 }
 
 // End of modification
 
 // JaPHa Modification
-// NVM CHANGE 009.001.003 - UPDATED TO 2.0.0	*/
-uintptr_t get_freelist_header(){
+// Description
 
-	return freelist->header;
+uintptr_t get_freelist_header()
+{
+
+    return freelist->header;
 }
 
 // End of modification
 
 // JaPHa Modification
-// NVM CHANGE 009.001.004 - UPDATED TO 2.0.0	*/
-struct chunk *get_freelist_next(){
-	return freelist->next;
+// Description
+
+struct chunk *get_freelist_next()
+{
+    return freelist->next;
 }
 
 // End of modification
 
 // JaPHa Modification
-// NVM CHANGE 009.001.005 - UPDATED TO 2.0.0	*/
-unsigned int get_heapfree(){
-	return heapfree;
+// Description
+
+unsigned int get_heapfree()
+{
+    return heapfree;
 }
 
 // End of modification
 
 // JaPHa Modification
-// NVM CHANGE 009.001.006 - UPDATED TO 2.0.0	*/
-unsigned int get_nvmFreeSpace(){
-	return nvmFreeSpace;
+// Description
+
+unsigned int get_nvmFreeSpace()
+{
+    return nvmFreeSpace;
 }
 
 // End of modification
 
 // JaPHa Modification
-// UPDATED TO 2.0.0
-int get_has_finaliser_count(){
-	return has_finaliser_count;
+// Description
+
+int get_has_finaliser_count()
+{
+    return has_finaliser_count;
 }
 
 // End of modification
 
 // JaPHa Modification
-// UPDATED TO 2.0.0
-int get_has_finaliser_size(){
-	return has_finaliser_size;
+// Description
+
+int get_has_finaliser_size()
+{
+    return has_finaliser_size;
 }
 
 // End of modification
 
 // JaPHa Modification
-// UPDATED TO 2.0.0
-Object ** get_has_finaliser_list(){
-	return has_finaliser_list;
+// Description
+
+Object ** get_has_finaliser_list()
+{
+    return has_finaliser_list;
 }
 
 // End of modification

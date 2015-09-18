@@ -34,7 +34,7 @@ typedef struct hash_table {
 } HashTable;
 
 // JaPHa Modification
-// Added arguments
+// Added Resize Hash Arguments
 
 extern void resizeHash(HashTable *table, int new_size, char* name, int create_file);
 
@@ -65,6 +65,9 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
 
 #define hashTableCount(table)                                          \
     table.hash_count
+
+// JaPHa Modification
+// Added Find Hash Entry Arguments
 
 #define findHashEntry(table, ptr, ptr2, add_if_absent, scavenge, locked, ht_name, create_file)           \
 {                                                                      \
@@ -128,6 +131,8 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
     if(locked)                                                         \
         unlockHashTable0(&table, self);                                \
 }
+
+// End of modification
 
 #define deleteHashEntry(table, ptr, locked)                            \
 {                                                                      \

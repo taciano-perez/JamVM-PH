@@ -28,6 +28,14 @@
 /* Configure options */
 #include "config.h"
 
+// JaPHa Modification
+// Log Includes
+
+#include "japha/test/testing_utils.h"
+#include "japha/utils/logger.h"
+
+// End of Modification
+
 /* Architecture dependent definitions */
 #include "arch.h"
 
@@ -754,9 +762,9 @@ typedef struct InitArgs {
 	// Added execution arguments
 
     int persistent_heap;
-	char *heap_file;
+    char *heap_file;
 
-	// End of Modification
+    // End of Modification
 
     Property *commandline_props;
     int props_count;
@@ -793,7 +801,7 @@ typedef struct opc
 	int ldr_vmdata_offset;
 	Class *java_lang_Class;
 	unsigned long chunkpp;
-	uintptr_t freelist_header; //TODO Check this type - UPDATED TO 2.0.0
+	uintptr_t freelist_header;
 	struct chunk *freelist_next;
 	unsigned int heapfree;
 	unsigned int nvmFreeSpace;
@@ -966,10 +974,48 @@ extern void *sysMalloc_persistent(int n);
 extern void sysFree_persistent(void *addr);
 extern void *sysRealloc_persistent(void *ptr, int n);
 
+// End of modification
+
+// JaPHa Modification
 // Orthogonal Persistent Context get function
+
 extern OPC *get_opc_ptr();
 
+// End of modification
+
+// JaPHa Modification
 // Added create file flag to garbage collector allocation functions
+
+extern unsigned long get_chunkpp();
+extern uintptr_t get_freelist_header();
+extern struct chunk *get_freelist_next();
+extern unsigned int get_heapfree();
+extern unsigned int get_nvmFreeSpace();
+extern int get_ldr_vmdata_offset();
+extern void set_ldr_vmdata_offset(int ldr);
+extern Class ** get_prim_classes();
+extern void set_prim_classes();
+extern void set_has_finaliser_list();
+extern int get_has_finaliser_count();
+extern int get_has_finaliser_size();
+extern Object ** get_has_finaliser_list();
+
+
+extern int get_string_HC();
+extern int get_utf8_HC();
+
+extern int get_BC_HC();
+extern int get_BP_HC();
+extern int get_CL_HC();
+
+extern Class* get_java_lang_class();
+extern void set_java_lang_class(Class *clazz);
+
+// End of modification
+
+// JaPHa Modification
+// Changed Malloc Args
+
 extern void *gcMemMalloc(int n, char* name, int create_file);
 extern void *gcMemRealloc(void *ptr, int n, char* name, int create_file);
 

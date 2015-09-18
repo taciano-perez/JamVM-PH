@@ -97,25 +97,25 @@ int initVM(InitArgs *args) {
 
     /* Initialise the VM modules -- ordering is important! */
 
-    initialiseHooks(args);
-    initialiseProperties(args);
-    initialiseAlloc(args);
-    initialiseThreadStage1(args);
-    initialiseUtf8(args);
-    initialiseSymbol();
-    initialiseClassStage1(args);
-    initialiseDll(args);
-    initialiseMonitor(args);
-    initialiseString(args);
-    initialiseException();
-    initialiseNatives();
-    initialiseAccess();
-    initialiseFrame();
-    initialiseJNI();
-    initialiseInterpreter(args);
-    initialiseClassStage2(args);
-    initialiseThreadStage2(args);
-    initialiseGC(args);
+    /*status =*/ initialiseHooks(args);// &&
+                 initialiseProperties(args);// &&
+                 initialiseAlloc(args);// &&
+                 initialiseThreadStage1(args);// &&
+                 initialiseUtf8(args);// &&
+                 initialiseSymbol();// &&
+                 initialiseClassStage1(args);// &&
+                 initialiseDll(args);// &&
+                 initialiseMonitor(args);// &&
+                 initialiseString(args);// &&
+                 initialiseException();// &&
+                 initialiseNatives();// &&
+                 initialiseAccess();// &&
+                 initialiseFrame();// &&
+                 initialiseJNI();// &&
+                 initialiseInterpreter(args);// &&
+                 initialiseClassStage2(args);// &&
+                 initialiseThreadStage2(args);// &&
+                 initialiseGC(args);
 
     status = TRUE;
 

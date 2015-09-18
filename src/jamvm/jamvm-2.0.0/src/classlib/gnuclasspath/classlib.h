@@ -64,7 +64,7 @@ extern void classlibCacheClassLoaderFields(Class *loader_class);
 extern HashTable *classlibLoaderTable(Object *class_loader);
 
 // JaPHa Modification
-// Added arguments
+// Added Persistent Arguments
 
 extern HashTable *classlibCreateLoaderTable(Object *class_loader, char* ht_name , int create_file);
 

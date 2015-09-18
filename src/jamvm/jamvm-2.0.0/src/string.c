@@ -119,13 +119,14 @@ Object *findInternedString(Object *string) {
     if(string == NULL)
         return NULL;
 
+    /* Add if absent, no scavenge, locked */
+
     // JaPHa Modification
     // Added arguments
 
-    /* Add if absent, no scavenge, locked */
     findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, STRING_NAME, TRUE);
 
-    // End of modification
+    // End of Modification
 
     return interned;
 }
@@ -235,13 +236,18 @@ int initialiseString(InitArgs *args)
     }
 #endif
 
-    // JaPHa Modification
-    // Added initialization arguments
-
     /* Init hash table and create lock */
+
+    // JaPHa Modification
+    // Added Init Hash Table Initialization Arguments
+
     initHashTable(hash_table, HASHTABSZE, TRUE, STRING_NAME, TRUE);
 
-    //setting hash count
+    // End of Modification
+
+    // JaPHa Modification
+    //Setting Hash Count
+
     if(persistent_mode == TRUE)
     {
         OPC *ph_value = get_opc_ptr();
@@ -308,3 +314,13 @@ char *String2Utf8(Object *string) {
     return unicode2Utf8(unicode, len, utf8);
 }
 #endif
+
+// JaPHa Modification
+// Description
+
+int get_string_HC()
+{
+    return hash_table.hash_count;
+}
+
+// End of modification

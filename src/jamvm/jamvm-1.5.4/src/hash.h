@@ -34,28 +34,25 @@ typedef struct hash_table {
 } HashTable;
 
 // JaPHa Modification
-// NVM CHANGE 006.000 - Hash Functions -Changed functions args - UPDATED TO 2.0.0
+// Added Resize Hash Arguments
 
 extern void resizeHash(HashTable *table, int new_size, char* name, int create_file);
 
-// End of modification
+// End of Modification
 
 extern void lockHashTable0(HashTable *table, Thread *self);
 extern void unlockHashTable0(HashTable *table, Thread *self);
 
 // JaPHa Modification
-// XXX NVM CHANGE 006.001 - Init HT = GMM - UPDATED TO 2.0.0
-//todo Memset - UPDATED TO 2.0.0
-//memset(table.hash_table, 0, sizeof(HashEntry)*initial_size);                   \
+// Initialize HashTable
 
-#define initHashTable(table, initial_size, create_lock, name, create_file)         \
-{                                                                                  \
-    table.hash_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*initial_size,     \
-                                                            name, create_file);    \
-    table.hash_size = initial_size;                                                \
-    table.hash_count = 0;                                                          \
-    if(create_lock)                                                                \
-        initVMLock(table.lock);                                                    \
+#define initHashTable(table, initial_size, create_lock, name, create_file)                \
+{                                                                      \
+    table.hash_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*initial_size, name, create_file);    \
+    table.hash_size = initial_size;                                    \
+    table.hash_count = 0;                                              \
+    if(create_lock)                                                    \
+        initVMLock(table.lock);                                        \
 }
 
 // End of modification
@@ -70,11 +67,10 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
     table.hash_count
 
 // JaPHa Modification
-// XXX NVM CHANGE 006.003 - Find Hash - UPDATED TO 2.0.0
+// Added Find Hash Entry Arguments
 
-#define findHashEntry(table, ptr, ptr2, add_if_absent, scavenge, locked,           \
-                                                      name, create_file)           \
-{                                                                                  \
+#define findHashEntry(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)           \
+{                                                                      \
     int hash = HASH(ptr);                                                          \
     int i;                                                                         \
                                                                                    \
@@ -112,8 +108,8 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
                             void *data = entry->data;                              \
                             if(data) {                                             \
                                 if(SCAVENGE(data)) {                               \
-                                    entry->data = NULL;                            \
-                                    table.hash_count--;                            \
+                                    entry->data = NULL;                \
+                                    table.hash_count--;                \
                                 }                                                  \
                                 cnt--;                                             \
                             }                                                      \
@@ -124,9 +120,9 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
                             new_size = table.hash_size;                            \
                     } else                                                         \
                         new_size = table.hash_size*2;                              \
-                                                                                   \
-                    resizeHash(&table, new_size, name, create_file);               \
-                }                                                                  \
+                                                                       \
+                    resizeHash(&table, new_size, name, create_file);    \
+                }                                                      \
             }                                                                      \
         }                                                                          \
                                                                                    \
@@ -193,9 +189,9 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
     }                                                                              \
 }
 
-#define gcFreeHashTable(table)                                                     \
+#define gcFreeHashTable(table)                                           \
     gcMemFree(table.hash_table);
 
-#define freeHashTable(table)                                                       \
+#define freeHashTable(table)                                           \
     gcMemFree(table.hash_table);
 

@@ -1682,18 +1682,21 @@ uintptr_t *nativeUnloadDll(Class *class, MethodBlock *mb, uintptr_t *ostack) {
 }
 
 // JaPHa Modification
-// XXX NVM CHANGE 009.002.002 - UPDATED TO 2.0.0
+// Get and Set for Class
 
-Class* get_java_lang_class(){
-	return java_lang_Class;
+Class* get_java_lang_class()
+{
+    return java_lang_Class;
 }
 
 // End of modification
 
 // JaPHa Modification
-//	XXX NVM CHANGE 009.002.003 - UPDATED TO 2.0.0
-void set_java_lang_class(Class *clazz){
-	java_lang_Class = clazz;
+// Description
+
+void set_java_lang_class(Class *clazz)
+{
+    java_lang_Class = clazz;
 }
 
 // End of modification

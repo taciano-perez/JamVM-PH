@@ -544,10 +544,10 @@ CodeBlockHeader *findCodeBlock(TestCodeBlock *block) {
     if(branch_patching_dup && block->patchers != NULL)
         ret_block = newDuplicateBlock(block);
     else {
+        /* Search hash table.  Add if absent, scavenge and not locked */
         // JaPHa Modification
         // Added arguments
 
-        /* Search hash table.  Add if absent, scavenge and not locked */
         findHashEntry(code_hash_table, block, ret_block, TRUE, TRUE, FALSE, INLINE_NAME, FALSE );
 
         // End of Modification

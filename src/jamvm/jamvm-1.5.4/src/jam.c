@@ -241,7 +241,7 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
             }
 
             // JaPHa Modification
-            // XXX NVM CHANGE 001.001 - UPDATED TO 2.0.0
+            // Description
 
 		} else if (strncmp(argv[i], "-persistentheap:", 16) == 0) {
 			args->persistent_heap = TRUE;
@@ -358,7 +358,7 @@ exit:
 }
 
 // JaPHa Modification
-// XXX NVM CHANGE 069.069 - UPDATED TO 2.0.0
+// Resume all listeners method
 
 int resumeAllListeners(Object *system_loader)
 {
@@ -395,7 +395,7 @@ int resumeAllListeners(Object *system_loader)
 
 }
 
-// End of modification
+// End of Modification
 
 int main(int argc, char *argv[]) {
     Class *array_class, *main_class;
@@ -407,23 +407,39 @@ int main(int argc, char *argv[]) {
     int status;
     int i;
 
+    // JaPHa Modification
+    // Log Init
+
     log(INFO, "Entering JamVM Main");
     initialise_log_file();
     initialise_tests_file();
+
+    // End of Modification
 
     setDefaultInitArgs(&args);
     class_arg = parseCommandLine(argc, argv, &args);
 
     args.main_stack_base = &array_class;
     initVM(&args);
+    
+    // JaPHa Modification
+    // Log Message
+
     log(INFO,"VM initialized");
+
+    // End of Modification
 
    if((system_loader = getSystemClassLoader()) == NULL)
         goto error;
 
     mainThreadSetContextClassLoader(system_loader);
 
+    // JaPHa Modification
+    // Resuming all listeners before executing the main java class
+
     resumeAllListeners(system_loader);
+
+    // End of Modification
 
     for(cpntr = argv[class_arg]; *cpntr; cpntr++)
         if(*cpntr == '.')

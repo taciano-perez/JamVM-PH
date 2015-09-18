@@ -47,12 +47,12 @@ static FILE *sig_trace_fd;
 static char *boot_dll_path;
 
 // JaPHa Modification
-// Variables
+// NVM Variables
 
-static char *DLL_HT_NAME 	= "dll_ht";
-static int first_execution 	= TRUE;
-static int persistent_mode 	= FALSE;
-static char *DLL_FILENAME 	= "dlls.txt";
+static char *DLL_HT_NAME     = "dll_ht";
+static char *DLL_FILENAME     = "dlls.txt";
+static int persistent_mode     = FALSE;
+static int first_execution     = TRUE;
 
 // End of Modification
 
@@ -253,51 +253,39 @@ typedef struct {
 
 void reloadDlls(InitArgs *args)
 {
-	DllEntry *dll;
-	FILE *fp;
-	char *name = NULL;
-	size_t len = 0;
-	ssize_t read;
+    DllEntry *dll;
+    FILE *fp;
+    char *name = NULL;
+    size_t len = 0;
+    ssize_t read;
 
-	if((args->persistent_heap) && (access(DLL_FILENAME, F_OK) != -1 ) )
-	{
-		first_execution = FALSE;
-		fp = fopen(DLL_FILENAME, "r+");
+    if((args->persistent_heap) && (access(DLL_FILENAME, F_OK) != -1 ) )
+    {
+        first_execution = FALSE;
+        fp = fopen(DLL_FILENAME, "r+");
 
-		if(fp == NULL)
-		{
-			exit(EXIT_FAILURE);
-		}
+        if(fp == NULL)
+        {
+            exit(EXIT_FAILURE);
+        }
 
-		while((read = getline(&name, &len, fp)) != -1)
-		{
-			name[strlen(name)-1] = '\0';
-			resolveDll(name,NULL);
-		}
+        while((read = getline(&name, &len, fp)) != -1)
+        {
+            name[strlen(name)-1] = '\0';
+            resolveDll(name,NULL);
+        }
 
-		fclose(fp);
-	}
+        fclose(fp);
+    }
 }
 
 // End of Modification
 
 int initialiseDll(InitArgs *args) {
 #ifndef NO_JNI
-
-	// JaPHa Modification
-	// Added initialization arguments
-
-	// Persistent verification
-	if(args->persistent_heap == TRUE)
-	{
-		persistent_mode = TRUE;
-	}
-
     /* Init hash table, and create lock */
     initHashTable(hash_table, HASHTABSZE, TRUE, DLL_HT_NAME, FALSE);
     reloadDlls(args);
-
-    // End of Modification
 
     if(args->trace_jni_sigs) {
         sig_trace_fd = fopen("jni-signatures", "w");
@@ -307,6 +295,16 @@ int initialiseDll(InitArgs *args) {
         }
     }
 #endif
+
+    // JaPHa Modification
+    // Added initialization arguments
+
+    if(args->persistent_heap == TRUE)
+    {
+        persistent_mode = TRUE;
+    }
+
+    // End of Modification
 
     /* Set the boot path */
 
@@ -372,12 +370,12 @@ int resolveDll(char *name, Object *loader) {
     // JaPHa Modification
     // Opening dll file
 
-	if(persistent_mode)
-	{
-		FILE *f = fopen(DLL_FILENAME,"a+");
-	}
+    if(persistent_mode)
+    {
+        FILE *f = fopen(DLL_FILENAME,"a+");
+    }
 
-	// End of Modification
+    // End of Modification
 
     TRACE("<DLL: Attempting to resolve library %s>\n", name);
 
@@ -388,10 +386,11 @@ int resolveDll(char *name, Object *loader) {
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
 
-    // JaPHa Modification
-    // Added arguments
-
     /* Do not add if absent, no scavenge, locked */
+
+    // JaPHa Modification
+    // Added Find Hash Entry arguments
+
     findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, DLL_HT_NAME, FALSE);
 
     // End of Modification
@@ -457,21 +456,22 @@ int resolveDll(char *name, Object *loader) {
 #define COMPARE(ptr1, ptr2, hash1, hash2) \
                   ((hash1 == hash2) && (strcmp(ptr1->name, ptr2->name) == 0))
 
+        /* Add if absent, no scavenge, locked */
+
         //JaPHa Modification
         // Added arguments and persistent file generator
 
-        /* Add if absent, no scavenge, locked */
         findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, DLL_HT_NAME, FALSE);
 
-		if(persistent_mode == TRUE)
-		{
-			FILE * fp;
-			fp = fopen(DLL_FILENAME, "a+");
-			fprintf(fp, "%s\n", dll->name);
-			fclose(fp);
-		}
+        if(persistent_mode == TRUE)
+        {
+            FILE * fp;
+            fp = fopen(DLL_FILENAME, "a+");
+            fprintf(fp, "%s\n", dll->name);
+            fclose(fp);
+        }
 
-		// End of Modification
+        // End of Modification
 
         /* If the library has an OnUnload function it must be
            called from a running Java thread (i.e. not within
@@ -628,7 +628,12 @@ void unloadClassLoaderDlls(Object *loader) {
         /* Ensure new table is less than 2/3 full */
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
 
+        // JaPHa Modification
+        // Added Resize Hash Arguments
+
         resizeHash(&hash_table, size, DLL_HT_NAME, FALSE);
+
+        // End of Modification
     }
 }
 
@@ -636,10 +641,15 @@ uintptr_t *callJNIWrapper(Class *class, MethodBlock *mb, uintptr_t *ostack) {
     TRACE("<DLL: Calling JNI method %s.%s%s>\n", CLASS_CB(class)->name,
           mb->name, mb->type);
 
+    // JaPHa Modification
+    // Description
+
     if(first_execution == FALSE)
     {
-    	lookupLoadedDlls(mb);
+        lookupLoadedDlls(mb);
     }
+
+    // End of Modification
 
     if(!initJNILrefs())
         return NULL;
