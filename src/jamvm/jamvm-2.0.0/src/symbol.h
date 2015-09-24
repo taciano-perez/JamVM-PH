@@ -61,6 +61,14 @@ extern char *symbol_values[];
     action(uncaughtException, "uncaughtException"), \
     action(contextClassLoader, "contextClassLoader"), \
     action(getSystemClassLoader, "getSystemClassLoader"), \
+    /* JaPHa Modification*/\
+    /* Included actions to reload DLL's*/\
+    action(stdinFd, "stdin_fd"), \
+    action(stdoutFd, "stdout_fd"), \
+    action(stderrFd, "stderr_fd"), \
+    action(initIDs, "initIDs"), \
+    action(write, "write"), \
+    /* End of Modification*/\
     \
     /* Constant pool attribute names */\
     action(Code, "Code"), \
@@ -183,6 +191,10 @@ extern char *symbol_values[];
     \
     /* Method signatures */\
     action(___V, "()V"), \
+    /* JaPHa Modification */\
+	/* Included actions to reload DLL's */\
+    action(___I, "()I"), \
+    /* End of Modification */\
     action(___Z, "()Z"), \
     action(_I__V, "(I)V"), \
     action(_J__V, "(J)V"), \

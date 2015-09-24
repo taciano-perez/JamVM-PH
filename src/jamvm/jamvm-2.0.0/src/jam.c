@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <fcntl.h>
 
 #include "jam.h"
 #include "hash.h"
@@ -32,11 +33,19 @@
 #include "thread.h"
 #include "classlib.h"
 
+
 #ifdef USE_ZIP
 #define BCP_MESSAGE "<jar/zip files and directories separated by :>"
 #else
 #define BCP_MESSAGE "<directories separated by :>"
 #endif
+
+//JaPHA Modification
+//JaPHa variables
+
+int first_execution = TRUE;
+
+//End Modification
 
 void showNonStandardOptions() {
     printf("  -Xbootclasspath:%s\n", BCP_MESSAGE);
@@ -232,12 +241,53 @@ exit:
 }
 
 // JaPHa Modification
+// reloadJNIResources method - reload DLLs for JNI
+
+int reloadJNIResources(Object *system_loader)
+{
+	MethodBlock *mb;
+
+	if(first_execution == TRUE)
+	{
+		return TRUE;
+	}
+
+	Class *vm_channel = findClassFromClassLoader("gnu.java.nio.VMChannel", system_loader);
+
+	if(vm_channel != NULL)
+	{
+		initClass(vm_channel);
+	}
+
+	if(exceptionOccurred())
+	{
+		return FALSE;
+	}
+
+	mb = lookupMethod(vm_channel, SYMBOL(stdinFd), SYMBOL(___I));
+	lookupLoadedDlls(mb);
+
+	mb = lookupMethod(vm_channel, SYMBOL(stdoutFd), SYMBOL(___I));
+	lookupLoadedDlls(mb);
+
+	mb = lookupMethod(vm_channel, SYMBOL(stderrFd), SYMBOL(___I));
+	lookupLoadedDlls(mb);
+
+	mb = lookupMethod(vm_channel, SYMBOL(initIDs), SYMBOL(___V));
+	lookupLoadedDlls(mb);
+}
+
+// End modification
+
+// JaPHa Modification
 // Resume all listeners method
 
 int resumeAllListeners(Object *system_loader)
 {
 	Class *op_runtime = findClassFromClassLoader("javax.op.OPRuntime", system_loader);
 	Class *vm_channel = findClassFromClassLoader("gnu.java.nio.VMChannel", system_loader);
+
+	reloadJNIResources(system_loader);
 
     if(op_runtime != NULL)
         initClass(op_runtime);
@@ -293,6 +343,16 @@ int main(int argc, char *argv[]) {
     class_arg = parseCommandLine(argc, argv, &args);
 
     args.main_stack_base = &array_class;
+
+    // JaPHa Mdification
+    // First execution flag
+
+    if( access(args.heap_file, F_OK ) != -1 )
+    {
+        first_execution = FALSE;
+    }
+
+    // End modification
 
     if(!initVM(&args)) {
         printf("Could not initialise VM.  Aborting.\n");
