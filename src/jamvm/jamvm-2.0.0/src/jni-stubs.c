@@ -16,8 +16,6 @@ static uintptr_t *static__I(Class *class, MethodBlock *mb, uintptr_t *ostack) {
     if(!initJNILrefs())
         return NULL;
 
-    printf("teste: %s\n", mb->name);
-
     *ostack = (*(uintptr_t (*)(void*, void*))mb->code) (
 	&jni_env,
 	class);
