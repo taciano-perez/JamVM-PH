@@ -31,8 +31,8 @@
 // JaPHa Modification
 // Log Includes
 
-#include "japha/test/testing_utils.h"
-#include "japha/utils/logger.h"
+#include "nvm/test/testing_utils.h"
+#include "nvm/utils/logger.h"
 
 // End of Modification
 
