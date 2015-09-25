@@ -39,17 +39,17 @@ static HashTable hash_table;
 static Class *string_class;
 static int value_offset;
 
-#ifdef SHARED_CHAR_BUFFERS
-static int count_offset; 
-static int offset_offset;
-
 // JaPHa Modification
 // Constants and Variables
 
-static char* STRING_NAME     = "string_ht";
+static char* STRING_NAME = "string_ht";
 static int persistent_mode     = FALSE;
 
 // End of Modification
+
+#ifdef SHARED_CHAR_BUFFERS
+static int count_offset;
+static int offset_offset;
 
 #define STRING_LEN(string) INST_DATA(string, int, count_offset)
 #define STRING_OFFSET(string) INST_DATA(string, int, offset_offset)
