@@ -39,18 +39,9 @@ static HashTable hash_table;
 static Class *string_class;
 static int value_offset;
 
-// JaPHa Modification
-// Constants and Variables
-
-static char* STRING_NAME = "string_ht";
-static int persistent_mode     = FALSE;
-
-// End of Modification
-
 #ifdef SHARED_CHAR_BUFFERS
-static int count_offset;
+static int count_offset; 
 static int offset_offset;
-
 #define STRING_LEN(string) INST_DATA(string, int, count_offset)
 #define STRING_OFFSET(string) INST_DATA(string, int, offset_offset)
 #else
@@ -120,13 +111,7 @@ Object *findInternedString(Object *string) {
         return NULL;
 
     /* Add if absent, no scavenge, locked */
-
-    // JaPHa Modification
-    // Added arguments
-
-    findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, STRING_NAME, TRUE);
-
-    // End of Modification
+    findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE);
 
     return interned;
 }
@@ -154,12 +139,7 @@ void freeInternedStrings() {
         /* Ensure new table is less than 2/3 full */
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
 
-        // JaPHa Modification
-        // Added arguments
-
-        resizeHash(&hash_table, size, STRING_NAME, TRUE);
-
-        // End of Modification
+        resizeHash(&hash_table, size);
     }
 }
 
@@ -197,18 +177,7 @@ char *String2Cstr(Object *string) {
     return String2Buff0(string, buff, len);
 }
 
-int initialiseString(InitArgs *args)
-{
-    // JaPHa Modification
-    // Persistent mode flag
-
-    if(args->persistent_heap == TRUE)
-    {
-        persistent_mode = TRUE;
-    }
-
-    // End of Modification
-
+int initialiseString() {
     FieldBlock *value;
 
     string_class = findSystemClass0(SYMBOL(java_lang_String));
@@ -237,24 +206,7 @@ int initialiseString(InitArgs *args)
 #endif
 
     /* Init hash table and create lock */
-
-    // JaPHa Modification
-    // Added Init Hash Table Initialization Arguments
-
-    initHashTable(hash_table, HASHTABSZE, TRUE, STRING_NAME, TRUE);
-
-    // End of Modification
-
-    // JaPHa Modification
-    //Setting Hash Count
-
-    if(persistent_mode == TRUE)
-    {
-        OPC *ph_value = get_opc_ptr();
-        hash_table.hash_count = ph_value->string_hash_count;
-    }
-
-    // End of Modification
+    initHashTable(hash_table, HASHTABSZE, TRUE);
 
     return TRUE;
 
@@ -314,13 +266,3 @@ char *String2Utf8(Object *string) {
     return unicode2Utf8(unicode, len, utf8);
 }
 #endif
-
-// JaPHa Modification
-// Description
-
-int get_string_HC()
-{
-    return hash_table.hash_count;
-}
-
-// End of modification
