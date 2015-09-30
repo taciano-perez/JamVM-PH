@@ -22,7 +22,13 @@
 #define CLASSLIB_CLASS_SPECIAL  JTHREAD
 
 #if OPENJDK_VERSION == 8
-#define CLASSLIB_CLASS_PAD_SIZE 10*sizeof(Object*)+1*sizeof(int)
+// JaPHa Modification
+// changed CLASSLIB_CLASS_PAD_SIZE from 10 to 11
+
+#define CLASSLIB_CLASS_PAD_SIZE 11*sizeof(Object*)+1*sizeof(int)
+
+// End of Modification
+
 #elif OPENJDK_VERSION == 7
 #define CLASSLIB_CLASS_PAD_SIZE 18*sizeof(Object*)+2*sizeof(int)
 #else

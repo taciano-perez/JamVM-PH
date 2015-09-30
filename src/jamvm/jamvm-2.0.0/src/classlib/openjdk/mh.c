@@ -59,6 +59,13 @@ extern int cons_slot_offset, cons_class_offset;
 extern int mthd_slot_offset, mthd_class_offset;
 extern int fld_slot_offset, fld_class_offset;
 
+// JaPHa Modification
+// constants and variables
+
+static char* MH_NAME = "mh_ht";
+
+// End of Modification
+
 #define CACHE_SIZE 1<<7
 static HashTable intrinsic_cache;
 
@@ -229,7 +236,7 @@ void initialiseMethodHandles() {
     call_site_target_offset = target_fb->u.offset;
 
     /* Init hash table and create lock */
-    initHashTable(intrinsic_cache, CACHE_SIZE, TRUE);
+    initHashTable(intrinsic_cache, CACHE_SIZE, TRUE, MH_NAME, TRUE);
 }
 
 void cachePolyOffsets(CachedPolyOffsets *cpo) {
@@ -1220,7 +1227,7 @@ MethodBlock *lookupPolymorphicMethod(Class *class, Class *accessing_class,
     mb->native_invoker = polymorphicID2Invoker(id);
 
     /* Add if absent, scavenge, locked */
-    findHashEntry(intrinsic_cache, mb, found, TRUE, TRUE, TRUE);
+    findHashEntry(intrinsic_cache, mb, found, TRUE, TRUE, TRUE, MH_NAME, TRUE);
 
     if(mb != found)
         sysFree(mb);

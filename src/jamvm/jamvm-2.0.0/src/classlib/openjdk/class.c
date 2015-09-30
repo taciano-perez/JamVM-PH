@@ -75,7 +75,6 @@ HashTable *classlibCreateLoaderTable(Object *class_loader, char* ht_name, int cr
 
     return table;
 }
-
 // End of Modification
 
 Object *classlibBootPackage(PackageEntry *package_entry) {
