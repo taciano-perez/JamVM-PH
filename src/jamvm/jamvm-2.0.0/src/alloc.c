@@ -694,9 +694,6 @@ void markClassData(Class *class, int mark) {
 
     TRACE_GC("Marking class %s\n", cb->name);
 
-    /* Mark the class's classloader object */
-    MARK_CLASSBLOCK_FIELD(cb, class_loader, mark);
-
     /* Mark the classlib specific object references */
     CLASSLIB_CLASSBLOCK_REFS_DO(MARK_CLASSBLOCK_FIELD, cb, mark);
 
@@ -1394,7 +1391,6 @@ static void threadClassData(Class *class, Class *new_addr) {
 
     /* Thread object references within the class data */
     THREAD_CLASSBLOCK_FIELD(cb, super);
-    THREAD_CLASSBLOCK_FIELD(cb, class_loader);
 
     /* Thread the classlib specific references */
     CLASSLIB_CLASSBLOCK_REFS_DO(THREAD_CLASSBLOCK_FIELD, cb);
@@ -1403,8 +1399,10 @@ static void threadClassData(Class *class, Class *new_addr) {
         if(cb->interfaces[i] != NULL)
             THREAD_REFERENCE(&cb->interfaces[i]);
 
-    if(IS_ARRAY(cb))
+    if(IS_ARRAY(cb)){
         THREAD_REFERENCE(&cb->element_class);
+        CLASSLIB_CLASSBLOCK_ARRAY_REFS_DO(THREAD_CLASSBLOCK_FIELD, cb);
+    }
 
     for(i = 0; i < cb->imethod_table_size; i++)
         THREAD_REFERENCE(&cb->imethod_table[i].interface);
@@ -2429,27 +2427,33 @@ Object *allocTypeArray(int type, int size) {
 }
 
 Object *allocMultiArray(Class *array_class, int dim, intptr_t *count) {
-    int i;
     Object *array;
-    char *element_name = CLASS_CB(array_class)->name + 1;
 
     if(dim > 1) {
-        Class *aclass = findArrayClassFromClass(element_name, array_class);
+        Class *comp_class = CLASS_CB(array_class)->component_class;
         Object **body;
+        int i;
 
         array = allocArray(array_class, *count, sizeof(Object*));
-
         if(array == NULL)
             return NULL;
 
         body = ARRAY_DATA(array, Object*);
 
-        for(i = 0; i < *count; i++)
-            if((*body++ = allocMultiArray(aclass, dim - 1, count + 1)) == NULL)
-                return NULL;
-    } else
-        array = allocArray(array_class, *count,
-                           sigElement2Size(*element_name));
+        for(i = 0; i < *count; i++) {
+        	Object *comp_array = allocMultiArray(comp_class, dim - 1, count + 1);
+
+        if(comp_array == NULL)
+            return NULL;
+
+        *body++ = comp_array;
+
+        }
+    } else {
+    	int el_size = sigElement2Size(CLASS_CB(array_class)->name[1]);
+    	array = allocArray(array_class, *count, el_size);
+
+}
 
     return array;
 }

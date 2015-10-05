@@ -522,29 +522,23 @@ jclass JVM_FindClassFromBootLoader(JNIEnv *env, const char *name) {
 jclass JVM_FindClassFromClassLoader(JNIEnv *env, const char *name,
                                     jboolean init, jobject loader,
                                     jboolean throw_error) {
-    Class *class;
 
     TRACE("JVM_FindClassFromClassLoader(env=%p, name=%s, init=%d, loader=%p,"
           " throw_error=%d)", env, name, init, loader, throw_error);
 
-    class = findClassFromClassLoader((char *)name, loader);
-
-    if(class == NULL) {
-        if(!throw_error) {
-            Object *excep = exceptionOccurred();
-            char *dot_name = slash2DotsDup((char*)name);
-
-            clearException();
-            signalChainedException(java_lang_ClassNotFoundException,
-                                   dot_name, excep);
-            sysFree(dot_name);
-        }
-    } else if(init)
-        initClass(class);
-
-    return class;
+    return findClassFromLoader((char *)name, init, loader, throw_error);
 }
 
+/* JVM_FindClassFromCaller */
+
+jclass JVM_FindClassFromCaller(JNIEnv *env, const char *name, jboolean init,
+                               jobject loader, jclass caller) {
+
+    TRACE("JVM_FindClassFromCaller(env=%p, name=%s, init=%d, loader=%p,"
+          " caller=%p)", env, name, init, loader, caller);
+
+    return findClassFromLoader((char *)name, init, loader, FALSE);
+}
 
 /* JVM_FindClassFromClass */
 
@@ -2962,6 +2956,24 @@ void JVM_GetVersionInfo(JNIEnv *env, jvm_version_info *info, size_t info_size) {
     info->jvm_version = ((VERSION_MAJOR & 0xff) << 24) |
                         ((VERSION_MINOR & 0xff) << 16) |
                          (VERSION_MICRO & 0xff);
+}
+
+
+/* JVM_GetTemporaryDirectory
+ * Return the temporary directory that the VM uses for the attach
+ * and perf data files.
+ *
+ * It is important that this directory is well-known and the
+ * same for all VM instances. It cannot be affected by configuration
+ * variables such as java.io.tmpdir.
+ *
+ * JamVM do not support the jvmstat framework thus this is left unimplemented.
+ */
+
+    jstring JVM_GetTemporaryDirectory(JNIEnv *env) {
+        UNIMPLEMENTED("JVM_GetTemporaryDirectory");
+
+    return 0;
 }
 
 

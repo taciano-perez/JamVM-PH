@@ -869,11 +869,12 @@ Class *defineClass(char *classname, char *data, int offset, int len,
 }
 
 Class *createArrayClass(char *classname, Object *class_loader) {
-    ClassBlock *elem_cb, *classblock;
-    Class *class, *found = NULL;
-    int len = strlen(classname);
+	Class *comp_class, *elem_class, *class, *found = NULL;
+	ClassBlock *elem_cb, *classblock;
+	int dim;
 
-    if((class = allocClass()) == NULL)
+	class = allocClass();
+    if((class) == NULL)
         return NULL;
 
     classblock = CLASS_CB(class);
@@ -900,33 +901,38 @@ Class *createArrayClass(char *classname, Object *class_loader) {
        this is used to speed up type checking (instanceof) */
 
     if(classname[1] == '[') {
-        Class *comp_class =
-                  findArrayClassFromClassLoader(classname + 1, class_loader);
-
+        comp_class = findArrayClassFromClassLoader(classname + 1,
+        		                                   class_loader);
         if(comp_class == NULL)
             goto error;
 
-        classblock->element_class = CLASS_CB(comp_class)->element_class;
-        classblock->dim = CLASS_CB(comp_class)->dim + 1;
+        elem_class = CLASS_CB(comp_class)->element_class;
+        dim = CLASS_CB(comp_class)->dim + 1;
     } else { 
         if(classname[1] == 'L') {
+        	int len = strlen(classname);
             char element_name[len - 2];
 
             memcpy(element_name, classname + 2, len - 3);
             element_name[len - 3] = '\0';
 
-            classblock->element_class =
-                      findClassFromClassLoader(element_name, class_loader);
-        } else
-            classblock->element_class = findPrimitiveClass(classname[1]);
+            elem_class = findClassFromClassLoader(element_name, class_loader);
 
-        if(classblock->element_class == NULL)
+        } else
+            elem_class = findPrimitiveClass(classname[1]);
+
+        if(elem_class == NULL)
             goto error;
 
-        classblock->dim = 1;
+        comp_class = elem_class;
+        dim = 1;
     }
 
-    elem_cb = CLASS_CB(classblock->element_class);
+    classblock->component_class = comp_class;
+    classblock->element_class = elem_class;
+    classblock->dim = dim;
+
+    elem_cb = CLASS_CB(elem_class);
 
     /* The array's classloader is the loader of the element class */
     classblock->class_loader = elem_cb->class_loader;
@@ -936,8 +942,8 @@ Class *createArrayClass(char *classname, Object *class_loader) {
                                ACC_FINAL | ACC_ABSTRACT;
 
     prepareClass(class);
-
-    if((found = addClassToHash(class, classblock->class_loader)) == class) {
+    found = addClassToHash(class, classblock->class_loader);
+    if(found == class) {
         if(verbose)
             jam_printf("[Created array class %s]\n", classname);
         return class;
