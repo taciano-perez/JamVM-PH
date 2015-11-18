@@ -149,6 +149,11 @@ ExecEnv *getExecEnv() {
     return NULL;
 }
 
+// JaPHa Modification
+void flushPHValues() {
+}
+// End of modification
+
 void exitVM(int status) {
 }
 

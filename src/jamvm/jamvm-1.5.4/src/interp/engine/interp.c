@@ -1215,6 +1215,15 @@ uintptr_t *executeJava() {
         Object *obj = (Object *)*--ostack;
         NULL_POINTER_CHECK(obj);
         objectLock(obj);
+		// JaPHa Modification
+		if(persistent) {
+            if(tx_monitor == 0) {
+                pmemobj_mutex_lock(pop_heap, &tx_mutex);
+                pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE);
+            }
+            tx_monitor++;
+		}
+		// End of modification
         DISPATCH(0, 1);
     })
 
@@ -1222,6 +1231,15 @@ uintptr_t *executeJava() {
         Object *obj = (Object *)*--ostack;
         NULL_POINTER_CHECK(obj);
         objectUnlock(obj);
+		// JaPHa Modification
+		if(persistent) {
+            tx_monitor--;
+            if(tx_monitor == 0) {
+                pmemobj_tx_end();
+                pmemobj_mutex_unlock(pop_heap, &tx_mutex);
+            }
+		}
+		// End of modification
         DISPATCH(0, 1);
     })
 

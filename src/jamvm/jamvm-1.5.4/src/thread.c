@@ -1148,42 +1148,52 @@ Thread *findRunningThreadByTid(int tid) {
     return thread;
 }
 
+// JaPHa Modification
+void flushPHValues() {
+    OPC *ph_values = get_opc_ptr();
+    ph_values->nvmFreeSpace = get_nvmFreeSpace();
+    ph_values->java_lang_Class =  get_java_lang_class();
+    ph_values->ldr_vmdata_offset = get_ldr_vmdata_offset();
+    ph_values->boot_classes_hash_count = get_BC_HC();
+    ph_values->boot_packages_hash_count = get_BP_HC();
+    ph_values->string_hash_count = get_string_HC();
+    ph_values->utf8_hash_count = get_utf8_HC();
+    ph_values->classes_hash_count = get_CL_HC();
+    memcpy(ph_values->prim_classes, get_prim_classes(), sizeof(ph_values->prim_classes));
+    ph_values->has_finaliser_count = get_has_finaliser_count();
+    ph_values->has_finaliser_size = get_has_finaliser_size();
+    ph_values->has_finaliser_list = sysMalloc_persistent(ph_values->has_finaliser_size*sizeof(Object*));
+    memcpy(ph_values->has_finaliser_list, get_has_finaliser_list(), ph_values->has_finaliser_size*sizeof(Object*));
+}
+// End of modification
+
+// JaPHa Modification
 void exitVM(int status) {
 	main_exited = TRUE;
 	/*	XXX NVM CHANGE 009.000.002	*/
 	if(is_persistent == TRUE){
-		OPC *ph_values = get_opc_ptr();
-		ph_values->chunkpp = get_chunkpp();
-		ph_values->freelist_header = get_freelist_header();
-		ph_values->freelist_next = get_freelist_next();
-		ph_values->heapfree = get_heapfree();
-		ph_values->nvmFreeSpace = get_nvmFreeSpace();
-		ph_values->java_lang_Class =  get_java_lang_class();
-		ph_values->ldr_vmdata_offset = get_ldr_vmdata_offset();
-		ph_values->boot_classes_hash_count = get_BC_HC();
-		ph_values->boot_packages_hash_count = get_BP_HC();
-		ph_values->string_hash_count = get_string_HC();
-		ph_values->utf8_hash_count = get_utf8_HC();
-		ph_values->classes_hash_count = get_CL_HC();
-		memcpy(ph_values->prim_classes, get_prim_classes(), sizeof(ph_values->prim_classes));
-		ph_values->has_finaliser_count = get_has_finaliser_count();
-		ph_values->has_finaliser_size = get_has_finaliser_size();
-		ph_values->has_finaliser_list = sysMalloc_persistent(ph_values->has_finaliser_size*sizeof(Object*));
-		memcpy(ph_values->has_finaliser_list, get_has_finaliser_list(), ph_values->has_finaliser_size*sizeof(Object*));
+
+	    // JaPHa Modification
+	    flushPHValues();
+	    // End of modification
+
 	}
+	// End of modification
 
     /* Execute System.exit() to run any registered shutdown hooks.
        In the unlikely event that System.exit() can't be found, or
        it returns, fall through and exit. */
 
-    if(!VMInitialising()) {
+    // FIXME COMMENTED SYSTEM.EXIT() CALL
+	/*if(!VMInitialising()) {
         Class *system = findSystemClass(SYMBOL(java_lang_System));
         if(system) {
             MethodBlock *exit = findMethod(system, SYMBOL(exit), SYMBOL(_I__V));
             if(exit)
                 executeStaticMethod(system, exit, status);
         }
-    }
+    }*/
+
 
     jamvm_exit(status);
 }

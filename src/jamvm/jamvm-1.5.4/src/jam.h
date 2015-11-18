@@ -35,6 +35,16 @@
 /* Architecture dependent definitions */
 #include "arch.h"
 
+// JaPHa Modification
+
+#include <unistd.h>
+#include <libpmemobj.h>
+
+#define PATH "HEAP_POOL"
+#define HEAP_SIZE 10000000
+
+// End of modification
+
 #ifndef TRUE
 #define         TRUE    1
 #define         FALSE   0
@@ -786,6 +796,32 @@ typedef struct opc {
 
 /* Alloc */
 
+//JaPHa Modification
+
+/* Format of an unallocated chunk */
+typedef struct chunk {
+	uintptr_t header;
+	struct chunk *next;
+} Chunk;
+
+typedef struct pheap {
+	void *base_address;
+	Chunk *freelist;
+	Chunk **chunkpp;
+	unsigned long heapfree;
+	unsigned long maxHeap;
+	char *heapbase;
+	char *heapmax;
+	char *heaplimit;
+	char heapMem[HEAP_SIZE]; // heap contents
+}PHeap;
+
+extern void dump_heap();
+extern void* ph_malloc(int len);
+extern int initialiseRoot(InitArgs *args);
+
+//End of Modification
+
 extern void initialiseAlloc(InitArgs *args);
 extern void initialiseGC(InitArgs *args);
 extern Class *allocClass();
@@ -1145,3 +1181,17 @@ extern void getTimeoutRelative(struct timespec *ts, long long millis,
 
 extern int sigElement2Size(char element);
 
+// JaPHa Modification
+
+POBJ_LAYOUT_BEGIN(HEAP_POOL);
+POBJ_LAYOUT_ROOT(HEAP_POOL, PHeap);
+POBJ_LAYOUT_END(HEAP_POOL);
+
+PMEMobjpool *pop_heap;
+PMEMoid root_heap;
+PHeap *pheap;
+PMEMmutex tx_mutex;
+int tx_monitor, main_started, persistent;
+extern void flushPHValues();
+
+// End of modification

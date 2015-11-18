@@ -391,6 +391,20 @@ int resumeAllListeners(Object *system_loader)
 }
 
 int main(int argc, char *argv[]) {
+	// JaPHa Modification
+	printf("Initialising JVM\n");
+	persistent = FALSE;
+	int i;
+    for(i = 0; i < argc; i++) {
+ 	   if(!strcmp(argv[i], "-persistentheap:heap.ph")) {
+		   persistent = TRUE;
+		   main_started = FALSE;
+		   break;
+	   }
+    }
+
+	// End of modification
+
     Class *array_class, *main_class;
     Object *system_loader, *array;
     MethodBlock *mb;
@@ -398,7 +412,7 @@ int main(int argc, char *argv[]) {
     int class_arg;
     char *cpntr;
     int status;
-    int i;
+    //int i;
 
     log(INFO, "Entering JamVM Main");
     initialise_log_file();
@@ -452,8 +466,13 @@ int main(int argc, char *argv[]) {
         log(INFO, "Entering Java Main");
 
         /* Call the main method */
-        if(i == argc)
+        // JaPHa Modification
+        if(i == argc) {
+            if(persistent)
+                main_started = TRUE;
             executeStaticMethod(main_class, mb, array);
+        }
+        // End of modification
     }
 
 error:
@@ -464,6 +483,14 @@ error:
 
     /* Wait for all but daemon threads to die */
     mainThreadWaitToExitVM();
+
+    // JaPHa Modification
+
+	if(persistent) {
+		pmemobj_close(pop_heap);
+	}
+
+	// End of modification
 
     log(INFO, "Exit");
     exitVM(status);
