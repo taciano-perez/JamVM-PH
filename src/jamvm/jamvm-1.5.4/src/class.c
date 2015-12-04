@@ -79,7 +79,6 @@ static char* boot_name = "bootCl_ht";
 static char* class_name = "classes_ht";
 static char* bootp_name = "bootPck_ht";
 static int is_persistent = 0;
-static int first_ex = TRUE;
 static int testing_mode = FALSE;
 static int class_HC = 0;
 
@@ -1559,13 +1558,12 @@ Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
      * that it can be used on second execution in persistent mode
      */
 
-	if( (is_persistent) && (access( class_name, F_OK ) != -1) && (first_ex == TRUE)){
+	if( (is_persistent) && (first_ex == FALSE)){
 		Object *vmdata = INST_DATA(loader, Object*, ldr_vmdata_offset);
-		HashTable *table = INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset);
+		HashTable *table = (HashTable*)pheap->classes_ht;
         initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
         OPC *ph_value = get_opc_ptr();
         table->hash_count = ph_value->classes_hash_count;
-        first_ex = FALSE;
 	}
 
 

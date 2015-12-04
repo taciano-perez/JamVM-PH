@@ -117,7 +117,7 @@ static long long total_started_threads_count = 1;
 static int all_threads_suspended = FALSE;
 static int threads_waiting_to_start = 0;
 
-static int main_exited = FALSE;
+//static int main_exited = FALSE;
 
 /* Bitmap - used for generating unique thread ID's */
 #define MAP_INC 32
@@ -1150,8 +1150,8 @@ Thread *findRunningThreadByTid(int tid) {
 
 // JaPHa Modification
 void flushPHValues() {
+    printf("Flushing PHValues\n");
     OPC *ph_values = get_opc_ptr();
-    ph_values->nvmFreeSpace = get_nvmFreeSpace();
     ph_values->java_lang_Class =  get_java_lang_class();
     ph_values->ldr_vmdata_offset = get_ldr_vmdata_offset();
     ph_values->boot_classes_hash_count = get_BC_HC();
@@ -1168,32 +1168,48 @@ void flushPHValues() {
 // End of modification
 
 // JaPHa Modification
+
 void exitVM(int status) {
 	main_exited = TRUE;
 	/*	XXX NVM CHANGE 009.000.002	*/
 	if(is_persistent == TRUE){
 
 	    // JaPHa Modification
+
 	    flushPHValues();
+	    printf("sizeof pheap: %lu\n", sizeof(PHeap)/1024);
+	    printf("pool freespace: %lu\n", pheap->heapfree);
+	    printf("pool maxheap: %lu\n", pheap->maxHeap);
+	    printf("nvm currentsize: %u\n", pheap->nvmCurrentSize);
+	    printf("nvm freespace: %u\n", pheap->nvmFreeSpace);
+
 	    // End of modification
 
 	}
+
 	// End of modification
 
     /* Execute System.exit() to run any registered shutdown hooks.
        In the unlikely event that System.exit() can't be found, or
        it returns, fall through and exit. */
 
-    // FIXME COMMENTED SYSTEM.EXIT() CALL
-	/*if(!VMInitialising()) {
+	if(!VMInitialising()) {
         Class *system = findSystemClass(SYMBOL(java_lang_System));
         if(system) {
             MethodBlock *exit = findMethod(system, SYMBOL(exit), SYMBOL(_I__V));
             if(exit)
                 executeStaticMethod(system, exit, status);
         }
-    }*/
+    }
 
+	//JaPHa Modification
+	//close the heap before ending the VM
+
+	if(persistent){
+		pmemobj_close(pop_heap);
+	}
+
+	//End of Modification
 
     jamvm_exit(status);
 }

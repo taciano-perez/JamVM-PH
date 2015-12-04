@@ -107,7 +107,6 @@
 /*	XXX	NVM VARIABLES - ALLOC.C	*/
 static int is_persistent = FALSE;
 static int testing_mode = FALSE;
-static int first_ex = TRUE;
 
 uintptr_t get_freelist_header();
 struct chunk *get_freelist_next();
@@ -117,23 +116,21 @@ int file = FALSE;
 #define HEAPADDR 		0xaf497000
 #define NVM_ADDRESS 	0xaeb0d000
 #define INCREASE_VALUE 	1000000
-#define NVM_INIT_SIZE 	10000000
 
- typedef struct nvmChunk{
- 	int allocBit;
- 	unsigned int chunkSize;
- 	struct nvmChunk *next;
- }nvmChunk;
+//JaPHa Modification
 
- static nvmChunk *nvmfreelist;
+//#define NVM_INIT_SIZE 	10000000
+
+//End of modification
+
+/* static nvmChunk *nvmfreelist;
  static char *nvm;
- static int nvm_fd;
+ static int nvm_fd; */
  static int nvmHeaderSize = sizeof(nvmChunk);
  static int minSize = (0x3 + sizeof(nvmChunk) + sizeof(void*));
- static unsigned int nvmFreeSpace = 0;
+ /*static unsigned int nvmFreeSpace = 0;
  static unsigned int nvmCurrentSize = NVM_INIT_SIZE;
- static unsigned long nvm_limit;
-
+ static unsigned long nvm_limit;*/
 
 static int verbosegc;
 static int compact_override;
@@ -331,54 +328,6 @@ void clearMarkBits() {
 	memset(markbits, 0, markbit_size * sizeof(*markbits));
 }
 
-/*XXX NVM CHANGE 002.000 - InitMem
- * Added InitialiseNVM function
- */
-
-void initialiseNVM(){
-	if( access( "Memory", F_OK ) != -1 ) {
-		nvm_fd = open ("Memory", O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
-		file = TRUE;
-	}else{
-		nvm_fd = open ("Memory", O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
-		lseek (nvm_fd, (nvmCurrentSize-1), SEEK_SET);
-		write(nvm_fd,"",1);
-	}
-	nvm = (char*) mmap(NVM_ADDRESS, nvmCurrentSize, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, nvm_fd, 0);
-	nvm = nvm + sizeof(OPC);
-	msync(nvm, nvmCurrentSize, MS_SYNC);
-	nvm_limit = (unsigned long) nvm + nvmCurrentSize;
-
-	if (nvm == -1){
-		int errsv = errno;
-		switch (errsv){
-		case EAGAIN: printf("ERROR: EAGAIN\n");
-					 break;
-		case EFAULT: printf("ERROR: EFAULT\n");
-					 break;
-		case EINVAL: printf("ERROR: EINVAL\n");
-					 break;
-		case ENOMEM: printf("ERROR: ENOMEM\n");
-					 break;
-		}
-	}
-//nvm é o tamanho ?
-//só abaixo do testing?
-//show!
-	if (testing_mode == TRUE){
-		char log_string[80];
-		sprintf(log_string, "Created NVM Memory an %p with size %d", nvm, nvmCurrentSize);
-		log(DEBUG,log_string);
-	}
-	/* 1st chunk =  all mem */
-	nvmfreelist = (nvmChunk*) nvm;
-	if (!file){
-		nvmfreelist->chunkSize = nvmFreeSpace = (nvmCurrentSize - nvmHeaderSize);
-		nvmfreelist->allocBit = 0;
-		nvmfreelist->next = NULL;
-	}
-}
-
 //JaPHa Modification
 
 void dump_heap() {
@@ -387,71 +336,94 @@ void dump_heap() {
 	printf("Next free: %p\n", &(*pheap->chunkpp)->next);
 }
 
+void dump_nvm() {
+	printf("Free list: %p\n",  pheap->nvmfreelist);
+	printf("Free space: %p\n",  pheap->nvmFreeSpace);
+	printf("Nvm current size: %p\n",  pheap->nvmCurrentSize);
+	printf("Nvm limit: %p\n",  pheap->nvm_limit);
+}
+
 void *ph_malloc(int len) {
 	uintptr_t largest;
 	Chunk *found;
 	Thread *self;
+	int err;
 
 	/* See comment below */
 	char *ret_addr;
 
-	TX_BEGIN(pop_heap) {
-		int n = (len+HEADER_SIZE+OBJECT_GRAIN-1)&~(OBJECT_GRAIN-1);
-		/* Grab the heap lock, hopefully without having to
-		   wait for it to avoid disabling suspension */
-		/*self = threadSelf();
-		if(!tryLockVMLock(heap_lock, self)) {
-			disableSuspend(self);
-			lockVMLock(heap_lock, self);
-			enableSuspend(self);
-		}*/
+	BEGIN_TX
+	int n = (len+HEADER_SIZE+OBJECT_GRAIN-1)&~(OBJECT_GRAIN-1);
+	/* Grab the heap lock, hopefully without having to
+	   wait for it to avoid disabling suspension */
+	/*self = threadSelf();
+	if(!tryLockVMLock(heap_lock, self)) {
+		disableSuspend(self);
+		lockVMLock(heap_lock, self);
+		enableSuspend(self);
+	}*/
 
-		/* Scan freelist looking for a chunk big enough to
-		   satisfy allocation request */
+	/* Scan freelist looking for a chunk big enough to
+	   satisfy allocation request */
+	int has_found = FALSE;
 
-		while(*(pheap->chunkpp)) {
-			uintptr_t len = (*(pheap->chunkpp))->header;
+	while(*(pheap->chunkpp)) {
+		uintptr_t len = (*(pheap->chunkpp))->header;
 
-			if(len == n) {
-				found = *pheap->chunkpp;
-				*pheap->chunkpp = found->next;
-				break;
-			}
-
-			if(len > n) {
-				Chunk *rem;
-				found = *pheap->chunkpp;
-				rem = (Chunk*)((char*)found + n);
-				rem->header = len - n;
-
-				/* Chain the remainder onto the freelist only
-				   if it's large enough to hold an object */
-				if(rem->header >= MIN_OBJECT_SIZE) {
-					rem->next = found->next;
-					*pheap->chunkpp = rem;
-				} else
-					*pheap->chunkpp = found->next;
-
-				break;
-			}
-			pheap->chunkpp = &(*pheap->chunkpp)->next;
+		if(len == n) {
+			found = *pheap->chunkpp;
+			*pheap->chunkpp = found->next;
+			has_found = TRUE;
+			break;
 		}
 
-		pheap->heapfree -= n;
+		if(len > n) {
+			Chunk *rem;
+			found = *pheap->chunkpp;
+			rem = (Chunk*)((char*)found + n);
+			rem->header = len - n;
 
-		/* Mark found chunk as allocated */
-		found->header = n | ALLOC_BIT;
 
-		/* Found is a block pointer - if we unlock now, small window
-		 * where new object ref is not held and will therefore be gc'ed.
-		 * Setup ret_addr before unlocking to prevent this.
-		 */
+			/* Chain the remainder onto the freelist only
+			   if it's large enough to hold an object */
+			if(rem->header >= MIN_OBJECT_SIZE) {
+				rem->next = found->next;
+				*pheap->chunkpp = rem;
+			} else
+				*pheap->chunkpp = found->next;
 
-		ret_addr = ((char*)found)+HEADER_SIZE;
-		memset(ret_addr, 0, n-HEADER_SIZE);
-		//unlockVMLock(heap_lock, self);
+			has_found = TRUE;
+			break;
+		}
+		pheap->chunkpp = &(*pheap->chunkpp)->next;
+	}
+	if (!has_found) {
+		printf("ERROR: could not find available space\n");
+	}
 
-	} TX_END
+	err = pmemobj_tx_add_range_direct(&(pheap->heapfree), sizeof(pheap->heapfree));
+
+	if (err) {
+		printf("pheapheapfree ERROR %d: could not add range to transaction\n", err);
+	}
+
+
+	pheap->heapfree -= n;
+
+	/* Mark found chunk as allocated */
+	//(found, n + sizeof(Chunk));
+	found->header = n | ALLOC_BIT;
+
+	/* Found is a block pointer - if we unlock now, small window
+	 * where new object ref is not held and will therefore be gc'ed.
+	 * Setup ret_addr before unlocking to prevent this.
+	 */
+
+	ret_addr = ((char*)found)+HEADER_SIZE;
+	memset(ret_addr, 0, n-HEADER_SIZE);
+	//unlockVMLock(heap_lock, self);
+
+	END_TX
 	return ret_addr;
 }
 
@@ -464,8 +436,9 @@ int initialiseRoot(InitArgs *args) {
 		heap_size = HEAP_SIZE;
 
 	if(access(PATH, F_OK) != 0) {
-		if ((pop_heap = pmemobj_create(PATH, POBJ_LAYOUT_NAME(HEAP_POOL), sizeof(PHeap)*2, 0666)) == NULL) {
+		if ((pop_heap = pmemobj_create(PATH, POBJ_LAYOUT_NAME(HEAP_POOL), sizeof(PHeap)*2, 0666)) == NULL) {//8388608
 			printf("failed to create pool\n");
+			printf("error msg:\t%s\n", pmem_errormsg());
 			return FALSE;
 		}
 		root_heap = pmemobj_root(pop_heap, heap_size);
@@ -477,7 +450,7 @@ int initialiseRoot(InitArgs *args) {
 		pheap->heapmax = pheap->heapbase + ((args->max_heap - (pheap->heapbase - pheap->heapMem)) & ~(OBJECT_GRAIN - 1));
 		pheap->heaplimit = pheap->heapbase + ((args->min_heap - (pheap->heapbase - pheap->heapMem)) & ~(OBJECT_GRAIN - 1));
 		pheap->freelist = pheap->heapbase;
-		pheap->freelist->header = pheap->heapfree = pheap->heaplimit - pheap->heapbase;
+		pheap->freelist->header = pheap->heaplimit - pheap->heapbase;
 		pheap->freelist->next = NULL;
 		pheap->chunkpp = &(pheap->freelist);
 		}
@@ -491,11 +464,8 @@ int initialiseRoot(InitArgs *args) {
 		if(pheap->base_address != pheap)
 			printf("base addresses are different\n");
 		}
-	/*dump_heap();
-	char* c1 = ph_malloc(12);
-	dump_heap();
-	char* c2 = ph_malloc(15);
-	dump_heap();*/
+
+	pheap_created = TRUE;
     return TRUE;
 }
 
@@ -528,6 +498,12 @@ void initialiseAlloc(InitArgs *args) {
 
 		initialiseRoot(args);
 
+		printf("pheap initial pointer: %p\n", pheap);
+		printf("pool freespace: %d\n", pheap->heapfree);
+		printf("pool maxheap: %d\n", pheap->maxHeap);
+		printf("nvm currentsize: %d\n", pheap->nvmCurrentSize);
+		printf("nvm freespace: %d\n", pheap->nvmFreeSpace);
+
 		//End of modification
 
 		//heapMem = (char*)mmap(heapMemAddr, args->max_heap, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
@@ -553,6 +529,7 @@ void initialiseAlloc(InitArgs *args) {
 	freelist = (Chunk*)heapbase;
 
 	//JaPHa Modification
+	//use the pool values in persistent execution
 
 	if(is_persistent){
 		maxHeap = pheap->maxHeap;
@@ -561,19 +538,27 @@ void initialiseAlloc(InitArgs *args) {
 		heapmax = pheap->heapmax;
 		freelist = pheap->freelist;
 		chunkpp = pheap->chunkpp;
-		initialiseNVM();
 	}
 
 	//End of modification
 
 	/*	XXX NVM CHANGE 009.000.003	*/
-	if(file){
-		ph_value = (char*)(nvm-sizeof(OPC));
-		nvmFreeSpace = ph_value->nvmFreeSpace;
-		set_java_lang_class(ph_value->java_lang_Class);
-		set_ldr_vmdata_offset(ph_value->ldr_vmdata_offset);
+	if(is_persistent){
+		if(file){
+			ph_value = &(pheap->opc);
+			set_java_lang_class(ph_value->java_lang_Class);
+			set_ldr_vmdata_offset(ph_value->ldr_vmdata_offset);
+		}
+		else{
+			pheap->nvmCurrentSize = NVM_INIT_SIZE;
+			pheap->nvm_limit = (unsigned long) pheap->nvm + pheap->nvmCurrentSize;
+			pheap->nvmfreelist = (nvmChunk*) pheap->nvm;
+			pheap->nvmfreelist->chunkSize = pheap->nvmFreeSpace = (pheap->nvmCurrentSize - nvmHeaderSize);
+			pheap->nvmfreelist->allocBit = 0;
+			pheap->nvmfreelist->next = NULL;
+			pheap->nvmChunkpp = &(pheap->nvmfreelist);
+		}
 	}
-
 
 	TRACE_GC("Alloced heap size %p\n", heaplimit-heapbase);
 	allocMarkBits();
@@ -1214,7 +1199,6 @@ static uintptr_t doSweep(Thread *self) {
 		if(ptr >= heaplimit)
 			goto out_last_marked;
 	}
-	//End of modification
 
 	out_last_free:
 
@@ -2093,12 +2077,12 @@ void initialiseGC(InitArgs *args) {
 
 
 	/* Create and start VM threads for the reference handler and finalizer */
-	createVMThread("Finalizer", finalizerThreadLoop);
-	createVMThread("Reference Handler", referenceHandlerThreadLoop);
+	//createVMThread("Finalizer", finalizerThreadLoop);
+	//createVMThread("Reference Handler", referenceHandlerThreadLoop);
 
 	/* Create and start VM thread for asynchronous GC */
-	if(args->asyncgc)
-		createVMThread("Async GC", asyncGCThreadLoop);
+	//if(args->asyncgc)
+		//createVMThread("Async GC", asyncGCThreadLoop);
 
 	/* GC will use mark-sweep or mark-compact as appropriate, but this
        can be changed via the command line */
@@ -2111,10 +2095,9 @@ void initialiseGC(InitArgs *args) {
 
 void *gcMalloc(int len) {
 
-	//JaPHa modification
-	//if(is_persistent)
-		//return ph_malloc(len);
-	//End of modification
+	if(is_persistent){
+		return ph_malloc(len);
+	}
 
 	/* The state determines what action to take in the event of
        allocation failure.  The states go up in seriousness,
@@ -2152,14 +2135,18 @@ void *gcMalloc(int len) {
 			uintptr_t len = (*chunkpp)->header;
 
 			if(len == n) {
+
 				found = *chunkpp;
+
 				*chunkpp = found->next;
 				goto got_it;
 			}
 
 			if(len > n) {
+
 				Chunk *rem;
 				found = *chunkpp;
+
 				rem = (Chunk*)((char*)found + n);
 				rem->header = len - n;
 
@@ -2516,6 +2503,23 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 	int fd;
 
 	if (is_persistent && create_file){
+
+		if(!strcmp(name,"utf8_ht")){
+			return pheap->utf8_ht;
+		}
+		if(!strcmp(name,"bootCl_ht")){
+			return pheap->bootCl_ht;
+		}
+		if(!strcmp(name,"bootPck_ht")){
+			return pheap->bootPck_ht;
+		}
+		if(!strcmp(name,"string_ht")){
+			return pheap->string_ht;
+		}
+		if(!strcmp(name,"classes_ht")){
+			return pheap->classes_ht;
+		}
+
 		unsigned long buffer[1];
 		size = size + sizeof(unsigned long);
 		if( access( name, F_OK ) != -1 ) {
@@ -2614,39 +2618,22 @@ void freePendingFrees() {
 
 /* MREMAP MAYMOVE ISSUE */
 void expandNVM(){
-	unsigned int oldSize = nvmCurrentSize;
+	unsigned int oldSize = pheap->nvmCurrentSize;
 	nvmChunk *new;
 	nvmChunk *chunk;
-	nvmCurrentSize = nvmCurrentSize + INCREASE_VALUE;
-	nvm_limit = (unsigned int) nvm + nvmCurrentSize;
-	lseek (nvm_fd, (nvmCurrentSize-1), SEEK_SET);
-	write(nvm_fd,"",1);
+	BEGIN_TX
+	pheap->nvmCurrentSize = pheap->nvmCurrentSize + INCREASE_VALUE;
+	pheap->nvm_limit = (unsigned int) pheap->nvm + pheap->nvmCurrentSize;
 
-	/* REMAP WITH MAYMOVE, may move */
-	nvm = (char*) mremap(nvm, oldSize, nvmCurrentSize, MREMAP_FIXED|MREMAP_MAYMOVE, NVM_ADDRESS);
-
-	if (nvm == -1){
-		int errsv = errno;
-		switch (errsv){
-		case EAGAIN: printf("EAGAIN\n");
-		break;
-		case EFAULT: printf("EFAULT\n");
-		break;
-		case EINVAL: printf("EINVAL\n");
-		break;
-		case ENOMEM: printf("ENOMEM\n");
-		break;
-		}
-	}
-	memset((nvm+oldSize), 0, INCREASE_VALUE);
+	memset((pheap->nvm+oldSize), 0, INCREASE_VALUE);
 
 	/* goto last chunk */
-	for (chunk = nvmfreelist; chunk->next !=NULL; chunk = chunk->next);
+	for (chunk = pheap->nvmfreelist; chunk->next !=NULL; chunk = chunk->next);
 
 	/* if isnt allocated attach new offset */
 	if (!chunk->allocBit){
 		chunk->chunkSize = chunk->chunkSize + INCREASE_VALUE;
-		nvmFreeSpace = nvmFreeSpace + INCREASE_VALUE;
+		pheap->nvmFreeSpace = pheap->nvmFreeSpace + INCREASE_VALUE;
 	}else {
 	/* create new chunk and add to the list
 							 ptr + header + chunk len 	*/
@@ -2655,67 +2642,85 @@ void expandNVM(){
 		new->chunkSize = INCREASE_VALUE;
 		new->next = NULL;
 		chunk->next = new;
-		nvmFreeSpace = nvmFreeSpace + INCREASE_VALUE - nvmHeaderSize;
+		pheap->nvmFreeSpace = pheap->nvmFreeSpace + INCREASE_VALUE - nvmHeaderSize;
 	}
+	END_TX
 }
 
 /* XXX NVM CHANGE 004.001 - SysMalloc */
 void *sysMalloc_persistent(int size){
 	if (is_persistent){
 		int n = size < sizeof(void*) ? sizeof(void*) : size;
+		int have_remaining = FALSE;
 		void *ret_addr = NULL;
+		nvmChunk *rem = NULL;
 		nvmChunk *found = NULL;
-		nvmChunk **iterate  = &nvmfreelist;
-		int shift = 0;
+		int err;
+		TX_BEGIN(pop_heap) {
+			//nvmChunk **iterate  = &(pheap->nvmfreelist); //- eliminado
 
-		while (*iterate){
-			/*	search unallocated chunk		*/
-			if ((*iterate)->allocBit == 1){
-				iterate = &(*iterate)->next;
-				continue;
-			}
-			unsigned int len = (*iterate)->chunkSize;
+			int shift = 0;
 
-			if(len > n) {
-				found = *iterate;
-				found->allocBit = 1;
-				/*	check if remaining space can hold a chunk		*/
-				if((int)(len - (nvmHeaderSize + n)) >= minSize) {
-					nvmChunk *rem = NULL;
-					/*	ptr +	header	+ content = OK	*/
-					rem = ((char*)found + nvmHeaderSize + n);
-
-					if (shift = (unsigned int)rem & 0x3){
-						shift = (0x4 - shift);
-						memset(rem, 0 , shift);
-						rem = ((char*)rem + shift);
-					}
-					rem->allocBit = 0;
-					rem->chunkSize = len - (shift + nvmHeaderSize + n);
-					rem->next = found->next;
-
-					found->chunkSize = n;
-					/* A -> Found -> Rem -> Found->next */
-					found->next = rem;
-					nvmFreeSpace = nvmFreeSpace - nvmHeaderSize - shift;
+			while (*(pheap->nvmChunkpp)){
+				/*	search unallocated chunk		*/
+				if ((*(pheap->nvmChunkpp))->allocBit == 1){
+					pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
+					continue;
 				}
-				ret_addr = ((void*)found + nvmHeaderSize);
-				break;
+				unsigned int len = (*(pheap->nvmChunkpp))->chunkSize;
+
+				if(len > n) {
+					found = *(pheap->nvmChunkpp);
+
+					/*	check if remaining space can hold a chunk		*/
+					if((int)(len - (nvmHeaderSize + n)) >= minSize) {
+						/*	ptr +	header	+ content = OK	*/
+						rem = ((char*)found + nvmHeaderSize + n);
+
+						have_remaining = TRUE;
+
+						if (shift = (unsigned int)rem & 0x3){
+							shift = (0x4 - shift);
+							memset(rem, 0 , shift);
+							rem = ((char*)rem + shift);
+						}
+						rem->allocBit = 0;
+						rem->chunkSize = len - (shift + nvmHeaderSize + n);
+						rem->next = found->next;
+					}
+					ret_addr = ((void*)found + nvmHeaderSize);
+					break;
+				}
+
+				if(len == n) {
+					found = *(pheap->nvmChunkpp);
+					ret_addr = ((void*)found + nvmHeaderSize);
+					break;
+				}
+				pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
 			}
 
-			if(len == n) {
-				found = *iterate;
-				found->allocBit = 1;
-				ret_addr = ((void*)found + nvmHeaderSize);
-				break;
+			err = pmemobj_tx_add_range_direct(found, sizeof(nvmChunk) + n);
+			if (err) {
+				printf("10 ERROR %d: could not add range to transaction\n", err);
 			}
-			iterate = &(*iterate)->next;
-		}
+			found->allocBit = 1;
+			found->chunkSize = n;
 
-		nvmFreeSpace = nvmFreeSpace - found->chunkSize;
-		/* clear chunk */
-		memset(ret_addr, 0, found->chunkSize);
-		msync(nvm, nvmCurrentSize, MS_SYNC);
+			if(have_remaining)
+				found->next = rem;
+
+			err = pmemobj_tx_add_range_direct(&(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace));
+			if (err) {
+				printf("11 ERROR %d: could not add range to transaction\n", err);
+			}
+			if(have_remaining)
+				pheap->nvmFreeSpace = pheap->nvmFreeSpace - nvmHeaderSize - shift - sizeof(nvmChunk);
+			else
+				pheap->nvmFreeSpace = pheap->nvmFreeSpace - found->chunkSize - sizeof(nvmChunk);
+			/* clear chunk */
+			memset(ret_addr, 0, found->chunkSize);
+		} TX_END
 		return ret_addr;
 	}else
 		return sysMalloc(size);
@@ -2724,17 +2729,30 @@ void *sysMalloc_persistent(int size){
 /* XXX NVM CHANGE 004.003 - SysFree */
 void sysFree_persistent(void* addr){
 	if(is_persistent){
-		unsigned long ptr = (unsigned long) addr;
+		int err;
+		unsigned long ptr = (unsigned long) addr;//this err
+		BEGIN_TX
 		/*	chunk = ptr - header */
 		nvmChunk *toFree = (ptr-nvmHeaderSize);
-		toFree->allocBit = 0;
-		nvmFreeSpace = nvmFreeSpace + toFree->chunkSize;
+		if(!main_exited){
+			err = pmemobj_tx_add_range_direct(&(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace));
+			if (err) {
+				printf("12 ERROR %d: could not add range to transaction\n", err);
+			}
+		}
+		pheap->nvmFreeSpace = pheap->nvmFreeSpace + toFree->chunkSize;
 		/* clear chunk */
+		if(!main_exited){
+			err = pmemobj_tx_add_range_direct(toFree, toFree->chunkSize + nvmHeaderSize);
+			if (err) {
+				printf("13 ERROR %d: could not add range to transaction\n", err);
+			}
+		}
+		toFree->allocBit = 0;
 		memset(ptr, 0, toFree->chunkSize);
-		msync(nvm, nvmCurrentSize, MS_SYNC);
+		END_TX
 	}else
 		sysFree(addr);
-
 }
 
 /* XXX NVM CHANGE 004.002 - SysRealloc */
@@ -2794,7 +2812,7 @@ unsigned long get_chunkpp()
 /*	XXX NVM CHANGE 009.001.002	*/
 OPC *get_opc_ptr()
 {
-	return (OPC*)((char*)nvm-sizeof(OPC));
+	return &(pheap->opc);
 }
 
 /*	XXX NVM CHANGE 009.001.003	*/
@@ -2812,10 +2830,6 @@ unsigned int get_heapfree(){
 	return heapfree;
 }
 
-/*	XXX NVM CHANGE 009.001.006	*/
-unsigned int get_nvmFreeSpace(){
-	return nvmFreeSpace;
-}
 
 int get_has_finaliser_count(){
 	return has_finaliser_count;

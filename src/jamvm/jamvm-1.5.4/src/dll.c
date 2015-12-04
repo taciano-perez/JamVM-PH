@@ -37,7 +37,6 @@
 /*	XXX	NVM VARIABLES - DLL.C	*/
 static int testing_mode = FALSE;
 static char* dll_ht_name = "dll_ht";
-static int first_ex = TRUE;
 static int is_persistent = FALSE;
 
 /* Set by call to initialise -- if true, prints out

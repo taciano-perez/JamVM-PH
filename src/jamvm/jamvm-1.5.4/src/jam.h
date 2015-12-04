@@ -40,8 +40,8 @@
 #include <unistd.h>
 #include <libpmemobj.h>
 
-#define PATH "HEAP_POOL"
-#define HEAP_SIZE 10000000
+#define PATH "/mnt/pmfs/HEAP_POOL"
+#define HEAP_SIZE 3000000
 
 // End of modification
 
@@ -697,7 +697,6 @@ typedef struct opc {
 	uintptr_t freelist_header;
 	struct chunk *freelist_next;
 	unsigned int heapfree;
-	unsigned int nvmFreeSpace;
 	int boot_classes_hash_count;
 	int boot_packages_hash_count;
 	int classes_hash_count;
@@ -797,12 +796,22 @@ typedef struct opc {
 /* Alloc */
 
 //JaPHa Modification
+// created heap structure that contains the old nvm structure and the persistent hashtables,
+// reallocation of the Chunk and nvmChunk structures from the alloc.c to here
+
+#define NVM_INIT_SIZE 	2500000
 
 /* Format of an unallocated chunk */
 typedef struct chunk {
 	uintptr_t header;
 	struct chunk *next;
 } Chunk;
+
+typedef struct nvmChunk{
+	int allocBit;
+	unsigned int chunkSize;
+	struct nvmChunk *next;
+}nvmChunk;
 
 typedef struct pheap {
 	void *base_address;
@@ -813,6 +822,18 @@ typedef struct pheap {
 	char *heapbase;
 	char *heapmax;
 	char *heaplimit;
+	nvmChunk *nvmfreelist;
+	nvmChunk **nvmChunkpp;
+	unsigned int nvmFreeSpace;
+	unsigned int nvmCurrentSize;
+	unsigned long nvm_limit;
+	OPC opc;
+	char* utf8_ht[131080];
+	char* bootCl_ht[8200];
+	char* bootPck_ht[1032];
+	char* string_ht[16392];
+	char* classes_ht[8200];
+	char nvm[NVM_INIT_SIZE];
 	char heapMem[HEAP_SIZE]; // heap contents
 }PHeap;
 
@@ -1182,16 +1203,25 @@ extern void getTimeoutRelative(struct timespec *ts, long long millis,
 extern int sigElement2Size(char element);
 
 // JaPHa Modification
+// definition of the pool layout and necessary variables
 
 POBJ_LAYOUT_BEGIN(HEAP_POOL);
 POBJ_LAYOUT_ROOT(HEAP_POOL, PHeap);
 POBJ_LAYOUT_END(HEAP_POOL);
 
+#define BEGIN_TX if(tx_monitor == 0) { \
+					pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE); \
+				 }
+
+#define END_TX if(tx_monitor == 0) { \
+					pmemobj_tx_end(); \
+				}
+
 PMEMobjpool *pop_heap;
 PMEMoid root_heap;
 PHeap *pheap;
 PMEMmutex tx_mutex;
-int tx_monitor, main_started, persistent;
+int tx_monitor, main_started, persistent, main_exited, pheap_created, errr, contX, contE, first_ex;
 extern void flushPHValues();
 
 // End of modification

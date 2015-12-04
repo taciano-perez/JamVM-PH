@@ -391,9 +391,18 @@ int resumeAllListeners(Object *system_loader)
 }
 
 int main(int argc, char *argv[]) {
+
 	// JaPHa Modification
+
 	printf("Initialising JVM\n");
 	persistent = FALSE;
+	main_exited = FALSE;
+	pheap_created = FALSE;
+	first_ex = TRUE;
+	if(access( PATH, F_OK ) != -1)
+	{
+		first_ex = FALSE;
+	}
 	int i;
     for(i = 0; i < argc; i++) {
  	   if(!strcmp(argv[i], "-persistentheap:heap.ph")) {
@@ -423,7 +432,7 @@ int main(int argc, char *argv[]) {
 
     args.main_stack_base = &array_class;
     initVM(&args);
-    log(INFO,"VM initialized");
+    printf("JVM Initialized\n");
 
     if ((system_loader = getSystemClassLoader()) == NULL)
     	goto error;
@@ -464,14 +473,16 @@ int main(int argc, char *argv[]) {
                 break;
 
         log(INFO, "Entering Java Main");
-
+        printf("Entering Java Main \n");
         /* Call the main method */
         // JaPHa Modification
+
         if(i == argc) {
             if(persistent)
                 main_started = TRUE;
             executeStaticMethod(main_class, mb, array);
         }
+
         // End of modification
     }
 
@@ -483,14 +494,6 @@ error:
 
     /* Wait for all but daemon threads to die */
     mainThreadWaitToExitVM();
-
-    // JaPHa Modification
-
-	if(persistent) {
-		pmemobj_close(pop_heap);
-	}
-
-	// End of modification
 
     log(INFO, "Exit");
     exitVM(status);
