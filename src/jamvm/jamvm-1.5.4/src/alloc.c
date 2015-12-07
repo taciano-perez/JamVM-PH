@@ -2700,10 +2700,10 @@ void *sysMalloc_persistent(int size){
 				pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
 			}
 
-			err = pmemobj_tx_add_range_direct(found, sizeof(nvmChunk) + n);
+			/*err = pmemobj_tx_add_range_direct(found, sizeof(nvmChunk) + n);
 			if (err) {
 				printf("10 ERROR %d: could not add range to transaction\n", err);
-			}
+			}*/
 			found->allocBit = 1;
 			found->chunkSize = n;
 
