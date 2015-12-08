@@ -399,6 +399,9 @@ int main(int argc, char *argv[]) {
 	main_exited = FALSE;
 	pheap_created = FALSE;
 	first_ex = TRUE;
+	flag = FALSE;
+	flag2 = FALSE;
+	tx_monitor = 0;
 	if(access( PATH, F_OK ) != -1)
 	{
 		first_ex = FALSE;

@@ -336,6 +336,9 @@ uintptr_t *executeJava() {
     )                                                      \
                                                            \
     DEF_OPC(OPC_PUTSTATIC_QUICK##suffix, level,            \
+		if(pheap_created && tx_monitor > 0){               \
+			pmemobj_tx_add_range_direct(RESOLVED_FIELD(pc),sizeof(FieldBlock));\
+		}                                              	   \
         POP_##level(*(type*)                               \
            (RESOLVED_FIELD(pc)->u.static_value.data), 3);  \
     )                                                      \
@@ -689,13 +692,19 @@ uintptr_t *executeJava() {
 
 #define ARRAY_STORE(TYPE)                     \
 {                                             \
+	BEGIN_TX                                  \
     int val = ARRAY_STORE_VAL;                \
     int idx = ARRAY_STORE_IDX;                \
     Object *array = (Object *)*--ostack;      \
                                               \
     NULL_POINTER_CHECK(array);                \
     ARRAY_BOUNDS_CHECK(array, idx);           \
+    int err = pmemobj_tx_add_range_direct(&(ARRAY_DATA(array, TYPE)[idx]), sizeof(val)); \
+    if (err && (!main_exited)) {              \
+		printf("array_store ERROR %d: could not add range to transaction\n", err); \
+	}                                         \
     ARRAY_DATA(array, TYPE)[idx] = val;       \
+    END_TX                                    \
     DISPATCH(0, 1);                           \
 }
 
@@ -716,6 +725,7 @@ uintptr_t *executeJava() {
     )
 
     DEF_OPC_012(OPC_AASTORE, { 
+    	BEGIN_TX
         Object *obj = (Object*)ARRAY_STORE_VAL;
         int idx = ARRAY_STORE_IDX;
         Object *array = (Object *)*--ostack;
@@ -725,8 +735,12 @@ uintptr_t *executeJava() {
 
         if((obj != NULL) && !arrayStoreCheck(array->class, obj->class))
             THROW_EXCEPTION(java_lang_ArrayStoreException, NULL);
-
+        int err = pmemobj_tx_add_range_direct(&(ARRAY_DATA(array, Object*)[idx]), sizeof(obj));
+        if (err) {
+			printf("aastore ERROR %d: could not add range to transaction\n", err);
+		}
         ARRAY_DATA(array, Object*)[idx] = obj;
+        END_TX
         DISPATCH(0, 1);
     })
 
@@ -1200,6 +1214,7 @@ uintptr_t *executeJava() {
     })
 
     DEF_OPC_210(OPC_NEWARRAY, {
+    	BEGIN_TX
         int type = ARRAY_TYPE(pc);
         int count = *--ostack;
         Object *obj;
@@ -1207,7 +1222,7 @@ uintptr_t *executeJava() {
         frame->last_pc = pc;
         if((obj = allocTypeArray(type, count)) == NULL)
             goto throwException;
-
+        END_TX
         PUSH_0((uintptr_t)obj, 2);
     })
 
@@ -1217,11 +1232,11 @@ uintptr_t *executeJava() {
         objectLock(obj);
 		// JaPHa Modification
 		if(persistent) {
-            if(tx_monitor == 0) {
-                pmemobj_mutex_lock(pop_heap, &tx_mutex);
-                pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE);
-            }
-            tx_monitor++;
+			if(tx_monitor > 0) {
+				pmemobj_tx_end();
+				tx_monitor = 0;
+			}
+            BEGIN_TX
 		}
 		// End of modification
         DISPATCH(0, 1);
@@ -1233,11 +1248,7 @@ uintptr_t *executeJava() {
         objectUnlock(obj);
 		// JaPHa Modification
 		if(persistent) {
-            tx_monitor--;
-            if(tx_monitor == 0) {
-                pmemobj_tx_end();
-                pmemobj_mutex_unlock(pop_heap, &tx_mutex);
-            }
+            END_TX
 		}
 		// End of modification
         DISPATCH(0, 1);
@@ -1946,7 +1957,7 @@ uintptr_t *executeJava() {
     DEF_OPC_210(OPC_GETFIELD2_QUICK, {
         Object *obj = (Object *)*--ostack;
         NULL_POINTER_CHECK(obj);
-                
+
         PUSH_LONG(INST_DATA(obj, u8, SINGLE_INDEX(pc)), 3);
     })
 
@@ -1969,21 +1980,33 @@ uintptr_t *executeJava() {
     })
 #else
     DEF_OPC_012(OPC_PUTFIELD2_QUICK, {
+    	BEGIN_TX
         Object *obj = (Object *)ostack[-3];
 
         ostack -= 3;
         NULL_POINTER_CHECK(obj);
+        int err = pmemobj_tx_add_range_direct(&(INST_DATA(obj, u8, SINGLE_INDEX(pc))), sizeof(u8));
+        if (err) {
+			printf("putfield2_quick ERROR %d: could not add range to transaction\n", err);
+		}
         INST_DATA(obj, u8, SINGLE_INDEX(pc)) = *(u8*)&ostack[1];
+        END_TX
         DISPATCH(0, 3);
     })
 
 #define PUTFIELD_QUICK(type, suffix)                        \
     DEF_OPC_012(OPC_PUTFIELD_QUICK##suffix, {               \
+    	BEGIN_TX											\
         Object *obj = (Object *)ostack[-2];                 \
                                                             \
         ostack -= 2;                                        \
         NULL_POINTER_CHECK(obj);                            \
+        int err = pmemobj_tx_add_range_direct(&(INST_DATA(obj, type, SINGLE_INDEX(pc))), sizeof(type)); \
+        if (err && (!main_exited)) {               		                    \
+			printf("putfield_quick ERROR %d: could not add range to transaction\n", err); \
+		}                                  			        \
         INST_DATA(obj, type, SINGLE_INDEX(pc)) = ostack[1]; \
+        END_TX												\
         DISPATCH(0, 3);                                     \
     })
 #endif
@@ -2055,6 +2078,7 @@ uintptr_t *executeJava() {
     })
  
     DEF_OPC_210(OPC_ANEWARRAY_QUICK, {
+    	BEGIN_TX
         Class *class = RESOLVED_CLASS(pc);
         char *name = CLASS_CB(class)->name;
         int count = *--ostack;
@@ -2084,7 +2108,7 @@ uintptr_t *executeJava() {
 
         if((obj = allocArray(array_class, count, sizeof(Object*))) == NULL)
             goto throwException;
-
+        END_TX
         PUSH_0((uintptr_t)obj, 3);
     })
 
@@ -2110,6 +2134,7 @@ uintptr_t *executeJava() {
     })
 
     DEF_OPC_210(OPC_MULTIANEWARRAY_QUICK, ({
+    	BEGIN_TX
         Class *class = RESOLVED_CLASS(pc);
         int i, dim = MULTI_ARRAY_DIM(pc);
         Object *obj;
@@ -2125,7 +2150,7 @@ uintptr_t *executeJava() {
 
         if((obj = allocMultiArray(class, dim, (intptr_t *)ostack)) == NULL)
             goto throwException;
-
+        END_TX
         PUSH_0((uintptr_t)obj, 4);
     });)
 
@@ -2158,21 +2183,12 @@ uintptr_t *executeJava() {
 
     DEF_OPC_210(OPC_INVOKEVIRTUAL_QUICK, {
         Class *new_class;
-//        ClassBlock *cb_teste;
-//       printf("Arg1 antes %p\n",arg1);
 
         arg1 = ostack - INV_QUICK_ARGS(pc);
-//        printf("Arg1 depois %p\n",arg1);
         NULL_POINTER_CHECK(*arg1);
-//        printf("Arg1 Null pointer %p\n",arg1);
 
         new_class = (*(Object **)arg1)->class;
-//      printf("Arg1 new class name %s\n",CLASS_CB(new_class)->name);
-//      printf("Arg1 new class %p\n", new_class);
-//        cb_teste = CLASS_CB(new_class);
-//        printf("Method table %p\n",(cb_teste)->method_table);
         new_mb = CLASS_CB(new_class)->method_table[INV_QUICK_IDX(pc)];
-//       printf("Arg1 new mb %p\n",new_mb);
         goto invokeMethod;
     })
 

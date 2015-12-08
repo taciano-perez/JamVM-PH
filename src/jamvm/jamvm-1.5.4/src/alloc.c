@@ -367,9 +367,31 @@ void *ph_malloc(int len) {
 	   satisfy allocation request */
 	int has_found = FALSE;
 
+
 	while(*(pheap->chunkpp)) {
 		uintptr_t len = (*(pheap->chunkpp))->header;
-
+		/*if(len >= n) {
+			if(tx_monitor && !flag){
+				printf("heaplog\n");
+				err = pmemobj_tx_add_range_direct(pheap->heapMem, HEAP_SIZE);
+				flag = TRUE;
+				if(err){
+					printf("heapMem found ERROR %d: could not add range to transaction\n", err);
+				}
+				err = pmemobj_tx_add_range_direct(pheap->chunkpp, sizeof(Chunk*));
+				if(err){
+					printf("chunkpp found ERROR %d: could not add range to transaction\n", err);
+				}
+				err = pmemobj_tx_add_range_direct(pheap->nvm, NVM_INIT_SIZE);
+				if(err){
+					printf("nvm found ERROR %d: could not add range to transaction\n", err);
+				}
+				err = pmemobj_tx_add_range_direct(pheap->nvmChunkpp, sizeof(nvmChunk*));
+				if(err){
+					printf("nvm found ERROR %d: could not add range to transaction\n", err);
+				}
+			}
+		}*/
 		if(len == n) {
 			found = *pheap->chunkpp;
 			*pheap->chunkpp = found->next;
@@ -382,7 +404,6 @@ void *ph_malloc(int len) {
 			found = *pheap->chunkpp;
 			rem = (Chunk*)((char*)found + n);
 			rem->header = len - n;
-
 
 			/* Chain the remainder onto the freelist only
 			   if it's large enough to hold an object */
@@ -401,11 +422,11 @@ void *ph_malloc(int len) {
 		printf("ERROR: could not find available space\n");
 	}
 
-	err = pmemobj_tx_add_range_direct(&(pheap->heapfree), sizeof(pheap->heapfree));
+	/*err = pmemobj_tx_add_range_direct(&(pheap->heapfree), sizeof(pheap->heapfree));
 
 	if (err) {
 		printf("pheapheapfree ERROR %d: could not add range to transaction\n", err);
-	}
+	}*/
 
 
 	pheap->heapfree -= n;
@@ -436,7 +457,7 @@ int initialiseRoot(InitArgs *args) {
 		heap_size = HEAP_SIZE;
 
 	if(access(PATH, F_OK) != 0) {
-		if ((pop_heap = pmemobj_create(PATH, POBJ_LAYOUT_NAME(HEAP_POOL), sizeof(PHeap)*2, 0666)) == NULL) {//8388608
+		if ((pop_heap = pmemobj_create(PATH, POBJ_LAYOUT_NAME(HEAP_POOL), sizeof(PHeap)*6, 0666)) == NULL) {//8388608
 			printf("failed to create pool\n");
 			printf("error msg:\t%s\n", pmem_errormsg());
 			return FALSE;
@@ -2656,7 +2677,7 @@ void *sysMalloc_persistent(int size){
 		nvmChunk *rem = NULL;
 		nvmChunk *found = NULL;
 		int err;
-		TX_BEGIN(pop_heap) {
+		BEGIN_TX
 			//nvmChunk **iterate  = &(pheap->nvmfreelist); //- eliminado
 
 			int shift = 0;
@@ -2710,17 +2731,18 @@ void *sysMalloc_persistent(int size){
 			if(have_remaining)
 				found->next = rem;
 
-			err = pmemobj_tx_add_range_direct(&(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace));
+			/*err = pmemobj_tx_add_range_direct(&(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace));
 			if (err) {
 				printf("11 ERROR %d: could not add range to transaction\n", err);
-			}
+			}*/
 			if(have_remaining)
 				pheap->nvmFreeSpace = pheap->nvmFreeSpace - nvmHeaderSize - shift - sizeof(nvmChunk);
 			else
 				pheap->nvmFreeSpace = pheap->nvmFreeSpace - found->chunkSize - sizeof(nvmChunk);
 			/* clear chunk */
 			memset(ret_addr, 0, found->chunkSize);
-		} TX_END
+		END_TX
+
 		return ret_addr;
 	}else
 		return sysMalloc(size);
@@ -2734,20 +2756,20 @@ void sysFree_persistent(void* addr){
 		BEGIN_TX
 		/*	chunk = ptr - header */
 		nvmChunk *toFree = (ptr-nvmHeaderSize);
-		if(!main_exited){
+		/*if(!main_exited){
 			err = pmemobj_tx_add_range_direct(&(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace));
 			if (err) {
 				printf("12 ERROR %d: could not add range to transaction\n", err);
 			}
-		}
+		}/*
 		pheap->nvmFreeSpace = pheap->nvmFreeSpace + toFree->chunkSize;
 		/* clear chunk */
-		if(!main_exited){
+		/*if(!main_exited){
 			err = pmemobj_tx_add_range_direct(toFree, toFree->chunkSize + nvmHeaderSize);
 			if (err) {
 				printf("13 ERROR %d: could not add range to transaction\n", err);
 			}
-		}
+		}*/
 		toFree->allocBit = 0;
 		memset(ptr, 0, toFree->chunkSize);
 		END_TX

@@ -1211,6 +1211,8 @@ void exitVM(int status) {
 
 	//End of Modification
 
+
+
     jamvm_exit(status);
 }
 
