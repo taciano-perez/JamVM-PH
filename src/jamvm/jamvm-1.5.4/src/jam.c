@@ -359,6 +359,11 @@ int resumeAllListeners(Object *system_loader)
 {
 	Class *op_runtime = findClassFromClassLoader("javax.op.OPRuntime", system_loader);
 	Class *vm_channel = findClassFromClassLoader("gnu.java.nio.VMChannel", system_loader);
+	Class *runtime = findSystemClass(SYMBOL(java_lang_Runtime));
+	//TODO FIX THIS
+	gcMemFree(runtime);
+	runtime = findSystemClass(SYMBOL(java_lang_Runtime));
+
 
     if(op_runtime != NULL)
         initClass(op_runtime);
@@ -386,6 +391,15 @@ int resumeAllListeners(Object *system_loader)
     if((mb = findMethod(vm_channel, SYMBOL(class_init), SYMBOL(___V))) != NULL)
          executeStaticMethod(vm_channel, mb);
 
+    if(runtime != NULL)
+    	initClass(runtime);
+
+	if(exceptionOccurred())
+			return FALSE;
+
+	if((mb = findMethod(runtime, SYMBOL(class_init), SYMBOL(___V))) != NULL)
+		 executeStaticMethod(runtime, mb);
+
     return TRUE;
 
 }
@@ -399,8 +413,7 @@ int main(int argc, char *argv[]) {
 	main_exited = FALSE;
 	pheap_created = FALSE;
 	first_ex = TRUE;
-	flag = FALSE;
-	flag2 = FALSE;
+	heap_range_added = FALSE;
 	tx_monitor = 0;
 	if(access( PATH, F_OK ) != -1)
 	{

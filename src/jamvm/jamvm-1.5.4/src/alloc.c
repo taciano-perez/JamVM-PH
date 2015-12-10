@@ -356,12 +356,12 @@ void *ph_malloc(int len) {
 	int n = (len+HEADER_SIZE+OBJECT_GRAIN-1)&~(OBJECT_GRAIN-1);
 	/* Grab the heap lock, hopefully without having to
 	   wait for it to avoid disabling suspension */
-	/*self = threadSelf();
+	self = threadSelf();
 	if(!tryLockVMLock(heap_lock, self)) {
 		disableSuspend(self);
 		lockVMLock(heap_lock, self);
 		enableSuspend(self);
-	}*/
+	}
 
 	/* Scan freelist looking for a chunk big enough to
 	   satisfy allocation request */
@@ -370,11 +370,10 @@ void *ph_malloc(int len) {
 
 	while(*(pheap->chunkpp)) {
 		uintptr_t len = (*(pheap->chunkpp))->header;
-		/*if(len >= n) {
-			if(tx_monitor && !flag){
-				printf("heaplog\n");
-				err = pmemobj_tx_add_range_direct(pheap->heapMem, HEAP_SIZE);
-				flag = TRUE;
+		if(len >= n) {
+			if(tx_monitor > 0 && !heap_range_added){
+				heap_range_added = TRUE;
+				/*err = pmemobj_tx_add_range_direct(pheap->heapMem, HEAP_SIZE);
 				if(err){
 					printf("heapMem found ERROR %d: could not add range to transaction\n", err);
 				}
@@ -389,9 +388,17 @@ void *ph_malloc(int len) {
 				err = pmemobj_tx_add_range_direct(pheap->nvmChunkpp, sizeof(nvmChunk*));
 				if(err){
 					printf("nvm found ERROR %d: could not add range to transaction\n", err);
+				}*/
+				err = pmemobj_tx_add_range_direct(&(pheap->heapfree), sizeof(pheap->heapfree));
+				if (err) {
+					printf("pheapheapfree ERROR %d: could not add range to transaction\n", err);
+				}
+				err = pmemobj_tx_add_range_direct(&(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace));
+				if (err) {
+					printf("nvmfreespace ERROR %d: could not add range to transaction\n", err);
 				}
 			}
-		}*/
+		}
 		if(len == n) {
 			found = *pheap->chunkpp;
 			*pheap->chunkpp = found->next;
@@ -422,12 +429,6 @@ void *ph_malloc(int len) {
 		printf("ERROR: could not find available space\n");
 	}
 
-	/*err = pmemobj_tx_add_range_direct(&(pheap->heapfree), sizeof(pheap->heapfree));
-
-	if (err) {
-		printf("pheapheapfree ERROR %d: could not add range to transaction\n", err);
-	}*/
-
 
 	pheap->heapfree -= n;
 
@@ -442,7 +443,7 @@ void *ph_malloc(int len) {
 
 	ret_addr = ((char*)found)+HEADER_SIZE;
 	memset(ret_addr, 0, n-HEADER_SIZE);
-	//unlockVMLock(heap_lock, self);
+	unlockVMLock(heap_lock, self);
 
 	END_TX
 	return ret_addr;
@@ -457,7 +458,7 @@ int initialiseRoot(InitArgs *args) {
 		heap_size = HEAP_SIZE;
 
 	if(access(PATH, F_OK) != 0) {
-		if ((pop_heap = pmemobj_create(PATH, POBJ_LAYOUT_NAME(HEAP_POOL), sizeof(PHeap)*6, 0666)) == NULL) {//8388608
+		if ((pop_heap = pmemobj_create(PATH, POBJ_LAYOUT_NAME(HEAP_POOL), sizeof(PHeap)*2, 0666)) == NULL) {//8388608
 			printf("failed to create pool\n");
 			printf("error msg:\t%s\n", pmem_errormsg());
 			return FALSE;
@@ -2721,20 +2722,12 @@ void *sysMalloc_persistent(int size){
 				pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
 			}
 
-			/*err = pmemobj_tx_add_range_direct(found, sizeof(nvmChunk) + n);
-			if (err) {
-				printf("10 ERROR %d: could not add range to transaction\n", err);
-			}*/
 			found->allocBit = 1;
 			found->chunkSize = n;
 
 			if(have_remaining)
 				found->next = rem;
 
-			/*err = pmemobj_tx_add_range_direct(&(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace));
-			if (err) {
-				printf("11 ERROR %d: could not add range to transaction\n", err);
-			}*/
 			if(have_remaining)
 				pheap->nvmFreeSpace = pheap->nvmFreeSpace - nvmHeaderSize - shift - sizeof(nvmChunk);
 			else

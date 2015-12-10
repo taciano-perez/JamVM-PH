@@ -1177,7 +1177,7 @@ void exitVM(int status) {
 	    // JaPHa Modification
 
 	    flushPHValues();
-	    printf("sizeof pheap: %lu\n", sizeof(PHeap)/1024);
+	    printf("sizeof pheap: %lu mb\n", sizeof(PHeap)/1024);
 	    printf("pool freespace: %lu\n", pheap->heapfree);
 	    printf("pool maxheap: %lu\n", pheap->maxHeap);
 	    printf("nvm currentsize: %u\n", pheap->nvmCurrentSize);
@@ -1206,12 +1206,10 @@ void exitVM(int status) {
 	//close the heap before ending the VM
 
 	if(persistent){
-		pmemobj_close(pop_heap);
+		//pmemobj_close(pop_heap);
 	}
 
 	//End of Modification
-
-
 
     jamvm_exit(status);
 }

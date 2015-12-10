@@ -699,10 +699,7 @@ uintptr_t *executeJava() {
                                               \
     NULL_POINTER_CHECK(array);                \
     ARRAY_BOUNDS_CHECK(array, idx);           \
-    int err = pmemobj_tx_add_range_direct(&(ARRAY_DATA(array, TYPE)[idx]), sizeof(val)); \
-    if (err && (!main_exited)) {              \
-		printf("array_store ERROR %d: could not add range to transaction\n", err); \
-	}                                         \
+    NVML_DIRECT("ARRAY_STORE",&(ARRAY_DATA(array, TYPE)[idx]),sizeof(val))\
     ARRAY_DATA(array, TYPE)[idx] = val;       \
     END_TX                                    \
     DISPATCH(0, 1);                           \
@@ -735,10 +732,7 @@ uintptr_t *executeJava() {
 
         if((obj != NULL) && !arrayStoreCheck(array->class, obj->class))
             THROW_EXCEPTION(java_lang_ArrayStoreException, NULL);
-        int err = pmemobj_tx_add_range_direct(&(ARRAY_DATA(array, Object*)[idx]), sizeof(obj));
-        if (err) {
-			printf("aastore ERROR %d: could not add range to transaction\n", err);
-		}
+        NVML_DIRECT("AASTORE", &(ARRAY_DATA(array, Object*)[idx]), sizeof(obj))
         ARRAY_DATA(array, Object*)[idx] = obj;
         END_TX
         DISPATCH(0, 1);
@@ -1235,6 +1229,7 @@ uintptr_t *executeJava() {
 			if(tx_monitor > 0) {
 				pmemobj_tx_end();
 				tx_monitor = 0;
+				heap_range_added = FALSE;
 			}
             BEGIN_TX
 		}
@@ -1985,10 +1980,7 @@ uintptr_t *executeJava() {
 
         ostack -= 3;
         NULL_POINTER_CHECK(obj);
-        int err = pmemobj_tx_add_range_direct(&(INST_DATA(obj, u8, SINGLE_INDEX(pc))), sizeof(u8));
-        if (err) {
-			printf("putfield2_quick ERROR %d: could not add range to transaction\n", err);
-		}
+        NVML_DIRECT("PUTFIELD2_QUICK",&(INST_DATA(obj, u8, SINGLE_INDEX(pc))),sizeof(u8))
         INST_DATA(obj, u8, SINGLE_INDEX(pc)) = *(u8*)&ostack[1];
         END_TX
         DISPATCH(0, 3);
@@ -2001,10 +1993,7 @@ uintptr_t *executeJava() {
                                                             \
         ostack -= 2;                                        \
         NULL_POINTER_CHECK(obj);                            \
-        int err = pmemobj_tx_add_range_direct(&(INST_DATA(obj, type, SINGLE_INDEX(pc))), sizeof(type)); \
-        if (err && (!main_exited)) {               		                    \
-			printf("putfield_quick ERROR %d: could not add range to transaction\n", err); \
-		}                                  			        \
+        NVML_DIRECT("PUTFIELD_QUICK",&(INST_DATA(obj, type, SINGLE_INDEX(pc))),sizeof(type))\
         INST_DATA(obj, type, SINGLE_INDEX(pc)) = ostack[1]; \
         END_TX												\
         DISPATCH(0, 3);                                     \

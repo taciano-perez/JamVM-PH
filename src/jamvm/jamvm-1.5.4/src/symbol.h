@@ -129,6 +129,7 @@ extern char *symbol_values[];
     action(java_lang_VMThread, "java/lang/VMThread"), \
     action(java_lang_Character, "java/lang/Character"), \
     action(java_lang_VMRuntime, "java/lang/VMRuntime"), \
+    action(java_lang_Runtime, "java/lang/Runtime"), \
     action(java_lang_Throwable, "java/lang/Throwable"), \
     action(java_lang_Cloneable, "java/lang/Cloneable"), \
     action(java_io_Serializable, "java/io/Serializable"), \

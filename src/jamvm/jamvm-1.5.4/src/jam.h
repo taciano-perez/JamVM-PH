@@ -1209,21 +1209,32 @@ POBJ_LAYOUT_BEGIN(HEAP_POOL);
 POBJ_LAYOUT_ROOT(HEAP_POOL, PHeap);
 POBJ_LAYOUT_END(HEAP_POOL);
 
+int tx_monitor, main_started, persistent, main_exited, pheap_created, errr, contX, contE, first_ex, heap_range_added;
+PMEMobjpool *pop_heap;
+PMEMoid root_heap;
+PHeap *pheap;
+PMEMmutex tx_mutex;
+
+#define NVML_DIRECT(TYPE, PTR, SIZE) if(errr = pmemobj_tx_add_range_direct(PTR, SIZE)){ \
+										printf("%s ERROR %d: could not add range to transaction\n", TYPE, errr); \
+									}
+
+
 #define BEGIN_TX if(tx_monitor == 0) { \
-					pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE); \
+					errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE); \
+					if(errr) \
+					{       \
+						printf("ERROR %d at BEGIN", errr); \
+					}       \
 				 } \
 				 tx_monitor++;
 
 #define END_TX   tx_monitor--; \
 				 if(tx_monitor == 0) { \
 					pmemobj_tx_end(); \
+					heap_range_added = FALSE;\
 				}
 
-PMEMobjpool *pop_heap;
-PMEMoid root_heap;
-PHeap *pheap;
-PMEMmutex tx_mutex;
-int tx_monitor, main_started, persistent, main_exited, pheap_created, errr, contX, contE, first_ex, flag, flag2;
 extern void flushPHValues();
 
 // End of modification
