@@ -359,11 +359,6 @@ int resumeAllListeners(Object *system_loader)
 {
 	Class *op_runtime = findClassFromClassLoader("javax.op.OPRuntime", system_loader);
 	Class *vm_channel = findClassFromClassLoader("gnu.java.nio.VMChannel", system_loader);
-	Class *runtime = findSystemClass(SYMBOL(java_lang_Runtime));
-	//TODO FIX THIS
-	gcMemFree(runtime);
-	runtime = findSystemClass(SYMBOL(java_lang_Runtime));
-
 
     if(op_runtime != NULL)
         initClass(op_runtime);
@@ -391,14 +386,17 @@ int resumeAllListeners(Object *system_loader)
     if((mb = findMethod(vm_channel, SYMBOL(class_init), SYMBOL(___V))) != NULL)
          executeStaticMethod(vm_channel, mb);
 
-    if(runtime != NULL)
-    	initClass(runtime);
+    // TODO FIX RUNTIME REINIT
+    //Class *runtime = findSystemClass(SYMBOL(java_lang_Runtime));
 
-	if(exceptionOccurred())
-			return FALSE;
+    //if(runtime != NULL)
+    	//initClass(runtime);
 
-	if((mb = findMethod(runtime, SYMBOL(class_init), SYMBOL(___V))) != NULL)
-		 executeStaticMethod(runtime, mb);
+	//if(exceptionOccurred())
+			//return FALSE;
+
+	//if((mb = findMethod(runtime, SYMBOL(class_init), SYMBOL(___V))) != NULL)
+		// executeStaticMethod(runtime, mb);
 
     return TRUE;
 
@@ -409,35 +407,31 @@ int main(int argc, char *argv[]) {
 	// JaPHa Modification
 
 	printf("Initialising JVM\n");
-	persistent = FALSE;
-	main_exited = FALSE;
-	pheap_created = FALSE;
+	persistent = main_started = main_exited = pheap_created = heap_range_added = tx_monitor = exit_vm = FALSE;
 	first_ex = TRUE;
-	heap_range_added = FALSE;
-	tx_monitor = 0;
-	if(access( PATH, F_OK ) != -1)
-	{
+
+	if(access(PATH, F_OK) != -1) {
 		first_ex = FALSE;
 	}
+
+	Class *array_class, *main_class;
+	Object *system_loader, *array;
+	MethodBlock *mb;
+	InitArgs args;
+	int class_arg;
+	char *cpntr;
+	int status;
 	int i;
+
     for(i = 0; i < argc; i++) {
  	   if(!strcmp(argv[i], "-persistentheap:heap.ph")) {
 		   persistent = TRUE;
-		   main_started = FALSE;
+		   //main_started = FALSE;
 		   break;
 	   }
     }
 
 	// End of modification
-
-    Class *array_class, *main_class;
-    Object *system_loader, *array;
-    MethodBlock *mb;
-    InitArgs args;
-    int class_arg;
-    char *cpntr;
-    int status;
-    //int i;
 
     log(INFO, "Entering JamVM Main");
     initialise_log_file();
@@ -463,8 +457,9 @@ int main(int argc, char *argv[]) {
 
     main_class = findClassFromClassLoader(argv[class_arg], system_loader);
 
-    if(main_class != NULL)
-        initClass(main_class);
+    if(main_class != NULL){
+    		initClass(main_class);
+    }
 
     if(exceptionOccurred())
         goto error;
@@ -491,6 +486,7 @@ int main(int argc, char *argv[]) {
         log(INFO, "Entering Java Main");
         printf("Entering Java Main \n");
         /* Call the main method */
+
         // JaPHa Modification
 
         if(i == argc) {
@@ -512,6 +508,7 @@ error:
     mainThreadWaitToExitVM();
 
     log(INFO, "Exit");
+    exit_vm = TRUE;
     exitVM(status);
 
    /* Keep the compiler happy */

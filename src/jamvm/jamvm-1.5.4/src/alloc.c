@@ -337,23 +337,24 @@ void dump_heap() {
 }
 
 void dump_nvm() {
-	printf("Free list: %p\n",  pheap->nvmfreelist);
-	printf("Free space: %p\n",  pheap->nvmFreeSpace);
-	printf("Nvm current size: %p\n",  pheap->nvmCurrentSize);
-	printf("Nvm limit: %p\n",  pheap->nvm_limit);
+	printf("Free list: %p\n", pheap->nvmfreelist);
+	printf("Free space: %p\n", pheap->nvmFreeSpace);
+	printf("Nvm current size: %p\n", pheap->nvmCurrentSize);
+	printf("Nvm limit: %p\n", pheap->nvm_limit);
 }
 
-void *ph_malloc(int len) {
+void *ph_malloc(int len2) {
 	uintptr_t largest;
 	Chunk *found;
 	Thread *self;
 	int err;
+	int have_remaining = 0;
 
 	/* See comment below */
 	char *ret_addr;
 
 	BEGIN_TX
-	int n = (len+HEADER_SIZE+OBJECT_GRAIN-1)&~(OBJECT_GRAIN-1);
+	int n = (len2+HEADER_SIZE+OBJECT_GRAIN-1)&~(OBJECT_GRAIN-1);
 	/* Grab the heap lock, hopefully without having to
 	   wait for it to avoid disabling suspension */
 	self = threadSelf();
@@ -367,38 +368,10 @@ void *ph_malloc(int len) {
 	   satisfy allocation request */
 	int has_found = FALSE;
 
-
+	//NVML_DIRECT("CHUNKPP", pheap->chunkpp, sizeof(Chunk*))
+	uintptr_t len;
 	while(*(pheap->chunkpp)) {
-		uintptr_t len = (*(pheap->chunkpp))->header;
-		if(len >= n) {
-			if(tx_monitor > 0 && !heap_range_added){
-				heap_range_added = TRUE;
-				/*err = pmemobj_tx_add_range_direct(pheap->heapMem, HEAP_SIZE);
-				if(err){
-					printf("heapMem found ERROR %d: could not add range to transaction\n", err);
-				}
-				err = pmemobj_tx_add_range_direct(pheap->chunkpp, sizeof(Chunk*));
-				if(err){
-					printf("chunkpp found ERROR %d: could not add range to transaction\n", err);
-				}
-				err = pmemobj_tx_add_range_direct(pheap->nvm, NVM_INIT_SIZE);
-				if(err){
-					printf("nvm found ERROR %d: could not add range to transaction\n", err);
-				}
-				err = pmemobj_tx_add_range_direct(pheap->nvmChunkpp, sizeof(nvmChunk*));
-				if(err){
-					printf("nvm found ERROR %d: could not add range to transaction\n", err);
-				}*/
-				err = pmemobj_tx_add_range_direct(&(pheap->heapfree), sizeof(pheap->heapfree));
-				if (err) {
-					printf("pheapheapfree ERROR %d: could not add range to transaction\n", err);
-				}
-				err = pmemobj_tx_add_range_direct(&(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace));
-				if (err) {
-					printf("nvmfreespace ERROR %d: could not add range to transaction\n", err);
-				}
-			}
-		}
+		/*uintptr_t */len = (*(pheap->chunkpp))->header;
 		if(len == n) {
 			found = *pheap->chunkpp;
 			*pheap->chunkpp = found->next;
@@ -415,6 +388,7 @@ void *ph_malloc(int len) {
 			/* Chain the remainder onto the freelist only
 			   if it's large enough to hold an object */
 			if(rem->header >= MIN_OBJECT_SIZE) {
+				have_remaining = 1;
 				rem->next = found->next;
 				*pheap->chunkpp = rem;
 			} else
@@ -429,11 +403,21 @@ void *ph_malloc(int len) {
 		printf("ERROR: could not find available space\n");
 	}
 
-
+	NVML_DIRECT("HEAPFREE", &(pheap->heapfree), sizeof(pheap->heapfree))
 	pheap->heapfree -= n;
 
 	/* Mark found chunk as allocated */
 	//(found, n + sizeof(Chunk));
+
+	/*if(have_remaining)
+	{
+		NVML_DIRECT("FOUND", found, HEADER_SIZE * 2  + n)
+	}
+	else
+	{
+		NVML_DIRECT("FOUND", found, HEADER_SIZE + n)
+	}*/
+
 	found->header = n | ALLOC_BIT;
 
 	/* Found is a block pointer - if we unlock now, small window
@@ -458,7 +442,7 @@ int initialiseRoot(InitArgs *args) {
 		heap_size = HEAP_SIZE;
 
 	if(access(PATH, F_OK) != 0) {
-		if ((pop_heap = pmemobj_create(PATH, POBJ_LAYOUT_NAME(HEAP_POOL), sizeof(PHeap)*2, 0666)) == NULL) {//8388608
+		if ((pop_heap = pmemobj_create(PATH, POBJ_LAYOUT_NAME(HEAP_POOL), sizeof(PHeap)*4, 0666)) == NULL) {//8388608
 			printf("failed to create pool\n");
 			printf("error msg:\t%s\n", pmem_errormsg());
 			return FALSE;
@@ -485,6 +469,7 @@ int initialiseRoot(InitArgs *args) {
 		pheap = (struct pheap*) pmemobj_direct(root_heap);
 		if(pheap->base_address != pheap)
 			printf("base addresses are different\n");
+		pheap->chunkpp = &(pheap->freelist);
 		}
 
 	pheap_created = TRUE;
@@ -515,16 +500,10 @@ void initialiseAlloc(InitArgs *args) {
 
 		if( access(PATH, F_OK ) != -1 ) {
 			file = TRUE;
-			first_ex = FALSE;
 		}
 
-		initialiseRoot(args);
-
-		printf("pheap initial pointer: %p\n", pheap);
-		printf("pool freespace: %d\n", pheap->heapfree);
-		printf("pool maxheap: %d\n", pheap->maxHeap);
-		printf("nvm currentsize: %d\n", pheap->nvmCurrentSize);
-		printf("nvm freespace: %d\n", pheap->nvmFreeSpace);
+		if(!initialiseRoot(args))
+			printf("Problem when creating/opening pool\n");
 
 		//End of modification
 
@@ -581,6 +560,12 @@ void initialiseAlloc(InitArgs *args) {
 			pheap->nvmChunkpp = &(pheap->nvmfreelist);
 		}
 	}
+
+	printf("pheap initial pointer: %p\n", pheap);
+	printf("pool freespace: %d\n", pheap->heapfree);
+	printf("pool maxheap: %d\n", pheap->maxHeap);
+	printf("nvm currentsize: %d\n", pheap->nvmCurrentSize);
+	printf("nvm freespace: %d\n", pheap->nvmFreeSpace);
 
 	TRACE_GC("Alloced heap size %p\n", heaplimit-heapbase);
 	allocMarkBits();
@@ -2069,7 +2054,7 @@ void set_has_finaliser_list(){
 	has_finaliser_size = ph_values->has_finaliser_size;
 	has_finaliser_list = sysMalloc(has_finaliser_size*sizeof(Object*));
     memcpy(has_finaliser_list, ph_values->has_finaliser_list, has_finaliser_size*sizeof(Object*));
-    sysFree_persistent(ph_values->has_finaliser_list);
+    //sysFree_persistent(ph_values->has_finaliser_list);
 }
 
 
@@ -2679,65 +2664,80 @@ void *sysMalloc_persistent(int size){
 		nvmChunk *found = NULL;
 		int err;
 		BEGIN_TX
-			//nvmChunk **iterate  = &(pheap->nvmfreelist); //- eliminado
+		//nvmChunk **iterate  = &(pheap->nvmfreelist); //- eliminado
 
-			int shift = 0;
+		int shift = 0;
 
-			while (*(pheap->nvmChunkpp)){
-				/*	search unallocated chunk		*/
-				if ((*(pheap->nvmChunkpp))->allocBit == 1){
-					pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
-					continue;
-				}
-				unsigned int len = (*(pheap->nvmChunkpp))->chunkSize;
-
-				if(len > n) {
-					found = *(pheap->nvmChunkpp);
-
-					/*	check if remaining space can hold a chunk		*/
-					if((int)(len - (nvmHeaderSize + n)) >= minSize) {
-						/*	ptr +	header	+ content = OK	*/
-						rem = ((char*)found + nvmHeaderSize + n);
-
-						have_remaining = TRUE;
-
-						if (shift = (unsigned int)rem & 0x3){
-							shift = (0x4 - shift);
-							memset(rem, 0 , shift);
-							rem = ((char*)rem + shift);
-						}
-						rem->allocBit = 0;
-						rem->chunkSize = len - (shift + nvmHeaderSize + n);
-						rem->next = found->next;
-					}
-					ret_addr = ((void*)found + nvmHeaderSize);
-					break;
-				}
-
-				if(len == n) {
-					found = *(pheap->nvmChunkpp);
-					ret_addr = ((void*)found + nvmHeaderSize);
-					break;
-				}
+		unsigned int len = 0;
+		//NVML_DIRECT("NVMCHUNKPP", pheap->nvmChunkpp, sizeof(nvmChunk*))
+		while (*(pheap->nvmChunkpp)){
+			/*	search unallocated chunk		*/
+			if ((*(pheap->nvmChunkpp))->allocBit == 1){
 				pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
+				continue;
+			}
+			len = (*(pheap->nvmChunkpp))->chunkSize;
+
+			if(len > n) {
+				found = *(pheap->nvmChunkpp);
+
+				/*	check if remaining space can hold a chunk		*/
+				if((int)(len - (nvmHeaderSize + n)) >= minSize) {
+					/*	ptr +	header	+ content = OK	*/
+					rem = ((char*)found + nvmHeaderSize + n);
+
+					have_remaining = TRUE;
+
+					if (shift = (unsigned int)rem & 0x3){
+						shift = (0x4 - shift);
+						memset(rem, 0 , shift);
+						rem = ((char*)rem + shift);
+					}
+					rem->allocBit = 0;
+					rem->chunkSize = len - (shift + nvmHeaderSize + n);
+					rem->next = found->next;
+				}
+				ret_addr = ((void*)found + nvmHeaderSize);
+				break;
 			}
 
-			found->allocBit = 1;
-			found->chunkSize = n;
+			if(len == n) {
+				found = *(pheap->nvmChunkpp);
+				ret_addr = ((void*)found + nvmHeaderSize);
+				break;
+			}
+			pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
+		}
 
-			if(have_remaining)
-				found->next = rem;
+		/*if(have_remaining)
+		{
+			NVML_DIRECT("FOUND", found, nvmHeaderSize * 2  + n)
+		}
+		else
+		{
+			NVML_DIRECT("FOUND", found, nvmHeaderSize + n)
+		}*/
 
-			if(have_remaining)
-				pheap->nvmFreeSpace = pheap->nvmFreeSpace - nvmHeaderSize - shift - sizeof(nvmChunk);
-			else
-				pheap->nvmFreeSpace = pheap->nvmFreeSpace - found->chunkSize - sizeof(nvmChunk);
-			/* clear chunk */
-			memset(ret_addr, 0, found->chunkSize);
+
+		found->allocBit = 1;
+		found->chunkSize = n;
+
+		if(have_remaining)
+			found->next = rem;
+
+		NVML_DIRECT("NVMFREESPACE", &(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace))
+
+		if(have_remaining)
+			pheap->nvmFreeSpace = pheap->nvmFreeSpace - nvmHeaderSize - shift - sizeof(nvmChunk);
+		else
+			pheap->nvmFreeSpace = pheap->nvmFreeSpace - found->chunkSize - sizeof(nvmChunk);
+		/* clear chunk */
+		memset(ret_addr, 0, found->chunkSize);
+
 		END_TX
 
 		return ret_addr;
-	}else
+	} else
 		return sysMalloc(size);
 }
 
@@ -2749,20 +2749,14 @@ void sysFree_persistent(void* addr){
 		BEGIN_TX
 		/*	chunk = ptr - header */
 		nvmChunk *toFree = (ptr-nvmHeaderSize);
-		/*if(!main_exited){
-			err = pmemobj_tx_add_range_direct(&(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace));
-			if (err) {
-				printf("12 ERROR %d: could not add range to transaction\n", err);
-			}
-		}/*
+
+
+		NVML_DIRECT("NVMFREESPACE", &(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace))
+
 		pheap->nvmFreeSpace = pheap->nvmFreeSpace + toFree->chunkSize;
-		/* clear chunk */
-		/*if(!main_exited){
-			err = pmemobj_tx_add_range_direct(toFree, toFree->chunkSize + nvmHeaderSize);
-			if (err) {
-				printf("13 ERROR %d: could not add range to transaction\n", err);
-			}
-		}*/
+
+		NVML_DIRECT("TOFREE", toFree, toFree->chunkSize + nvmHeaderSize)
+
 		toFree->allocBit = 0;
 		memset(ptr, 0, toFree->chunkSize);
 		END_TX

@@ -1205,8 +1205,8 @@ void exitVM(int status) {
 	//JaPHa Modification
 	//close the heap before ending the VM
 
-	if(persistent){
-		//pmemobj_close(pop_heap);
+	if(persistent) {
+		pmemobj_close(pop_heap);
 	}
 
 	//End of Modification

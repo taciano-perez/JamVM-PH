@@ -336,9 +336,10 @@ uintptr_t *executeJava() {
     )                                                      \
                                                            \
     DEF_OPC(OPC_PUTSTATIC_QUICK##suffix, level,            \
-		if(pheap_created && tx_monitor > 0){               \
-			pmemobj_tx_add_range_direct(RESOLVED_FIELD(pc),sizeof(FieldBlock));\
-		}                                              	   \
+		BEGIN_TX                                           \
+		NVML_DIRECT("PUTSTATICQ",                          \
+		RESOLVED_FIELD(pc), sizeof(FieldBlock));           \
+		END_TX                                         	   \
         POP_##level(*(type*)                               \
            (RESOLVED_FIELD(pc)->u.static_value.data), 3);  \
     )                                                      \
@@ -1225,14 +1226,8 @@ uintptr_t *executeJava() {
         NULL_POINTER_CHECK(obj);
         objectLock(obj);
 		// JaPHa Modification
-		if(persistent) {
-			if(tx_monitor > 0) {
-				pmemobj_tx_end();
-				tx_monitor = 0;
-				heap_range_added = FALSE;
-			}
-            BEGIN_TX
-		}
+		if(persistent)
+			pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE);
 		// End of modification
         DISPATCH(0, 1);
     })
@@ -1243,7 +1238,8 @@ uintptr_t *executeJava() {
         objectUnlock(obj);
 		// JaPHa Modification
 		if(persistent) {
-            END_TX
+			pmemobj_tx_process();
+			pmemobj_tx_end();
 		}
 		// End of modification
         DISPATCH(0, 1);
