@@ -34,6 +34,75 @@
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
 
+//JaPHa Modification
+
+#define findHashEntry_utf8(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)\
+{                                                                                  \
+	BEGIN_TX                                                                       \
+    int hash = HASH(ptr);                                                          \
+    int i;                                                                         \
+                                                                                   \
+    Thread *self;                                                                  \
+    if(locked) {                                                                   \
+        self = threadSelf();                                                       \
+        lockHashTable0(&table, self);                                              \
+    }                                                                              \
+                                                                                   \
+    i = hash & (table.hash_size - 1);                                              \
+                                                                                   \
+    for(;;) {                                                                      \
+        ptr2 = table.hash_table[i].data;                                           \
+        if((ptr2 == NULL) || (COMPARE(ptr, ptr2, hash, table.hash_table[i].hash))) \
+            break;                                                                 \
+                                                                                   \
+        i = (i+1) & (table.hash_size - 1);                                         \
+    }                                                                              \
+                                                                                   \
+    if(ptr2) {                                                                     \
+        ptr2 = FOUND(ptr, ptr2);                                                   \
+    } else                                                                         \
+        if(add_if_absent) {                                                        \
+        	NVML_DIRECT("HASHTABLE", &(table.hash_table[i]), sizeof(HashEntry))    \
+            table.hash_table[i].hash = hash;                                       \
+            ptr2 = table.hash_table[i].data = PREPARE(ptr);                        \
+                                                                                   \
+            if(ptr2) {                                                             \
+                table.hash_count++;                                                \
+                if((table.hash_count * 4) > (table.hash_size * 3)) {               \
+                    int new_size;                                                  \
+                    if(scavenge) {                                                 \
+                        HashEntry *entry = table.hash_table;                       \
+                        int cnt = table.hash_count;                                \
+                        for(; cnt; entry++) {                                      \
+                            void *data = entry->data;                              \
+                            if(data) {                                             \
+                                if(SCAVENGE(data)) {                               \
+                                    entry->data = NULL;                            \
+                                    table.hash_count--;                            \
+                                }                                                  \
+                                cnt--;                                             \
+                            }                                                      \
+                        }                                                          \
+                        if((table.hash_count * 3) > (table.hash_size * 2))         \
+                            new_size = table.hash_size*2;                          \
+                        else                                                       \
+                            new_size = table.hash_size;                            \
+                    } else                                                         \
+                        new_size = table.hash_size*2;                              \
+                                                                                   \
+                    resizeHash(&table, new_size, name, create_file);               \
+                }                                                                  \
+            }                                                                      \
+        }                                                                          \
+                                                                                   \
+    if(locked)                                                                     \
+        unlockHashTable0(&table, self);                                            \
+    END_TX                                                                         \
+}
+
+//End of Modification
+
+
 static HashTable hash_table;
 
 /*XXX NVM VARIABLES - UTF8.C */
@@ -102,7 +171,7 @@ char *findHashedUtf8(char *string, int add_if_absent) {
     char *interned = NULL;
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.008  */
-   		findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
+   		findHashEntry_utf8(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
    	return interned;
 }
 

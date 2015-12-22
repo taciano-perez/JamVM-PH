@@ -92,6 +92,74 @@ static int testing_mode = FALSE;
     res;                                                        \
 })
 
+//JaPHa Modification
+
+#define findHashEntry_mon(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)\
+{                                                                                  \
+	BEGIN_TX                                                                       \
+    int hash = HASH(ptr);                                                          \
+    int i;                                                                         \
+                                                                                   \
+    Thread *self;                                                                  \
+    if(locked) {                                                                   \
+        self = threadSelf();                                                       \
+        lockHashTable0(&table, self);                                              \
+    }                                                                              \
+                                                                                   \
+    i = hash & (table.hash_size - 1);                                              \
+                                                                                   \
+    for(;;) {                                                                      \
+        ptr2 = table.hash_table[i].data;                                           \
+        if((ptr2 == NULL) || (COMPARE(ptr, ptr2, hash, table.hash_table[i].hash))) \
+            break;                                                                 \
+                                                                                   \
+        i = (i+1) & (table.hash_size - 1);                                         \
+    }                                                                              \
+                                                                                   \
+    if(ptr2) {                                                                     \
+        ptr2 = FOUND(ptr, ptr2);                                                   \
+    } else                                                                         \
+        if(add_if_absent) {                                                        \
+        	NVML_DIRECT("HASHTABLE", &(table.hash_table[i]), sizeof(HashEntry))    \
+            table.hash_table[i].hash = hash;                                       \
+            ptr2 = table.hash_table[i].data = PREPARE(ptr);                        \
+                                                                                   \
+            if(ptr2) {                                                             \
+                table.hash_count++;                                                \
+                if((table.hash_count * 4) > (table.hash_size * 3)) {               \
+                    int new_size;                                                  \
+                    if(scavenge) {                                                 \
+                        HashEntry *entry = table.hash_table;                       \
+                        int cnt = table.hash_count;                                \
+                        for(; cnt; entry++) {                                      \
+                            void *data = entry->data;                              \
+                            if(data) {                                             \
+                                if(SCAVENGE(data)) {                               \
+                                    entry->data = NULL;                            \
+                                    table.hash_count--;                            \
+                                }                                                  \
+                                cnt--;                                             \
+                            }                                                      \
+                        }                                                          \
+                        if((table.hash_count * 3) > (table.hash_size * 2))         \
+                            new_size = table.hash_size*2;                          \
+                        else                                                       \
+                            new_size = table.hash_size;                            \
+                    } else                                                         \
+                        new_size = table.hash_size*2;                              \
+                                                                                   \
+                    resizeHash(&table, new_size, name, create_file);               \
+                }                                                                  \
+            }                                                                      \
+        }                                                                          \
+                                                                                   \
+    if(locked)                                                                     \
+        unlockHashTable0(&table, self);                                            \
+    END_TX                                                                         \
+}
+
+//End of Modification
+
 static Monitor *mon_free_list = NULL;
 static HashTable mon_cache;
 
@@ -332,7 +400,7 @@ Monitor *findMonitor(Object *obj) {
         Monitor *mon;
         /* Add if absent, scavenge, locked */
         /* XXX NVM CHANGE 006.003.012  */
-        findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
+        findHashEntry_mon(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
         return mon;
     }
 }
@@ -566,7 +634,7 @@ void initialiseMonitor(InitArgs *args) {
 	}
     /* Init hash table, create lock */
     /* XXX NVM CHANGE 005.001.006 - Monitors HT - N*/
-    initHashTable(mon_cache, HASHTABSZE, TRUE, monitor_name, FALSE);
+    initHashTable(mon_cache, HASHTABSZE, TRUE, monitor_name, TRUE);
 }
 
 /* Heap compaction support */

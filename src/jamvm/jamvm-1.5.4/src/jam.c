@@ -353,7 +353,10 @@ exit:
     exit(status);
 }
 
-
+void doTest() {
+	int x = 0;
+	x= x+1;
+}
 
 int resumeAllListeners(Object *system_loader)
 {

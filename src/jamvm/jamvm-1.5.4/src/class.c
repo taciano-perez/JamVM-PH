@@ -120,10 +120,153 @@ static Class *prim_classes[MAX_PRIM_CLASSES];
    we'll get an abstract method error. */
 static char abstract_method[] = {OPC_ABSTRACT_METHOD_ERROR};
 
+//JaPHa Modification
+#define HASH(ptr) utf8Hash(CLASS_CB((Class *)ptr)->name)
+#define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2) && \
+            CLASS_CB((Class *)ptr1)->name == CLASS_CB((Class *)ptr2)->name
+
+#define findHashEntry_PH(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)\
+{                                                                                  \
+	BEGIN_TX                                                                       \
+    int hash = HASH(ptr);                                                          \
+    int i;                                                                         \
+                                                                                   \
+    Thread *self;                                                                  \
+    if(locked) {                                                                   \
+        self = threadSelf();                                                       \
+        lockHashTable0(&table, self);                                              \
+    }                                                                              \
+                                                                                   \
+    i = hash & (table.hash_size - 1);                                              \
+                                                                                   \
+    for(;;) {                                                                      \
+        ptr2 = table.hash_table[i].data;                                           \
+        if((ptr2 == NULL) || (COMPARE(ptr, ptr2, hash, table.hash_table[i].hash))) \
+            break;                                                                 \
+                                                                                   \
+        i = (i+1) & (table.hash_size - 1);                                         \
+    }                                                                              \
+                                                                                   \
+    if(ptr2) {                                                                     \
+        ptr2 = FOUND(ptr, ptr2);                                                   \
+    } else                                                                         \
+        if(add_if_absent) {                                                        \
+        	NVML_DIRECT("HASHTABLE", &(table.hash_table[i]), sizeof(HashEntry))    \
+            table.hash_table[i].hash = hash;                                       \
+            ptr2 = table.hash_table[i].data = PREPARE(ptr);                        \
+                                                                                   \
+            if(ptr2) {                                                             \
+                table.hash_count++;                                                \
+                if((table.hash_count * 4) > (table.hash_size * 3)) {               \
+                    int new_size;                                                  \
+                    if(scavenge) {                                                 \
+                        HashEntry *entry = table.hash_table;                       \
+                        int cnt = table.hash_count;                                \
+                        for(; cnt; entry++) {                                      \
+                            void *data = entry->data;                              \
+                            if(data) {                                             \
+                                if(SCAVENGE(data)) {                               \
+                                    entry->data = NULL;                            \
+                                    table.hash_count--;                            \
+                                }                                                  \
+                                cnt--;                                             \
+                            }                                                      \
+                        }                                                          \
+                        if((table.hash_count * 3) > (table.hash_size * 2))         \
+                            new_size = table.hash_size*2;                          \
+                        else                                                       \
+                            new_size = table.hash_size;                            \
+                    } else                                                         \
+                        new_size = table.hash_size*2;                              \
+                                                                                   \
+                    resizeHash(&table, new_size, name, create_file);               \
+                }                                                                  \
+            }                                                                      \
+        }                                                                          \
+                                                                                   \
+    if(locked)                                                                     \
+        unlockHashTable0(&table, self);                                            \
+    END_TX                                                                         \
+}
+
+#undef HASH
+#undef COMPARE
+#define HASH(ptr) utf8Hash(((PackageEntry*)ptr)->name)
+#define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2 && \
+            utf8Comp(((PackageEntry*)ptr1)->name, ((PackageEntry*)ptr2)->name))
+
+#define findHashEntry_bp(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)\
+{                                                                                  \
+	BEGIN_TX                                                                       \
+    int hash = HASH(ptr);                                                          \
+    int i;                                                                         \
+                                                                                   \
+    Thread *self;                                                                  \
+    if(locked) {                                                                   \
+        self = threadSelf();                                                       \
+        lockHashTable0(&table, self);                                              \
+    }                                                                              \
+                                                                                   \
+    i = hash & (table.hash_size - 1);                                              \
+                                                                                   \
+    for(;;) {                                                                      \
+        ptr2 = table.hash_table[i].data;                                           \
+        if((ptr2 == NULL) || (COMPARE(ptr, ptr2, hash, table.hash_table[i].hash))) \
+            break;                                                                 \
+                                                                                   \
+        i = (i+1) & (table.hash_size - 1);                                         \
+    }                                                                              \
+                                                                                   \
+    if(ptr2) {                                                                     \
+        ptr2 = FOUND(ptr, ptr2);                                                   \
+    } else                                                                         \
+        if(add_if_absent) {                                                        \
+        	NVML_DIRECT("HASHTABLE", &(table.hash_table[i]), sizeof(HashEntry))    \
+            table.hash_table[i].hash = hash;                                       \
+            ptr2 = table.hash_table[i].data = PREPARE(ptr);                        \
+                                                                                   \
+            if(ptr2) {                                                             \
+                table.hash_count++;                                                \
+                if((table.hash_count * 4) > (table.hash_size * 3)) {               \
+                    int new_size;                                                  \
+                    if(scavenge) {                                                 \
+                        HashEntry *entry = table.hash_table;                       \
+                        int cnt = table.hash_count;                                \
+                        for(; cnt; entry++) {                                      \
+                            void *data = entry->data;                              \
+                            if(data) {                                             \
+                                if(SCAVENGE(data)) {                               \
+                                    entry->data = NULL;                            \
+                                    table.hash_count--;                            \
+                                }                                                  \
+                                cnt--;                                             \
+                            }                                                      \
+                        }                                                          \
+                        if((table.hash_count * 3) > (table.hash_size * 2))         \
+                            new_size = table.hash_size*2;                          \
+                        else                                                       \
+                            new_size = table.hash_size;                            \
+                    } else                                                         \
+                        new_size = table.hash_size*2;                              \
+                                                                                   \
+                    resizeHash(&table, new_size, name, create_file);               \
+                }                                                                  \
+            }                                                                      \
+        }                                                                          \
+                                                                                   \
+    if(locked)                                                                     \
+        unlockHashTable0(&table, self);                                            \
+    END_TX                                                                         \
+}
+
+//End of Modification
+
 static Class *addClassToHash(Class *class, Object *class_loader) {
     HashTable *table;
     Class *entry;
 
+#undef HASH
+#undef COMPARE
 #define HASH(ptr) utf8Hash(CLASS_CB((Class *)ptr)->name)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (hash1 == hash2) && \
             CLASS_CB((Class *)ptr1)->name == CLASS_CB((Class *)ptr2)->name
@@ -152,8 +295,6 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                 }
                 /* XXX NVM CHANGE 005.001.001 - Classes HT - Y*/
                 initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
-                /* XXX NVM CHANGE 007.000.001 */
-                first_ex = FALSE;
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
@@ -169,9 +310,9 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.001  */
     if ((unsigned long)table == (unsigned long)&boot_classes){
-    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
+    	findHashEntry_PH((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
     }else{
-    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, class_name, TRUE );
+    	findHashEntry_PH((*table), class, entry, TRUE, FALSE, TRUE, class_name, TRUE );
     	class_HC = table->hash_count;
     }
 
@@ -1380,7 +1521,7 @@ void defineBootPackage(char *classname, int index) {
 
         /* Add if absent, no scavenge, locked */
         /* XXX NVM CHANGE 006.003.002  */
-        findHashEntry(boot_packages, package, hashed, TRUE, FALSE, TRUE, bootp_name, TRUE);
+        findHashEntry_bp(boot_packages, package, hashed, TRUE, FALSE, TRUE, bootp_name, TRUE);
 
         if(package != hashed)
             sysFree(package);
@@ -1553,20 +1694,6 @@ Class *findPrimitiveClass(char prim_type) {
 }
 
 Class *findNonArrayClassFromClassLoader(char *classname, Object *loader) {
-    /* XXX NVM CHANGE 007.000.000 - FIRST_EX FLAG
-     * Had to ensure that hash table is not created twice during executions and
-     * that it can be used on second execution in persistent mode
-     */
-
-	if( (is_persistent) && (first_ex == FALSE)){
-		Object *vmdata = INST_DATA(loader, Object*, ldr_vmdata_offset);
-		HashTable *table = (HashTable*)pheap->classes_ht;
-        initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
-        OPC *ph_value = get_opc_ptr();
-        table->hash_count = ph_value->classes_hash_count;
-	}
-
-
     Class *class = findHashedClass(classname, loader);
 
     if(class == NULL) {

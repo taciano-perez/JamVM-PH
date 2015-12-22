@@ -242,8 +242,6 @@ void reloadDlls(InitArgs *args){
 	ssize_t read;
 
 	if((args->persistent_heap) && (access("dlls.txt", F_OK) != -1 ) ){
-		/* XXX NVM CHANGE 007.000.002 */
-		first_ex = FALSE;
 		fp = fopen("dlls.txt", "r+");
 		if (fp == NULL)
 			exit(EXIT_FAILURE);

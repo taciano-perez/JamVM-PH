@@ -403,18 +403,16 @@ void *ph_malloc(int len2) {
 		printf("ERROR: could not find available space\n");
 	}
 
-	NVML_DIRECT("HEAPFREE", &(pheap->heapfree), sizeof(pheap->heapfree))
+	//NVML_DIRECT("HEAPFREE", &(pheap->heapfree), sizeof(pheap->heapfree))
 	pheap->heapfree -= n;
 
 	/* Mark found chunk as allocated */
 	//(found, n + sizeof(Chunk));
 
-	/*if(have_remaining)
-	{
-		NVML_DIRECT("FOUND", found, HEADER_SIZE * 2  + n)
+	/*if(have_remaining) {
+		NVML_DIRECT("FOUND", found, HEADER_SIZE + n)
 	}
-	else
-	{
+	else {
 		NVML_DIRECT("FOUND", found, HEADER_SIZE + n)
 	}*/
 
@@ -467,9 +465,13 @@ int initialiseRoot(InitArgs *args) {
 		}
 		root_heap = pmemobj_root(pop_heap, heap_size);
 		pheap = (struct pheap*) pmemobj_direct(root_heap);
-		if(pheap->base_address != pheap)
+		if(pheap->base_address != pheap) {
 			printf("base addresses are different\n");
-		pheap->chunkpp = &(pheap->freelist);
+			printf("pheap %p\n", pheap);
+			printf("pheap->base_address %p\n", pheap->base_address);
+			pmemobj_close(pop_heap);
+			exit(-1);
+			}
 		}
 
 	pheap_created = TRUE;
@@ -2526,6 +2528,9 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 		if(!strcmp(name,"classes_ht")){
 			return pheap->classes_ht;
 		}
+		if(!strcmp(name,"monitor_ht")){
+			return pheap->monitor_ht;
+		}
 
 		unsigned long buffer[1];
 		size = size + sizeof(unsigned long);
@@ -2669,7 +2674,7 @@ void *sysMalloc_persistent(int size){
 		int shift = 0;
 
 		unsigned int len = 0;
-		//NVML_DIRECT("NVMCHUNKPP", pheap->nvmChunkpp, sizeof(nvmChunk*))
+		NVML_DIRECT("NVMCHUNKPP", pheap->nvmChunkpp, sizeof(nvmChunk*))
 		while (*(pheap->nvmChunkpp)){
 			/*	search unallocated chunk		*/
 			if ((*(pheap->nvmChunkpp))->allocBit == 1){
@@ -2709,15 +2714,12 @@ void *sysMalloc_persistent(int size){
 			pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
 		}
 
-		/*if(have_remaining)
-		{
+		if(have_remaining) {
 			NVML_DIRECT("FOUND", found, nvmHeaderSize * 2  + n)
 		}
-		else
-		{
+		else {
 			NVML_DIRECT("FOUND", found, nvmHeaderSize + n)
-		}*/
-
+		}
 
 		found->allocBit = 1;
 		found->chunkSize = n;

@@ -34,6 +34,70 @@
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
 
+#define findHashEntry_string(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)\
+{                                                                                  \
+	BEGIN_TX                                                                       \
+    int hash = HASH(ptr);                                                          \
+    int i;                                                                         \
+                                                                                   \
+    Thread *self;                                                                  \
+    if(locked) {                                                                   \
+        self = threadSelf();                                                       \
+        lockHashTable0(&table, self);                                              \
+    }                                                                              \
+                                                                                   \
+    i = hash & (table.hash_size - 1);                                              \
+                                                                                   \
+    for(;;) {                                                                      \
+        ptr2 = table.hash_table[i].data;                                           \
+        if((ptr2 == NULL) || (COMPARE(ptr, ptr2, hash, table.hash_table[i].hash))) \
+            break;                                                                 \
+                                                                                   \
+        i = (i+1) & (table.hash_size - 1);                                         \
+    }                                                                              \
+                                                                                   \
+    if(ptr2) {                                                                     \
+        ptr2 = FOUND(ptr, ptr2);                                                   \
+    } else                                                                         \
+        if(add_if_absent) {                                                        \
+        	NVML_DIRECT("HASHTABLE", &(table.hash_table[i]), sizeof(HashEntry))    \
+            table.hash_table[i].hash = hash;                                       \
+            ptr2 = table.hash_table[i].data = PREPARE(ptr);                        \
+                                                                                   \
+            if(ptr2) {                                                             \
+                table.hash_count++;                                                \
+                if((table.hash_count * 4) > (table.hash_size * 3)) {               \
+                    int new_size;                                                  \
+                    if(scavenge) {                                                 \
+                        HashEntry *entry = table.hash_table;                       \
+                        int cnt = table.hash_count;                                \
+                        for(; cnt; entry++) {                                      \
+                            void *data = entry->data;                              \
+                            if(data) {                                             \
+                                if(SCAVENGE(data)) {                               \
+                                    entry->data = NULL;                            \
+                                    table.hash_count--;                            \
+                                }                                                  \
+                                cnt--;                                             \
+                            }                                                      \
+                        }                                                          \
+                        if((table.hash_count * 3) > (table.hash_size * 2))         \
+                            new_size = table.hash_size*2;                          \
+                        else                                                       \
+                            new_size = table.hash_size;                            \
+                    } else                                                         \
+                        new_size = table.hash_size*2;                              \
+                                                                                   \
+                    resizeHash(&table, new_size, name, create_file);               \
+                }                                                                  \
+            }                                                                      \
+        }                                                                          \
+                                                                                   \
+    if(locked)                                                                     \
+        unlockHashTable0(&table, self);                                            \
+    END_TX                                                                         \
+}
+
 static Class *string_class;
 static int count_offset; 
 static int value_offset;
@@ -102,7 +166,7 @@ Object *findInternedString(Object *string) {
     Object *interned;
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.007  */
-    findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, string_name, TRUE);
+    findHashEntry_string(hash_table, string, interned, TRUE, FALSE, TRUE, string_name, TRUE);
 
     return interned;
 }
