@@ -152,6 +152,8 @@ ExecEnv *getExecEnv() {
 // JaPHa Modification
 void flushPHValues() {
 }
+
+void doTest(){}
 // End of modification
 
 void exitVM(int status) {
