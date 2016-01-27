@@ -36,13 +36,13 @@
 #include "arch.h"
 
 // JaPHa Modification
-
 #include <unistd.h>
 #include <libpmemobj.h>
 
 #define PATH "/mnt/pmfs/HEAP_POOL"
+//#define PATH "heap_local"
 #define HEAP_SIZE 3000000
-
+#define PHEAP_SIZE sizeof(PHeap)*4
 // End of modification
 
 #ifndef TRUE
@@ -795,11 +795,11 @@ typedef struct opc {
 
 /* Alloc */
 
-//JaPHa Modification
+// JaPHa Modification
 // created heap structure that contains the old nvm structure and the persistent hashtables,
 // reallocation of the Chunk and nvmChunk structures from the alloc.c to here
 
-#define NVM_INIT_SIZE 	2500000
+#define NVM_INIT_SIZE 	2500000*8
 
 /* Format of an unallocated chunk */
 typedef struct chunk {
@@ -807,11 +807,11 @@ typedef struct chunk {
 	struct chunk *next;
 } Chunk;
 
-typedef struct nvmChunk{
+typedef struct nvmChunk {
 	int allocBit;
 	unsigned int chunkSize;
 	struct nvmChunk *next;
-}nvmChunk;
+} nvmChunk;
 
 typedef struct pheap {
 	void *base_address;
@@ -835,14 +835,13 @@ typedef struct pheap {
 	char* classes_ht[8200];
 	char* monitor_ht[528];
 	char nvm[NVM_INIT_SIZE];
-	char heapMem[HEAP_SIZE]; // heap contents
-}PHeap;
+	char heapMem[HEAP_SIZE];// heap contents
+} PHeap;
 
 extern void dump_heap();
 extern void* ph_malloc(int len);
 extern int initialiseRoot(InitArgs *args);
-
-//End of Modification
+// End of modification
 
 extern void initialiseAlloc(InitArgs *args);
 extern void initialiseGC(InitArgs *args);
@@ -1210,7 +1209,7 @@ POBJ_LAYOUT_BEGIN(HEAP_POOL);
 POBJ_LAYOUT_ROOT(HEAP_POOL, PHeap);
 POBJ_LAYOUT_END(HEAP_POOL);
 
-int tx_monitor, main_started, persistent, main_exited, pheap_created, errr, contX, contE, first_ex, exit_vm, heap_range_added, check_classloader;
+int persistent, tx_monitor, main_started, main_exited, pheap_created, errr, contX, contE, first_ex, exit_vm, heap_range_added, check_classloader;
 PMEMobjpool *pop_heap;
 PMEMoid root_heap;
 PHeap *pheap;
@@ -1222,18 +1221,20 @@ PMEMmutex tx_mutex;
 										} \
 									}
 
+#define BEGIN_TX(TYPE) if(errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE)) \
+					printf("ERROR %d at BEGIN\n", errr); \
+						/*else \
+							printf("%s BEGIN TX\n", TYPE); */\
 
-#define BEGIN_TX errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE); \
-					if(errr) \
-						printf("ERROR %d at BEGIN", errr);
-
-#define END_TX  if(pmemobj_tx_stage() == TX_STAGE_WORK)\
-					pmemobj_tx_process();\
-				if(pmemobj_tx_stage() != TX_STAGE_NONE)\
-					pmemobj_tx_end();
+#define END_TX(TYPE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
+					flushPHValues(); \
+					pmemobj_tx_process(); \
+				} \
+				if(pmemobj_tx_stage() != TX_STAGE_NONE) { \
+					pmemobj_tx_end(); \
+					/*printf("%s END TX\n", TYPE); */\
+				}
 
 extern void flushPHValues();
-
-extern void doTest();
-
+extern void checkPoolAddress(int *ptr);
 // End of modification

@@ -96,6 +96,9 @@ void initVM(InitArgs *args) {
     initialiseThreadStage2(args);
     initialiseGC(args);
 
+    //END FINALIZATION TX
+    END_TX("INITVM")
+
     VM_initing = FALSE;
 }
 

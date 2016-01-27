@@ -244,6 +244,7 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
 		} else if (strncmp(argv[i], "-persistentheap:", 16) == 0) {
 			args->persistent_heap = TRUE;
 			args->heap_file = argv[i] + 16;
+			persistent = TRUE;
 
 		} else if (strncmp(argv[i], "-testingmode", 12) == 0) {
 			args->testing_mode = TRUE;
@@ -353,10 +354,7 @@ exit:
     exit(status);
 }
 
-void doTest() {
-	int x = 0;
-	x= x+1;
-}
+
 
 int resumeAllListeners(Object *system_loader)
 {
@@ -389,6 +387,7 @@ int resumeAllListeners(Object *system_loader)
     if((mb = findMethod(vm_channel, SYMBOL(class_init), SYMBOL(___V))) != NULL)
          executeStaticMethod(vm_channel, mb);
 
+	// JaPHa Modification
     // TODO FIX RUNTIME REINIT
     //Class *runtime = findSystemClass(SYMBOL(java_lang_Runtime));
 
@@ -400,6 +399,7 @@ int resumeAllListeners(Object *system_loader)
 
 	//if((mb = findMethod(runtime, SYMBOL(class_init), SYMBOL(___V))) != NULL)
 		// executeStaticMethod(runtime, mb);
+	// End of modification
 
     return TRUE;
 
@@ -407,34 +407,25 @@ int resumeAllListeners(Object *system_loader)
 
 int main(int argc, char *argv[]) {
 
-	// JaPHa Modification
-
 	printf("Initialising JVM\n");
+
+	// JaPHa Modification
 	persistent = main_started = main_exited = pheap_created = heap_range_added = tx_monitor = exit_vm = FALSE;
 	first_ex = TRUE;
 
 	if(access(PATH, F_OK) != -1) {
 		first_ex = FALSE;
 	}
-
-	Class *array_class, *main_class;
-	Object *system_loader, *array;
-	MethodBlock *mb;
-	InitArgs args;
-	int class_arg;
-	char *cpntr;
-	int status;
-	int i;
-
-    for(i = 0; i < argc; i++) {
- 	   if(!strcmp(argv[i], "-persistentheap:heap.ph")) {
-		   persistent = TRUE;
-		   //main_started = FALSE;
-		   break;
-	   }
-    }
-
 	// End of modification
+
+    Class *array_class, *main_class;
+    Object *system_loader, *array;
+    MethodBlock *mb;
+    InitArgs args;
+    int class_arg;
+    char *cpntr;
+    int status;
+    int i;
 
     log(INFO, "Entering JamVM Main");
     initialise_log_file();
@@ -445,7 +436,10 @@ int main(int argc, char *argv[]) {
 
     args.main_stack_base = &array_class;
     initVM(&args);
+
+	// JaPHa Modification
     printf("JVM Initialized\n");
+	// End of modification
 
     if ((system_loader = getSystemClassLoader()) == NULL)
     	goto error;
@@ -460,9 +454,8 @@ int main(int argc, char *argv[]) {
 
     main_class = findClassFromClassLoader(argv[class_arg], system_loader);
 
-    if(main_class != NULL){
-    		initClass(main_class);
-    }
+    if(main_class != NULL)
+        initClass(main_class);
 
     if(exceptionOccurred())
         goto error;
@@ -488,17 +481,18 @@ int main(int argc, char *argv[]) {
 
         log(INFO, "Entering Java Main");
         printf("Entering Java Main \n");
+
         /* Call the main method */
 
         // JaPHa Modification
-
-        if(i == argc) {
+        if(i == argc)
+		{
             if(persistent)
                 main_started = TRUE;
             executeStaticMethod(main_class, mb, array);
         }
-
         // End of modification
+
     }
 
 error:

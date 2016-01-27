@@ -57,7 +57,7 @@ uintptr_t *executeJava() {
        state.  These are common to all interpreter
        variants */
     uintptr_t *arg1;
-    CodePntr pc;
+    register CodePntr pc;
     ExecEnv *ee = getExecEnv();
     Frame *frame = ee->last_frame;
     register uintptr_t *lvars = frame->lvars;
@@ -328,6 +328,7 @@ uintptr_t *executeJava() {
                                                            \
     MULTI_LEVEL_FIELD_ACCESS(level)
 
+// JaPHa Modification
 #define FIELD_ACCESS_OPCODES(level, type, suffix)          \
                                                            \
     DEF_OPC(OPC_GETSTATIC_QUICK##suffix, level,            \
@@ -336,10 +337,12 @@ uintptr_t *executeJava() {
     )                                                      \
                                                            \
     DEF_OPC(OPC_PUTSTATIC_QUICK##suffix, level,            \
-		BEGIN_TX                                           \
-		NVML_DIRECT("PUTSTATICQ",                          \
-		RESOLVED_FIELD(pc), sizeof(FieldBlock));           \
-		END_TX                                         	   \
+		if(persistent) {								   \
+			BEGIN_TX("PUTSTATIC_QUICK")                    \
+			NVML_DIRECT("PUTSTATICQ",                      \
+			RESOLVED_FIELD(pc), sizeof(FieldBlock));       \
+			END_TX("PUTSTATIC_QUICK")                      \
+		}												   \
         POP_##level(*(type*)                               \
            (RESOLVED_FIELD(pc)->u.static_value.data), 3);  \
     )                                                      \
@@ -352,6 +355,7 @@ uintptr_t *executeJava() {
     DEF_OPC(OPC_GETFIELD_QUICK##suffix, level,             \
         GETFIELD_QUICK_##level(SINGLE_INDEX(pc), type);    \
     )
+// End of modification
 
 #define MULTI_LEVEL_FIELD_ACCESS(level)                    \
     FIELD_ACCESS_OPCODES(level, u4, /* none */)            \
@@ -691,20 +695,30 @@ uintptr_t *executeJava() {
 #define ARRAY_STORE_IDX *--ostack
 #endif
 
+// JaPHa Modification
 #define ARRAY_STORE(TYPE)                     \
 {                                             \
-	BEGIN_TX                                  \
+	if(persistent) {						  \
+		BEGIN_TX("ARRAY_STORE")               \
+	}										  \
     int val = ARRAY_STORE_VAL;                \
     int idx = ARRAY_STORE_IDX;                \
     Object *array = (Object *)*--ostack;      \
                                               \
     NULL_POINTER_CHECK(array);                \
     ARRAY_BOUNDS_CHECK(array, idx);           \
-    NVML_DIRECT("ARRAY_STORE",&(ARRAY_DATA(array, TYPE)[idx]),sizeof(val))\
+	if(persistent) {						  \
+		NVML_DIRECT("ARRAY_STORE",			  \
+		&(ARRAY_DATA(array, TYPE)[idx]),	  \
+		sizeof(val)) 						  \
+	}										  \
     ARRAY_DATA(array, TYPE)[idx] = val;       \
-    END_TX                                    \
+	if(persistent) {						  \
+		END_TX("ARRAY_STORE")                 \
+	}										  \
     DISPATCH(0, 1);                           \
 }
+// End of modification
 
     DEF_OPC_012_2(
             OPC_IASTORE,
@@ -722,8 +736,11 @@ uintptr_t *executeJava() {
         ARRAY_STORE(short);
     )
 
+	// JaPHa Modification
     DEF_OPC_012(OPC_AASTORE, { 
-    	BEGIN_TX
+		if(persistent) {
+    		BEGIN_TX("AASTORE")
+		}
         Object *obj = (Object*)ARRAY_STORE_VAL;
         int idx = ARRAY_STORE_IDX;
         Object *array = (Object *)*--ostack;
@@ -733,11 +750,17 @@ uintptr_t *executeJava() {
 
         if((obj != NULL) && !arrayStoreCheck(array->class, obj->class))
             THROW_EXCEPTION(java_lang_ArrayStoreException, NULL);
-        NVML_DIRECT("AASTORE", &(ARRAY_DATA(array, Object*)[idx]), sizeof(obj))
+
+		if(persistent) {
+        	NVML_DIRECT("AASTORE", &(ARRAY_DATA(array, Object*)[idx]), sizeof(obj))
+		}
         ARRAY_DATA(array, Object*)[idx] = obj;
-        END_TX
+		if(persistent) {
+	        END_TX("AASTORE")
+		}
         DISPATCH(0, 1);
     })
+	// End of modification
 
 #ifdef USE_CACHE
     DEF_OPC_012_2(
@@ -754,25 +777,31 @@ uintptr_t *executeJava() {
         DISPATCH(0, 1);
     })
 #else
+
+	// JaPHa Modification
     DEF_OPC_012_2(
             OPC_LASTORE,
             OPC_DASTORE, {
-        BEGIN_TX
-
-
+		if(persistent) {
+	        BEGIN_TX("LASTORE - DASTORE")
+		}
         int idx = ostack[-3];
         Object *array = (Object *)ostack[-4];
 
-        NVML_DIRECT("L&D ASTORE", &(ARRAY_DATA(array, u8)[idx]), sizeof(u8))
+		if(persistent) {
+	        NVML_DIRECT("L&D ASTORE", &(ARRAY_DATA(array, u8)[idx]), sizeof(u8))
+		}
         ostack -= 4;
         NULL_POINTER_CHECK(array);
         ARRAY_BOUNDS_CHECK(array, idx);
 
         ARRAY_DATA(array, u8)[idx] = *(u8*)&ostack[2];
-
-        END_TX
+		if(persistent) {
+        	END_TX("LASTORE - DASTORE")
+		}
         DISPATCH(0, 1);
     })
+	// End of modification
 #endif
 
 #ifdef USE_CACHE
@@ -1192,7 +1221,6 @@ uintptr_t *executeJava() {
 #ifdef USE_CACHE
         *(u8*)lvars = cache.l;
 #else
-
         *(u8*)lvars = STACK_POP(uint64_t);
 #endif
         lvars += 2;
@@ -1215,8 +1243,11 @@ uintptr_t *executeJava() {
         goto throwException;
     })
 
+	// JaPHa Modification
     DEF_OPC_210(OPC_NEWARRAY, {
-    	BEGIN_TX
+		if(persistent) {
+    		BEGIN_TX("NEWARRAY")
+		}
         int type = ARRAY_TYPE(pc);
         int count = *--ostack;
         Object *obj;
@@ -1224,48 +1255,53 @@ uintptr_t *executeJava() {
         frame->last_pc = pc;
         if((obj = allocTypeArray(type, count)) == NULL)
             goto throwException;
-        END_TX
+
+		if(persistent) {
+        	END_TX("NEWARRAY")
+		}
         PUSH_0((uintptr_t)obj, 2);
     })
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_210(OPC_MONITORENTER, {
         Object *obj = (Object *)*--ostack;
         NULL_POINTER_CHECK(obj);
         if(persistent) {
+        	//printf("MONITOR ENTER\n\n");
 			pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE);
 			NVML_DIRECT("ENTEROBJ", obj, sizeof(Object));
 		}
-
         objectLock(obj);
-		// JaPHa Modification
-
-		doTest();
-		// End of modification
         DISPATCH(0, 1);
     })
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_210(OPC_MONITOREXIT, {
         Object *obj = (Object *)*--ostack;
         NULL_POINTER_CHECK(obj);
         objectUnlock(obj);
-		// JaPHa Modification
 		if(persistent) {
 			pmemobj_tx_process();
 			pmemobj_tx_end();
+			//printf("\n\nMONITOR EXIT\n");
 		}
-		// End of modification
         DISPATCH(0, 1);
     })
+	// End of modification
 
 #ifdef DIRECT
+
+	// JaPHa Modification
     DEF_OPC_RW(OPC_LDC, ({
         int idx, cache;
         Operand operand;
 
-        BEGIN_TX
-
-        NVML_DIRECT("PCLDC", pc, sizeof(Instruction))
-
+//		if(persistent) {
+//        	BEGIN_TX("LDC")
+//	        NVML_DIRECT("PCLDC", pc, sizeof(Instruction))
+//		}
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_LDC, idx, cache);
 
         frame->last_pc = pc;
@@ -1282,14 +1318,19 @@ uintptr_t *executeJava() {
         } else
             OPCODE_REWRITE(OPC_LDC_QUICK, cache, operand);
 
-        END_TX
-
+//		if(persistent) {
+//	        END_TX("LDC")
+//		}
         REDISPATCH
     });)
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_210(OPC_TABLESWITCH, {
-    	BEGIN_TX
-    	NVML_DIRECT("TABLESWITCH", pc, sizeof(Instruction))
+		if(persistent) {
+	    	BEGIN_TX("TABLESWITCH")
+	    	NVML_DIRECT("TABLESWITCH", pc, sizeof(Instruction))
+		}
         SwitchTable *table = (SwitchTable*)pc->operand.pntr;
         int index = *--ostack;
 
@@ -1297,13 +1338,20 @@ uintptr_t *executeJava() {
             pc = table->deflt;
         else
             pc = table->entries[index - table->low];
-        END_TX
+
+		if(persistent) {
+	        END_TX("TABLESWITCH")
+		}
         DISPATCH_SWITCH
     })
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_210(OPC_LOOKUPSWITCH, {
-    	BEGIN_TX
-    	NVML_DIRECT("LOOKUPSWITCH", pc, sizeof(Instruction))
+		if(persistent) {
+			BEGIN_TX("LOOKUPSWITCH")
+			NVML_DIRECT("LOOKUPSWITCH", pc, sizeof(Instruction))
+		}
         LookupTable *table = (LookupTable*)pc->operand.pntr;
         int key = *--ostack;
         int i;
@@ -1313,19 +1361,23 @@ uintptr_t *executeJava() {
 
         pc = (i == table->num_entries ? table->deflt
                                       : table->entries[i].handler);
-        END_TX
+		if(persistent) {
+	        END_TX("LOOKUPSWITCH")
+		}
         DISPATCH_SWITCH
     })
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_RW(OPC_GETSTATIC, ({
         int idx, cache, opcode;
         FieldBlock *fb;
         Operand operand;
                
-        BEGIN_TX
-
-        NVML_DIRECT("GETSTATIC", pc, sizeof(Instruction))
-
+//        if(persistent) {
+//        	BEGIN_TX("GETSTATIC")
+//        	NVML_DIRECT("GETSTATIC", pc, sizeof(Instruction))
+//		}
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_GETSTATIC, idx, cache);
 
         frame->last_pc = pc;
@@ -1345,19 +1397,23 @@ uintptr_t *executeJava() {
         operand.pntr = fb;
         OPCODE_REWRITE(opcode, cache, operand);
 
-        END_TX
-
+//		if(persistent) {
+//	        END_TX("GETSTATIC")
+//		}
         REDISPATCH
     });)
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_RW(OPC_PUTSTATIC, ({
         int idx, cache, opcode;
         FieldBlock *fb;
         Operand operand;
 
-        BEGIN_TX
-
-        NVML_DIRECT("PUTSTATIC", pc, sizeof(Instruction))
+//		if(persistent) {
+//        	BEGIN_TX("PUTSTATIC")
+//        	NVML_DIRECT("PUTSTATIC", pc, sizeof(Instruction))
+//		}
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_PUTSTATIC, idx, cache);
 
         frame->last_pc = pc;
@@ -1376,19 +1432,25 @@ uintptr_t *executeJava() {
 
         operand.pntr = fb;
         OPCODE_REWRITE(opcode, cache, operand);
-
-        END_TX
+//		if(persistent) {
+// 	       END_TX("PUTSTATIC")
+//		}
 
         REDISPATCH
     });)
+	// End of modification
 
+
+	// JaPHa Modification
     DEF_OPC_RW(OPC_GETFIELD, ({
         int idx, cache, opcode;
         Operand operand;
         FieldBlock *fb;
 
-        BEGIN_TX
-        NVML_DIRECT("GETFIELD", pc, sizeof(Instruction))
+//		if(persistent) {
+//        	BEGIN_TX("GETFIELD")
+//        	NVML_DIRECT("GETFIELD", pc, sizeof(Instruction))
+//		}
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_GETFIELD, idx, cache);
 
         frame->last_pc = pc;
@@ -1408,18 +1470,23 @@ uintptr_t *executeJava() {
         operand.i = fb->u.offset;
         OPCODE_REWRITE(opcode, cache, operand);
 
-        END_TX
+//		if(persistent) {
+//       		END_TX("GETFIELD")
+//		}
         REDISPATCH
     });)
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_RW(OPC_PUTFIELD, ({
         int idx, cache, opcode;
         FieldBlock *fb;
         Operand operand;
 
-        BEGIN_TX
-
-        NVML_DIRECT("PUTFIELD", pc, sizeof(Instruction))
+//		if(persistent) {
+//        	BEGIN_TX("PUTFIELD")
+//        	NVML_DIRECT("PUTFIELD", pc, sizeof(Instruction))
+//		}
 
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_PUTFIELD, idx, cache);
 
@@ -1440,17 +1507,18 @@ uintptr_t *executeJava() {
         operand.i = fb->u.offset;
         OPCODE_REWRITE(opcode, cache, operand);
 
-        END_TX
+//		if(persistent) {
+//       		END_TX("PUTFIELD")
+//		}
 
         REDISPATCH
     });)
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_RW(OPC_INVOKEVIRTUAL, ({
         int idx, cache;
         Operand operand;
-
-        BEGIN_TX
-        NVML_DIRECT("INVOKEVIRTUAL", pc, sizeof(Instruction))
 
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_INVOKEVIRTUAL, idx, cache);
 
@@ -1469,16 +1537,19 @@ uintptr_t *executeJava() {
             OPCODE_REWRITE(OPC_INVOKEVIRTUAL_QUICK, cache, operand);
         }
 
-        END_TX
         REDISPATCH
     });)
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_RW(OPC_INVOKESPECIAL, ({
         int idx, cache;
         Operand operand;
 
-        BEGIN_TX
-        NVML_DIRECT("INVOKESPECIAL", pc, sizeof(Instruction))
+//        if(persistent) {
+//			BEGIN_TX("INVOKESPECIAL")
+//        	NVML_DIRECT("INVOKESPECIAL", pc, sizeof(Instruction))
+//		}
 
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_INVOKESPECIAL, idx, cache);
 
@@ -1500,16 +1571,22 @@ uintptr_t *executeJava() {
             OPCODE_REWRITE(OPC_INVOKENONVIRTUAL_QUICK, cache, operand);
         }
 
-        END_TX
+//		if(persistent) {
+//       		END_TX("INVOKESPECIAL")
+//		}
         REDISPATCH
     });)
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_RW(OPC_INVOKESTATIC, ({
         int idx, cache;
         Operand operand;
 
-        BEGIN_TX
-        NVML_DIRECT("INVOKESTATIC", pc, sizeof(Instruction))
+//		if(persistent) {
+//       		BEGIN_TX("INVOKESTATIC")
+//      	NVML_DIRECT("INVOKESTATIC", pc, sizeof(Instruction))
+//		}
 
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_INVOKESTATIC, idx, cache);
 
@@ -1521,16 +1598,22 @@ uintptr_t *executeJava() {
 
         operand.pntr = new_mb;
         OPCODE_REWRITE(OPC_INVOKESTATIC_QUICK, cache, operand);
-        END_TX
+//		if(persistent) {
+//       		END_TX("INVOKESTATIC")
+//		}
         REDISPATCH
     });)
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_RW(OPC_INVOKEINTERFACE, ({
         int idx, cache;
         Operand operand;
 
-        BEGIN_TX
-        NVML_DIRECT("INVOKEINTERFACE", pc, sizeof(Instruction))
+//		if(persistent) {
+//        	BEGIN_TX("INVOKEINTERFACE")
+//        	NVML_DIRECT("INVOKEINTERFACE", pc, sizeof(Instruction))
+//		}
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_INVOKEINTERFACE, idx, cache);
 
         frame->last_pc = pc;
@@ -1549,13 +1632,19 @@ uintptr_t *executeJava() {
             OPCODE_REWRITE(OPC_INVOKEVIRTUAL_QUICK, cache, operand);
         }
 
-        END_TX
+//		if(persistent) {
+//       		END_TX("INVOKEINTERFACE")
+//		}
         REDISPATCH
     });)
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_RW(OPC_MULTIANEWARRAY, ({
-    	BEGIN_TX
-    	NVML_DIRECT("MULTIANEWARRAY", pc, sizeof(Instruction))
+//		if(persistent) {
+//    		BEGIN_TX("MULTIANEWARRAY")
+//    		NVML_DIRECT("MULTIANEWARRAY", pc, sizeof(Instruction))
+//		}
 
         int idx = pc->operand.uui.u1;
         int cache = pc->operand.uui.i;
@@ -1567,18 +1656,25 @@ uintptr_t *executeJava() {
             goto throwException;
         
         OPCODE_REWRITE(OPC_MULTIANEWARRAY_QUICK, cache, pc->operand);
-        END_TX
+//		if(persistent) {
+//       		END_TX("MULTIANEWARRAY")
+//		}
         REDISPATCH
     });)
+	// End of modification
 
+	// JaPHa Modification
     DEF_OPC_RW_4(OPC_NEW, OPC_ANEWARRAY, OPC_CHECKCAST, OPC_INSTANCEOF, ({
         int idx = pc->operand.uui.u1;
         int opcode = pc->operand.uui.u2;
         int cache = pc->operand.uui.i;
         Class *class;
 
-        BEGIN_TX
-        NVML_DIRECT("4 RW", pc, sizeof(Instruction))
+//		if(persistent) {
+// 	       BEGIN_TX("NEW - ANEWARRAY - CHECKCAST - INSTANCEOF")
+// 	       NVML_DIRECT("4 RW", pc, sizeof(Instruction))
+//		}
+
         frame->last_pc = pc;
         class = resolveClass(mb->class, idx, opcode == OPC_NEW);
 
@@ -1594,9 +1690,12 @@ uintptr_t *executeJava() {
         }
 
         OPCODE_REWRITE((opcode + OPC_NEW_QUICK-OPC_NEW), cache, pc->operand);
-        END_TX
+//		if(persistent) {
+//       		END_TX("NEW - ANEWARRAY - CHECKCAST - INSTANCEOF")
+//		}
         REDISPATCH
     });)
+	// End of modification
 #else /* DIRECT */
     DEF_OPC_210(OPC_LDC, {
         frame->last_pc = pc;
@@ -2005,18 +2104,24 @@ uintptr_t *executeJava() {
         PUSH_LONG(fb->u.static_value.l, 3);
     })
 
+	// JaPHa Modification
     DEF_OPC_012(OPC_PUTSTATIC2_QUICK, {
-    	BEGIN_TX
+		if(persistent) {
+    		BEGIN_TX("PUTSTATIC2_QUICK")
+		}
         FieldBlock *fb = RESOLVED_FIELD(pc);
-    	NVML_DIRECT("FB", fb, sizeof(FieldBlock))
-    	END_TX
+		if(persistent) {
+    		NVML_DIRECT("FB", fb, sizeof(FieldBlock))
+    		END_TX("PUTSTATIC2_QUICK")
+		}
         POP_LONG(fb->u.static_value.l, 3);
     })
+	// End of modification
 
     DEF_OPC_210(OPC_GETFIELD2_QUICK, {
         Object *obj = (Object *)*--ostack;
         NULL_POINTER_CHECK(obj);
-
+                
         PUSH_LONG(INST_DATA(obj, u8, SINGLE_INDEX(pc)), 3);
     })
 
@@ -2038,30 +2143,48 @@ uintptr_t *executeJava() {
         DISPATCH(0, 3);                                      \
     })
 #else
+	// JaPHa Modification
     DEF_OPC_012(OPC_PUTFIELD2_QUICK, {
-    	BEGIN_TX
+		if(persistent) {
+	    	BEGIN_TX("PUTFIELD2_QUICK")
+		}
         Object *obj = (Object *)ostack[-3];
 
         ostack -= 3;
         NULL_POINTER_CHECK(obj);
-        NVML_DIRECT("PUTFIELD2_QUICK",&(INST_DATA(obj, u8, SINGLE_INDEX(pc))),sizeof(u8))
+		if(persistent) {
+        	NVML_DIRECT("PUTFIELD2_QUICK",&(INST_DATA(obj, u8, SINGLE_INDEX(pc))),sizeof(u8))
+		}
         INST_DATA(obj, u8, SINGLE_INDEX(pc)) = *(u8*)&ostack[1];
-        END_TX
+		if(persistent) {
+        	END_TX("PUTFIELD2_QUICK")
+		}
+
         DISPATCH(0, 3);
     })
+	// End of modification
 
+// JaPHa Modification
 #define PUTFIELD_QUICK(type, suffix)                        \
     DEF_OPC_012(OPC_PUTFIELD_QUICK##suffix, {               \
-    	BEGIN_TX											\
+		if(persistent) {									\
+    		BEGIN_TX("PUTFIELD_QUICK")						\
+		}													\
         Object *obj = (Object *)ostack[-2];                 \
                                                             \
         ostack -= 2;                                        \
         NULL_POINTER_CHECK(obj);                            \
-        NVML_DIRECT("PUTFIELD_QUICK",&(INST_DATA(obj, type, SINGLE_INDEX(pc))),sizeof(type))\
+		if(persistent) {									\
+        	NVML_DIRECT("PUTFIELD_QUICK",&(INST_DATA(obj,	\
+				type, SINGLE_INDEX(pc))),sizeof(type))		\
+		}                                                   \
         INST_DATA(obj, type, SINGLE_INDEX(pc)) = ostack[1]; \
-        END_TX												\
+		if(persistent) {									\
+        	END_TX("PUTFIELD_QUICK")						\
+		}													\
         DISPATCH(0, 3);                                     \
     })
+// End of modification
 #endif
 
     PUTFIELD_QUICK(u4, /* none */)
@@ -2119,19 +2242,30 @@ uintptr_t *executeJava() {
         goto invokeMethod;
     })
 
+	// JaPHa Modification
     DEF_OPC_210(OPC_NEW_QUICK, {
-    	BEGIN_TX
+		if(persistent) {
+    		BEGIN_TX("NEW_QUICK")
+		}
         Class *class = RESOLVED_CLASS(pc);
         Object *obj;
+
         frame->last_pc = pc;
         if((obj = allocObject(class)) == NULL)
             goto throwException;
-        END_TX
+
+		if(persistent) {
+        	END_TX("NEW_QUICK")
+		}
         PUSH_0((uintptr_t)obj, 3);
     })
+	// End of modification
  
+	// JaPHa Modification
     DEF_OPC_210(OPC_ANEWARRAY_QUICK, {
-    	BEGIN_TX
+		if(persistent) {
+    		BEGIN_TX("ANEWARRAY_QUICK")
+		}
         Class *class = RESOLVED_CLASS(pc);
         char *name = CLASS_CB(class)->name;
         int count = *--ostack;
@@ -2161,9 +2295,13 @@ uintptr_t *executeJava() {
 
         if((obj = allocArray(array_class, count, sizeof(Object*))) == NULL)
             goto throwException;
-        END_TX
+
+		if(persistent) {
+        	END_TX("ANEWARRAY_QUICK")
+		}
         PUSH_0((uintptr_t)obj, 3);
     })
+	// End of modification
 
     DEF_OPC_210(OPC_CHECKCAST_QUICK, {
         Class *class = RESOLVED_CLASS(pc);
@@ -2186,8 +2324,11 @@ uintptr_t *executeJava() {
         DISPATCH(0, 3);
     })
 
+	// JaPHa Modification
     DEF_OPC_210(OPC_MULTIANEWARRAY_QUICK, ({
-    	BEGIN_TX
+		if(persistent) {
+    		BEGIN_TX("MULTIANEWARRAY_QUICK")
+		}
         Class *class = RESOLVED_CLASS(pc);
         int i, dim = MULTI_ARRAY_DIM(pc);
         Object *obj;
@@ -2203,7 +2344,10 @@ uintptr_t *executeJava() {
 
         if((obj = allocMultiArray(class, dim, (intptr_t *)ostack)) == NULL)
             goto throwException;
-        END_TX
+
+		if(persistent) {
+        	END_TX("MULTIANEWARRAY_QUICK")
+		}
         PUSH_0((uintptr_t)obj, 4);
     });)
 
@@ -2220,6 +2364,7 @@ uintptr_t *executeJava() {
         signalException(java_lang_AbstractMethodError, mb->name);
         goto throwException;
     })
+	// End of modification
 
 #ifdef INLINING
     DEF_OPC_RW(OPC_INLINE_REWRITER, ({
@@ -2234,16 +2379,33 @@ uintptr_t *executeJava() {
     });)
 #endif
 
+	// JaPHa Modification
     DEF_OPC_210(OPC_INVOKEVIRTUAL_QUICK, {
         Class *new_class;
-
         arg1 = ostack - INV_QUICK_ARGS(pc);
         NULL_POINTER_CHECK(*arg1);
-
         new_class = (*(Object **)arg1)->class;
+        //printf("4 class pointer=%p, ", new_class);
+        ClassBlock* dbgCb = CLASS_CB(new_class);
+        //printf("4.1 gdbCb=%p\n", dbgCb);
+        //printf("4.2 gdbCb->name=%s, ", dbgCb->name);
         new_mb = CLASS_CB(new_class)->method_table[INV_QUICK_IDX(pc)];
+//        if(!strcmp(CLASS_CB(new_class)->name, "java/lang/String")) {
+//        	printf("String - %s\n", new_mb->name);
+//        }
+//        if(!strcmp(CLASS_CB(new_class)->name, "java/lang/String")) {
+//			printf("String - %s\n", new_mb->name);
+//		}
+        //printf("5\n");
+        //unsigned long *teste = (unsigned long *) 0x7ffff7efb240;
+		//if((unsigned long *)arg1 == teste){
+		//	printf("invokevirtual, ");
+		//	printf("class name: %s, ", CLASS_CB(new_class)->name);
+		//	printf("method name: %s\n", new_mb->name);
+		//
         goto invokeMethod;
     })
+	// End of modification
 
 invokeMethod:
 {
@@ -2408,4 +2570,3 @@ void shutdownInterpreter() {
 #endif
 }
 #endif
-

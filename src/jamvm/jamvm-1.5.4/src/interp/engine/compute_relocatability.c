@@ -153,7 +153,8 @@ ExecEnv *getExecEnv() {
 void flushPHValues() {
 }
 
-void doTest(){}
+void checkPoolAddress(int *ptr) {
+}
 // End of modification
 
 void exitVM(int status) {

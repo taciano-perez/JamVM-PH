@@ -117,34 +117,14 @@ int file = FALSE;
 #define NVM_ADDRESS 	0xaeb0d000
 #define INCREASE_VALUE 	1000000
 
-//JaPHa Modification
-
-//#define NVM_INIT_SIZE 	10000000
-
-//End of modification
-
-/* static nvmChunk *nvmfreelist;
- static char *nvm;
- static int nvm_fd; */
+// JaPHa Modification
  static int nvmHeaderSize = sizeof(nvmChunk);
  static int minSize = (0x3 + sizeof(nvmChunk) + sizeof(void*));
- /*static unsigned int nvmFreeSpace = 0;
- static unsigned int nvmCurrentSize = NVM_INIT_SIZE;
- static unsigned long nvm_limit;*/
+// End of modification
 
 static int verbosegc;
 static int compact_override;
 static int compact_value;
-
-//JaPHa Modification
-
-/* Format of an unallocated chunk */
-/*typedef struct chunk {
-	uintptr_t header;
-	struct chunk *next;
-} Chunk;*/
-
-//End of modification
 
 /* The free list head, and next allocation pointer */
 static Chunk *freelist;
@@ -313,7 +293,6 @@ static int sys_page_size;
 static uintptr_t doSweep(Thread *self);
 
 void allocMarkBits() {
-
 	int no_of_bits = (heaplimit-heapbase)>>(LOG_BYTESPERMARK-LOG_BITSPERMARK);
 
 	markbit_size = (no_of_bits+MARKSIZEBITS-1)>>LOG_MARKSIZEBITS;
@@ -328,21 +307,24 @@ void clearMarkBits() {
 	memset(markbits, 0, markbit_size * sizeof(*markbits));
 }
 
-//JaPHa Modification
-
+// JaPHa Modification
 void dump_heap() {
 	printf("Base address: %p\n", pheap);
 	printf("Free space: %lu\n", pheap->heapfree);
 	printf("Next free: %p\n", &(*pheap->chunkpp)->next);
 }
+// End of modification
 
+// JaPHa Modification
 void dump_nvm() {
 	printf("Free list: %p\n", pheap->nvmfreelist);
 	printf("Free space: %p\n", pheap->nvmFreeSpace);
 	printf("Nvm current size: %p\n", pheap->nvmCurrentSize);
 	printf("Nvm limit: %p\n", pheap->nvm_limit);
 }
+// End of modification
 
+// JaPHa Modification
 void *ph_malloc(int len2) {
 	uintptr_t largest;
 	Chunk *found;
@@ -353,7 +335,6 @@ void *ph_malloc(int len2) {
 	/* See comment below */
 	char *ret_addr;
 
-	BEGIN_TX
 	int n = (len2+HEADER_SIZE+OBJECT_GRAIN-1)&~(OBJECT_GRAIN-1);
 	/* Grab the heap lock, hopefully without having to
 	   wait for it to avoid disabling suspension */
@@ -368,17 +349,16 @@ void *ph_malloc(int len2) {
 	   satisfy allocation request */
 	int has_found = FALSE;
 
-	//NVML_DIRECT("CHUNKPP", pheap->chunkpp, sizeof(Chunk*))
+	NVML_DIRECT("CHUNKPP", pheap->chunkpp, sizeof(Chunk*))
 	uintptr_t len;
 	while(*(pheap->chunkpp)) {
-		/*uintptr_t */len = (*(pheap->chunkpp))->header;
+		len = (*(pheap->chunkpp))->header;
 		if(len == n) {
 			found = *pheap->chunkpp;
 			*pheap->chunkpp = found->next;
 			has_found = TRUE;
 			break;
 		}
-
 		if(len > n) {
 			Chunk *rem;
 			found = *pheap->chunkpp;
@@ -403,18 +383,19 @@ void *ph_malloc(int len2) {
 		printf("ERROR: could not find available space\n");
 	}
 
-	//NVML_DIRECT("HEAPFREE", &(pheap->heapfree), sizeof(pheap->heapfree))
+	NVML_DIRECT("HEAPFREE", &(pheap->heapfree), sizeof(pheap->heapfree))
 	pheap->heapfree -= n;
 
+	/*REMOVED*/
 	/* Mark found chunk as allocated */
 	//(found, n + sizeof(Chunk));
 
-	/*if(have_remaining) {
-		NVML_DIRECT("FOUND", found, HEADER_SIZE + n)
+	if(have_remaining) {
+		NVML_DIRECT("FOUND", found, HEADER_SIZE * 2 + n)
 	}
 	else {
 		NVML_DIRECT("FOUND", found, HEADER_SIZE + n)
-	}*/
+	}
 
 	found->header = n | ALLOC_BIT;
 
@@ -427,10 +408,11 @@ void *ph_malloc(int len2) {
 	memset(ret_addr, 0, n-HEADER_SIZE);
 	unlockVMLock(heap_lock, self);
 
-	END_TX
 	return ret_addr;
 }
+// End of modification
 
+// JaPHa Modification
 int initialiseRoot(InitArgs *args) {
 	int heap_size;
 
@@ -440,11 +422,13 @@ int initialiseRoot(InitArgs *args) {
 		heap_size = HEAP_SIZE;
 
 	if(access(PATH, F_OK) != 0) {
-		if ((pop_heap = pmemobj_create(PATH, POBJ_LAYOUT_NAME(HEAP_POOL), sizeof(PHeap)*4, 0666)) == NULL) {//8388608
+		if((pop_heap = pmemobj_create(PATH, POBJ_LAYOUT_NAME(HEAP_POOL), PHEAP_SIZE, 0666)) == NULL) {//8388608
 			printf("failed to create pool\n");
 			printf("error msg:\t%s\n", pmem_errormsg());
 			return FALSE;
 		}
+		//BEGIN INITIALIZATION TX WHEN CREATING POOL
+		BEGIN_TX("INITIALISEROOT CREATING")
 		root_heap = pmemobj_root(pop_heap, heap_size);
 		pheap = (PHeap*) pmemobj_direct(root_heap);
 		pheap->base_address = pheap;
@@ -457,12 +441,14 @@ int initialiseRoot(InitArgs *args) {
 		pheap->freelist->header = pheap->heaplimit - pheap->heapbase;
 		pheap->freelist->next = NULL;
 		pheap->chunkpp = &(pheap->freelist);
-		}
+	}
 	else {
-		if ((pop_heap = pmemobj_open(PATH, POBJ_LAYOUT_NAME(HEAP_POOL))) == NULL) {
+		if((pop_heap = pmemobj_open(PATH, POBJ_LAYOUT_NAME(HEAP_POOL))) == NULL) {
 			printf("failed to open pool\n");
 			return FALSE;
 		}
+		BEGIN_TX("INITIALISEROOT OPENING")
+		//BEGIN INITIALIZATION TX WHEN OPENING POOL
 		root_heap = pmemobj_root(pop_heap, heap_size);
 		pheap = (struct pheap*) pmemobj_direct(root_heap);
 		if(pheap->base_address != pheap) {
@@ -471,13 +457,12 @@ int initialiseRoot(InitArgs *args) {
 			printf("pheap->base_address %p\n", pheap->base_address);
 			pmemobj_close(pop_heap);
 			exit(-1);
-			}
 		}
+	}
 
 	pheap_created = TRUE;
-    return TRUE;
+	return TRUE;
 }
-
 //End of modification
 
 /* XXX NVM CHANGE 003.000 - InitAlloc
@@ -499,18 +484,14 @@ void initialiseAlloc(InitArgs *args) {
 		is_persistent = TRUE;
 
 		//JaPHa Modification
-
 		if( access(PATH, F_OK ) != -1 ) {
 			file = TRUE;
 		}
 
 		if(!initialiseRoot(args))
 			printf("Problem when creating/opening pool\n");
-
 		//End of modification
 
-		//heapMem = (char*)mmap(heapMemAddr, args->max_heap, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-		//msync(heapMem, args->max_heap, MS_SYNC);
 	}
 	else {
 		heapMem = (char*)mmap(0, args->max_heap, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
@@ -533,8 +514,7 @@ void initialiseAlloc(InitArgs *args) {
 
 	//JaPHa Modification
 	//use the pool values in persistent execution
-
-	if(is_persistent){
+	if(is_persistent) {
 		maxHeap = pheap->maxHeap;
 		heapbase = pheap->heapbase;
 		heaplimit = pheap->heaplimit;
@@ -542,17 +522,17 @@ void initialiseAlloc(InitArgs *args) {
 		freelist = pheap->freelist;
 		chunkpp = pheap->chunkpp;
 	}
-
 	//End of modification
 
 	/*	XXX NVM CHANGE 009.000.003	*/
-	if(is_persistent){
-		if(file){
+	// JaPHa Modification
+	if(is_persistent) {
+		if(file) {
 			ph_value = &(pheap->opc);
 			set_java_lang_class(ph_value->java_lang_Class);
 			set_ldr_vmdata_offset(ph_value->ldr_vmdata_offset);
 		}
-		else{
+		else {
 			pheap->nvmCurrentSize = NVM_INIT_SIZE;
 			pheap->nvm_limit = (unsigned long) pheap->nvm + pheap->nvmCurrentSize;
 			pheap->nvmfreelist = (nvmChunk*) pheap->nvm;
@@ -561,13 +541,19 @@ void initialiseAlloc(InitArgs *args) {
 			pheap->nvmfreelist->next = NULL;
 			pheap->nvmChunkpp = &(pheap->nvmfreelist);
 		}
+		printf("pheap initial pointer: %p\n", pheap);
+		printf("heapmem pointer %p\n", pheap->heapMem);
+		printf("nvm pointer %p\n", pheap->nvm);
+		printf("pool freespace: %d\n", pheap->heapfree);
+		printf("pool maxheap: %d\n", pheap->maxHeap);
+		printf("nvm currentsize: %d\n", pheap->nvmCurrentSize);
+		printf("nvm freespace: %d\n", pheap->nvmFreeSpace);
+	}else{
+		freelist->header = heapfree = heaplimit-heapbase;
+		freelist->next = NULL;
 	}
+	// End of modification
 
-	printf("pheap initial pointer: %p\n", pheap);
-	printf("pool freespace: %d\n", pheap->heapfree);
-	printf("pool maxheap: %d\n", pheap->maxHeap);
-	printf("nvm currentsize: %d\n", pheap->nvmCurrentSize);
-	printf("nvm freespace: %d\n", pheap->nvmFreeSpace);
 
 	TRACE_GC("Alloced heap size %p\n", heaplimit-heapbase);
 	allocMarkBits();
@@ -1108,7 +1094,7 @@ static uintptr_t doSweep(Thread *self) {
 	uintptr_t marked = 0, unmarked = 0, freed = 0, cleared = 0;
 
 	/* Amount of free heap is re-calculated during scan */
-		heapfree = 0;
+	heapfree = 0;
 
 	/* Scan the heap and free all unmarked objects by reconstructing
        the freelist.  Add all free chunks and unmarked objects and
@@ -1230,31 +1216,27 @@ static uintptr_t doSweep(Thread *self) {
 	/* We've now reconstructed the freelist, set freelist
        pointer to new list */
 	last->next = NULL;
-
 	freelist = newlist.next;
-	//End of modification
 
 	/* Reset next allocation block to beginning of list -
-   this leads to a search - use largest instead? */
-
+       this leads to a search - use largest instead? */
 	chunkpp = &freelist;
 
 	if(verbosegc) {
-			long long size = heaplimit-heapbase;
-			long long pcnt_used = ((long long)heapfree)*100/size;
-			jam_printf("<GC: Allocated objects: %lld>\n", (long long)marked);
-			jam_printf("<GC: Freed %lld object(s) using %lld bytes",
-					(long long)unmarked, (long long)freed);
-			if(cleared)
-				jam_printf(", cleared %lld reference(s)", (long long)cleared);
-			jam_printf(">\n<GC: Largest block is %lld total free is %lld out of"
-					" %lld (%lld%%)>\n", (long long)largest,
-					(long long)heapfree, size, pcnt_used);
+		long long size = heaplimit-heapbase;
+		long long pcnt_used = ((long long)heapfree)*100/size;
+		jam_printf("<GC: Allocated objects: %lld>\n", (long long)marked);
+		jam_printf("<GC: Freed %lld object(s) using %lld bytes",
+				(long long)unmarked, (long long)freed);
+		if(cleared)
+			jam_printf(", cleared %lld reference(s)", (long long)cleared);
+		jam_printf(">\n<GC: Largest block is %lld total free is %lld out of"
+				" %lld (%lld%%)>\n", (long long)largest,
+				(long long)heapfree, size, pcnt_used);
 	}
+
 	/* Return the size of the largest free chunk in heap - this
        is the largest allocation request that can be satisfied */
-
-	//End of modification
 
 	return largest;
 }
@@ -1368,21 +1350,21 @@ void threadRegisteredReferences() {
 			con_roots_hashtable[index];                                             \
 		})
 
-#define ADD_CHUNK_TO_FREELIST(start, end)     		  \
+#define ADD_CHUNK_TO_FREELIST(start, end)     \
 		{                                             \
 			Chunk *curr = (Chunk *) start;            \
 			curr->header = end - start;               \
-													  \
+			\
 			if(curr->header >= MIN_OBJECT_SIZE) {     \
 				last->next = curr;                    \
 				last = curr;                          \
 			}                                         \
-													  \
+			\
 			if(curr->header > largest)                \
-			largest = curr->header;                   \
-													  \
+			largest = curr->header;               \
+			\
 			/* Add onto total count of free chunks */ \
-			heapfree += curr->header;            	  \
+		heapfree += curr->header;                 \
 		}
 
 int compactSlideBlock(char *block_addr, char *new_addr) {
@@ -1586,8 +1568,9 @@ uintptr_t doCompact() {
 	char *ptr, *new_addr;
 	Chunk newlist;
 	Chunk *last = &newlist;
-
+	// JaPHa Modification
 	char *limit;
+	// End of modification
 
 	/* Will hold the size of the largest free chunk
        after scanning */
@@ -1677,7 +1660,6 @@ uintptr_t doCompact() {
 
 	/* Second phase rescans the heap, updates backwards references
        to each object, and then moves them. */
-
 	for(new_addr = ptr = heapbase; ptr < heaplimit;) {
 		uintptr_t hdr = HEADER(ptr);
 		uintptr_t size;
@@ -1732,35 +1714,33 @@ uintptr_t doCompact() {
 		ptr += size;
 	}
 
+	// JaPHa Modification
 	if(new_addr != limit)
 		ADD_CHUNK_TO_FREELIST(new_addr, limit);
+	// End of modification
 
 	/* We've now reconstructed the freelist, set freelist
        pointer to new list */
-
 	last->next = NULL;
-
 	freelist = newlist.next;
 
 	/* Reset next allocation block to beginning of list */
 	chunkpp = &freelist;
 
-
 	/* Free conservative roots hash table */
 	gcMemFree(con_roots_hashtable);
 
 	if(verbosegc) {
-
-			long long size = heaplimit-heapbase;
-			long long pcnt_used = ((long long)heapfree)*100/size;
-			jam_printf("<GC: Allocated objects: %lld>\n", (long long)marked);
-			jam_printf("<GC: Freed %lld object(s) using %lld bytes",
-					(long long)unmarked, (long long)freed);
-			if(cleared)
-				jam_printf(", cleared %lld reference(s)", (long long)cleared);
-			jam_printf(">\n<GC: Moved %lld objects, largest block is %lld total"
-					" free is %lld out of %lld (%lld%%)>\n", (long long)moved,
-					(long long)largest, (long long)heapfree, size, pcnt_used);
+		long long size = heaplimit-heapbase;
+		long long pcnt_used = ((long long)heapfree)*100/size;
+		jam_printf("<GC: Allocated objects: %lld>\n", (long long)marked);
+		jam_printf("<GC: Freed %lld object(s) using %lld bytes",
+				(long long)unmarked, (long long)freed);
+		if(cleared)
+			jam_printf(", cleared %lld reference(s)", (long long)cleared);
+		jam_printf(">\n<GC: Moved %lld objects, largest block is %lld total"
+				" free is %lld out of %lld (%lld%%)>\n", (long long)moved,
+				(long long)largest, (long long)heapfree, size, pcnt_used);
 	}
 
 	/* Return the size of the largest free chunk in heap - this
@@ -1795,7 +1775,7 @@ void expandHeap(int min) {
 
 	if(freelist != NULL) {
 		/* The freelist is in address order - find the last
-		   free chunk and add the new area to the end.  */
+           free chunk and add the new area to the end.  */
 
 		for(chunk = freelist; chunk->next != NULL; chunk = chunk->next);
 		chunk->next = new;
@@ -2051,12 +2031,17 @@ void referenceHandlerThreadLoop(Thread *self) {
 }
 
 void set_has_finaliser_list(){
+
+	// JaPHa Modification
 	OPC *ph_values = get_opc_ptr();
 	has_finaliser_count = ph_values->has_finaliser_count;
 	has_finaliser_size = ph_values->has_finaliser_size;
-	has_finaliser_list = sysMalloc(has_finaliser_size*sizeof(Object*));
+	has_finaliser_list = malloc(has_finaliser_size*sizeof(Object*));
     memcpy(has_finaliser_list, ph_values->has_finaliser_list, has_finaliser_size*sizeof(Object*));
-    //sysFree_persistent(ph_values->has_finaliser_list);
+	/*REMOVED*/
+	//sysFree_persistent(ph_values->has_finaliser_list);
+	// End of modification
+
 }
 
 
@@ -2086,12 +2071,16 @@ void initialiseGC(InitArgs *args) {
 
 
 	/* Create and start VM threads for the reference handler and finalizer */
-	//createVMThread("Finalizer", finalizerThreadLoop);
-	//createVMThread("Reference Handler", referenceHandlerThreadLoop);
+	// JaPHa Modification
+	//GC Disabled
+	/*REMOVED*/
+	/*createVMThread("Finalizer", finalizerThreadLoop);
+	createVMThread("Reference Handler", referenceHandlerThreadLoop);*/
 
 	/* Create and start VM thread for asynchronous GC */
-	//if(args->asyncgc)
-		//createVMThread("Async GC", asyncGCThreadLoop);
+	/*if(args->asyncgc)
+		createVMThread("Async GC", asyncGCThreadLoop);*/
+	// End of modification
 
 	/* GC will use mark-sweep or mark-compact as appropriate, but this
        can be changed via the command line */
@@ -2104,9 +2093,11 @@ void initialiseGC(InitArgs *args) {
 
 void *gcMalloc(int len) {
 
-	if(is_persistent){
+	// JaPHa Modification
+	if(is_persistent) {
 		return ph_malloc(len);
 	}
+	// End of modification
 
 	/* The state determines what action to take in the event of
        allocation failure.  The states go up in seriousness,
@@ -2144,18 +2135,14 @@ void *gcMalloc(int len) {
 			uintptr_t len = (*chunkpp)->header;
 
 			if(len == n) {
-
 				found = *chunkpp;
-
 				*chunkpp = found->next;
 				goto got_it;
 			}
 
 			if(len > n) {
-
 				Chunk *rem;
 				found = *chunkpp;
-
 				rem = (Chunk*)((char*)found + n);
 				rem->header = len - n;
 
@@ -2486,7 +2473,6 @@ uintptr_t getObjectHashcode(Object *ob) {
 
 unsigned long freeHeapMem() {
 	return heapfree;
-
 }
 
 unsigned long totalHeapMem() {
@@ -2511,27 +2497,27 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 	uintptr_t *mem;
 	int fd;
 
+	// JaPHa Modification
 	if (is_persistent && create_file){
-
-		if(!strcmp(name,"utf8_ht")){
+		if(!strcmp(name,"utf8_ht")) {
 			return pheap->utf8_ht;
 		}
-		if(!strcmp(name,"bootCl_ht")){
+		if(!strcmp(name,"bootCl_ht")) {
 			return pheap->bootCl_ht;
 		}
-		if(!strcmp(name,"bootPck_ht")){
+		if(!strcmp(name,"bootPck_ht")) {
 			return pheap->bootPck_ht;
 		}
-		if(!strcmp(name,"string_ht")){
+		if(!strcmp(name,"string_ht")) {
 			return pheap->string_ht;
 		}
-		if(!strcmp(name,"classes_ht")){
+		if(!strcmp(name,"classes_ht")) {
 			return pheap->classes_ht;
 		}
-		if(!strcmp(name,"monitor_ht")){
+		if(!strcmp(name,"monitor_ht")) {
 			return pheap->monitor_ht;
 		}
-
+	// End of modification
 		unsigned long buffer[1];
 		size = size + sizeof(unsigned long);
 		if( access( name, F_OK ) != -1 ) {
@@ -2629,11 +2615,12 @@ void freePendingFrees() {
 
 
 /* MREMAP MAYMOVE ISSUE */
+// JaPHa Modification
 void expandNVM(){
 	unsigned int oldSize = pheap->nvmCurrentSize;
 	nvmChunk *new;
 	nvmChunk *chunk;
-	BEGIN_TX
+
 	pheap->nvmCurrentSize = pheap->nvmCurrentSize + INCREASE_VALUE;
 	pheap->nvm_limit = (unsigned int) pheap->nvm + pheap->nvmCurrentSize;
 
@@ -2656,10 +2643,11 @@ void expandNVM(){
 		chunk->next = new;
 		pheap->nvmFreeSpace = pheap->nvmFreeSpace + INCREASE_VALUE - nvmHeaderSize;
 	}
-	END_TX
 }
+// End of modification
 
 /* XXX NVM CHANGE 004.001 - SysMalloc */
+// JaPHa Modification
 void *sysMalloc_persistent(int size){
 	if (is_persistent){
 		int n = size < sizeof(void*) ? sizeof(void*) : size;
@@ -2668,14 +2656,17 @@ void *sysMalloc_persistent(int size){
 		nvmChunk *rem = NULL;
 		nvmChunk *found = NULL;
 		int err;
-		BEGIN_TX
-		//nvmChunk **iterate  = &(pheap->nvmfreelist); //- eliminado
+
+
+		/*REMOVED*/
+		//nvmChunk **iterate  = &(pheap->nvmfreelist);
 
 		int shift = 0;
 
 		unsigned int len = 0;
-		NVML_DIRECT("NVMCHUNKPP", pheap->nvmChunkpp, sizeof(nvmChunk*))
+		//NVML_DIRECT("NVMCHUNKPP", pheap->nvmChunkpp, sizeof(nvmChunk*))
 		while (*(pheap->nvmChunkpp)){
+
 			/*	search unallocated chunk		*/
 			if ((*(pheap->nvmChunkpp))->allocBit == 1){
 				pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
@@ -2685,14 +2676,12 @@ void *sysMalloc_persistent(int size){
 
 			if(len > n) {
 				found = *(pheap->nvmChunkpp);
-
 				/*	check if remaining space can hold a chunk		*/
 				if((int)(len - (nvmHeaderSize + n)) >= minSize) {
 					/*	ptr +	header	+ content = OK	*/
 					rem = ((char*)found + nvmHeaderSize + n);
 
 					have_remaining = TRUE;
-
 					if (shift = (unsigned int)rem & 0x3){
 						shift = (0x4 - shift);
 						memset(rem, 0 , shift);
@@ -2714,11 +2703,18 @@ void *sysMalloc_persistent(int size){
 			pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
 		}
 
+		if (found == NULL) {
+			// we couldn't find any chunk with the desired size
+			// since we don't have GC yet, we'll have to exit the JVM
+			jam_fprintf(stderr, "We're out of chunks and don't have GC, so goodbye!\n");
+			exitVM(1);
+		}
+
 		if(have_remaining) {
-			NVML_DIRECT("FOUND", found, nvmHeaderSize * 2  + n)
+			//NVML_DIRECT("FOUND", found, nvmHeaderSize * 2  + n)
 		}
 		else {
-			NVML_DIRECT("FOUND", found, nvmHeaderSize + n)
+			//NVML_DIRECT("FOUND", found, nvmHeaderSize + n)
 		}
 
 		found->allocBit = 1;
@@ -2727,7 +2723,7 @@ void *sysMalloc_persistent(int size){
 		if(have_remaining)
 			found->next = rem;
 
-		NVML_DIRECT("NVMFREESPACE", &(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace))
+		//NVML_DIRECT("NVMFREESPACE", &(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace))
 
 		if(have_remaining)
 			pheap->nvmFreeSpace = pheap->nvmFreeSpace - nvmHeaderSize - shift - sizeof(nvmChunk);
@@ -2736,35 +2732,31 @@ void *sysMalloc_persistent(int size){
 		/* clear chunk */
 		memset(ret_addr, 0, found->chunkSize);
 
-		END_TX
-
 		return ret_addr;
-	} else
+	}else
 		return sysMalloc(size);
 }
+// End of modification
 
 /* XXX NVM CHANGE 004.003 - SysFree */
+// JaPHa Modification
 void sysFree_persistent(void* addr){
 	if(is_persistent){
 		int err;
-		unsigned long ptr = (unsigned long) addr;//this err
-		BEGIN_TX
+		unsigned long ptr = (unsigned long) addr;
+
 		/*	chunk = ptr - header */
 		nvmChunk *toFree = (ptr-nvmHeaderSize);
-
-
 		NVML_DIRECT("NVMFREESPACE", &(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace))
-
 		pheap->nvmFreeSpace = pheap->nvmFreeSpace + toFree->chunkSize;
-
 		NVML_DIRECT("TOFREE", toFree, toFree->chunkSize + nvmHeaderSize)
-
 		toFree->allocBit = 0;
 		memset(ptr, 0, toFree->chunkSize);
-		END_TX
 	}else
 		sysFree(addr);
+
 }
+// End of modification
 
 /* XXX NVM CHANGE 004.002 - SysRealloc */
 void *sysRealloc_persistent(void *addr, int size){
@@ -2823,11 +2815,14 @@ unsigned long get_chunkpp()
 /*	XXX NVM CHANGE 009.001.002	*/
 OPC *get_opc_ptr()
 {
+	// JaPHa modification
 	return &(pheap->opc);
+	// End of modification
 }
 
 /*	XXX NVM CHANGE 009.001.003	*/
 uintptr_t get_freelist_header(){
+
 	return freelist->header;
 }
 
@@ -2840,7 +2835,6 @@ struct chunk *get_freelist_next(){
 unsigned int get_heapfree(){
 	return heapfree;
 }
-
 
 int get_has_finaliser_count(){
 	return has_finaliser_count;

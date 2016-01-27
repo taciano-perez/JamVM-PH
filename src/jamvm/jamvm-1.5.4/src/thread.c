@@ -117,8 +117,6 @@ static long long total_started_threads_count = 1;
 static int all_threads_suspended = FALSE;
 static int threads_waiting_to_start = 0;
 
-//static int main_exited = FALSE;
-
 /* Bitmap - used for generating unique thread ID's */
 #define MAP_INC 32
 static unsigned int *tidBitmap = NULL;
@@ -1150,50 +1148,58 @@ Thread *findRunningThreadByTid(int tid) {
 
 // JaPHa Modification
 void flushPHValues() {
-    printf("Flushing PHValues\n");
     OPC *ph_values = get_opc_ptr();
-    ph_values->java_lang_Class =  get_java_lang_class();
+    NVML_DIRECT("PHVALUES", ph_values, sizeof(OPC));
+    //ph_values->java_lang_Class =  get_java_lang_class();
     ph_values->ldr_vmdata_offset = get_ldr_vmdata_offset();
     ph_values->boot_classes_hash_count = get_BC_HC();
     ph_values->boot_packages_hash_count = get_BP_HC();
     ph_values->string_hash_count = get_string_HC();
     ph_values->utf8_hash_count = get_utf8_HC();
     ph_values->classes_hash_count = get_CL_HC();
-    memcpy(ph_values->prim_classes, get_prim_classes(), sizeof(ph_values->prim_classes));
-    ph_values->has_finaliser_count = get_has_finaliser_count();
-    ph_values->has_finaliser_size = get_has_finaliser_size();
+    //memcpy(ph_values->prim_classes, get_prim_classes(), sizeof(ph_values->prim_classes));
+    //ph_values->has_finaliser_count = get_has_finaliser_count();
+    /*ph_values->has_finaliser_size = get_has_finaliser_size();
     ph_values->has_finaliser_list = sysMalloc_persistent(ph_values->has_finaliser_size*sizeof(Object*));
-    memcpy(ph_values->has_finaliser_list, get_has_finaliser_list(), ph_values->has_finaliser_size*sizeof(Object*));
+    memcpy(ph_values->has_finaliser_list, get_has_finaliser_list(), ph_values->has_finaliser_size*sizeof(Object*));*/
+}
+
+void checkPoolAddress(int *ptr) {
+	int *first_address = pheap;
+	int *last_address = first_address + PHEAP_SIZE;
+
+	if(ptr > last_address || ptr < first_address) {
+		printf("out of range\n");
+		printf("Initial Address %p\n", first_address);
+		printf("Sizeof PHeap*4 %p\n", PHEAP_SIZE);
+		printf("Final Address %p\n", last_address);
+	}
 }
 // End of modification
-
-// JaPHa Modification
 
 void exitVM(int status) {
 	main_exited = TRUE;
 	/*	XXX NVM CHANGE 009.000.002	*/
-	if(is_persistent == TRUE){
-
-	    // JaPHa Modification
-
-	    flushPHValues();
-	    printf("sizeof pheap: %lu mb\n", sizeof(PHeap)/1024);
-	    printf("pool freespace: %lu\n", pheap->heapfree);
-	    printf("pool maxheap: %lu\n", pheap->maxHeap);
-	    printf("nvm currentsize: %u\n", pheap->nvmCurrentSize);
-	    printf("nvm freespace: %u\n", pheap->nvmFreeSpace);
-
-	    // End of modification
-
-	}
-
-	// End of modification
+//	if(is_persistent == TRUE){
+//
+//	    // JaPHa Modification
+//	    dump_heap();
+//	    dump_nvm();
+//	    printf("pheap: %p\n", &pheap);
+//	    printf("sizeof pheap: %lu\n", PHEAP_SIZE);
+//	    printf("pool freespace: %lu\n", pheap->heapfree);
+//	    printf("pool maxheap: %lu\n", pheap->maxHeap);
+//	    printf("nvm currentsize: %u\n", pheap->nvmCurrentSize);
+//	    printf("nvm freespace: %u\n", pheap->nvmFreeSpace);
+//	    // End of modification
+//
+//	}
 
     /* Execute System.exit() to run any registered shutdown hooks.
        In the unlikely event that System.exit() can't be found, or
        it returns, fall through and exit. */
 
-	if(!VMInitialising()) {
+    if(!VMInitialising()) {
         Class *system = findSystemClass(SYMBOL(java_lang_System));
         if(system) {
             MethodBlock *exit = findMethod(system, SYMBOL(exit), SYMBOL(_I__V));
@@ -1203,12 +1209,10 @@ void exitVM(int status) {
     }
 
 	//JaPHa Modification
-	//close the heap before ending the VM
-
-	if(persistent) {
+	//TODO close the heap before ending the VM
+	if(is_persistent) {
 		pmemobj_close(pop_heap);
 	}
-
 	//End of Modification
 
     jamvm_exit(status);
