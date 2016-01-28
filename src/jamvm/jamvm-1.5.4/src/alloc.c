@@ -349,7 +349,9 @@ void *ph_malloc(int len2) {
 	   satisfy allocation request */
 	int has_found = FALSE;
 
-	NVML_DIRECT("CHUNKPP", pheap->chunkpp, sizeof(Chunk*))
+	if(nvml_alloc) {
+		NVML_DIRECT("CHUNKPP", &pheap->chunkpp, sizeof(Chunk*))
+	}
 	uintptr_t len;
 	while(*(pheap->chunkpp)) {
 		len = (*(pheap->chunkpp))->header;
@@ -383,7 +385,10 @@ void *ph_malloc(int len2) {
 		printf("ERROR: could not find available space\n");
 	}
 
-	NVML_DIRECT("HEAPFREE", &(pheap->heapfree), sizeof(pheap->heapfree))
+	if(nvml_alloc) {
+		NVML_DIRECT("HEAPFREE", &(pheap->heapfree), sizeof(pheap->heapfree))
+	}
+
 	pheap->heapfree -= n;
 
 	/*REMOVED*/
@@ -391,10 +396,14 @@ void *ph_malloc(int len2) {
 	//(found, n + sizeof(Chunk));
 
 	if(have_remaining) {
-		NVML_DIRECT("FOUND", found, HEADER_SIZE * 2 + n)
+		if(nvml_alloc) {
+			NVML_DIRECT("FOUND", found, HEADER_SIZE * 2 + n)
+		}
 	}
 	else {
-		NVML_DIRECT("FOUND", found, HEADER_SIZE + n)
+		if(nvml_alloc) {
+			NVML_DIRECT("FOUND", found, HEADER_SIZE + n)
+		}
 	}
 
 	found->header = n | ALLOC_BIT;
@@ -2664,7 +2673,9 @@ void *sysMalloc_persistent(int size){
 		int shift = 0;
 
 		unsigned int len = 0;
-		//NVML_DIRECT("NVMCHUNKPP", pheap->nvmChunkpp, sizeof(nvmChunk*))
+		if(nvml_alloc) {
+			NVML_DIRECT("NVMCHUNKPP", &pheap->nvmChunkpp, sizeof(nvmChunk*))
+		}
 		while (*(pheap->nvmChunkpp)){
 
 			/*	search unallocated chunk		*/
@@ -2711,10 +2722,14 @@ void *sysMalloc_persistent(int size){
 		}
 
 		if(have_remaining) {
-			//NVML_DIRECT("FOUND", found, nvmHeaderSize * 2  + n)
+			if(nvml_alloc) {
+				NVML_DIRECT("FOUND", found, nvmHeaderSize * 2  + n)
+			}
 		}
 		else {
-			//NVML_DIRECT("FOUND", found, nvmHeaderSize + n)
+			if(nvml_alloc) {
+				NVML_DIRECT("FOUND", found, nvmHeaderSize + n)
+			}
 		}
 
 		found->allocBit = 1;
@@ -2723,7 +2738,9 @@ void *sysMalloc_persistent(int size){
 		if(have_remaining)
 			found->next = rem;
 
-		//NVML_DIRECT("NVMFREESPACE", &(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace))
+		if(nvml_alloc) {
+			NVML_DIRECT("NVMFREESPACE", &(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace))
+		}
 
 		if(have_remaining)
 			pheap->nvmFreeSpace = pheap->nvmFreeSpace - nvmHeaderSize - shift - sizeof(nvmChunk);
@@ -2747,9 +2764,13 @@ void sysFree_persistent(void* addr){
 
 		/*	chunk = ptr - header */
 		nvmChunk *toFree = (ptr-nvmHeaderSize);
-		NVML_DIRECT("NVMFREESPACE", &(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace))
+		if(nvml_alloc) {
+			NVML_DIRECT("NVMFREESPACE", &(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace))
+		}
 		pheap->nvmFreeSpace = pheap->nvmFreeSpace + toFree->chunkSize;
-		NVML_DIRECT("TOFREE", toFree, toFree->chunkSize + nvmHeaderSize)
+		if(nvml_alloc) {
+			NVML_DIRECT("TOFREE", toFree, toFree->chunkSize + nvmHeaderSize)
+		}
 		toFree->allocBit = 0;
 		memset(ptr, 0, toFree->chunkSize);
 	}else

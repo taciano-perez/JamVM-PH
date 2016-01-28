@@ -1,4 +1,4 @@
-public class tstr{
+public class tstr {
 	public static String str = "oi";
 	public static int x = 0;
 	public static Object lock = new Object();
@@ -15,5 +15,3 @@ public class tstr{
 
 	}
 }
-
-

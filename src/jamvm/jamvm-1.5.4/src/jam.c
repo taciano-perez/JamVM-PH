@@ -410,7 +410,7 @@ int main(int argc, char *argv[]) {
 	printf("Initialising JVM\n");
 
 	// JaPHa Modification
-	persistent = main_started = main_exited = pheap_created = heap_range_added = tx_monitor = exit_vm = FALSE;
+	nvml_alloc = persistent = main_started = main_exited = pheap_created = heap_range_added = tx_monitor = exit_vm = FALSE;
 	first_ex = TRUE;
 
 	if(access(PATH, F_OK) != -1) {

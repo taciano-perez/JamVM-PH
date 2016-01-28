@@ -1209,7 +1209,7 @@ POBJ_LAYOUT_BEGIN(HEAP_POOL);
 POBJ_LAYOUT_ROOT(HEAP_POOL, PHeap);
 POBJ_LAYOUT_END(HEAP_POOL);
 
-int persistent, tx_monitor, main_started, main_exited, pheap_created, errr, contX, contE, first_ex, exit_vm, heap_range_added, check_classloader;
+int nvml_alloc, persistent, tx_monitor, main_started, main_exited, pheap_created, errr, contX, contE, first_ex, exit_vm, heap_range_added, check_classloader;
 PMEMobjpool *pop_heap;
 PMEMoid root_heap;
 PHeap *pheap;

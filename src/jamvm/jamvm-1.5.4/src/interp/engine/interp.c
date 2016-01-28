@@ -339,7 +339,7 @@ uintptr_t *executeJava() {
     DEF_OPC(OPC_PUTSTATIC_QUICK##suffix, level,            \
 		if(persistent) {								   \
 			BEGIN_TX("PUTSTATIC_QUICK")                    \
-			NVML_DIRECT("PUTSTATICQ",                      \
+			NVML_DIRECT("PUTSTATICQUICK",                  \
 			RESOLVED_FIELD(pc), sizeof(FieldBlock));       \
 			END_TX("PUTSTATIC_QUICK")                      \
 		}												   \
@@ -1247,6 +1247,7 @@ uintptr_t *executeJava() {
     DEF_OPC_210(OPC_NEWARRAY, {
 		if(persistent) {
     		BEGIN_TX("NEWARRAY")
+    		nvml_alloc = TRUE;
 		}
         int type = ARRAY_TYPE(pc);
         int count = *--ostack;
@@ -1258,6 +1259,7 @@ uintptr_t *executeJava() {
 
 		if(persistent) {
         	END_TX("NEWARRAY")
+			nvml_alloc = FALSE;
 		}
         PUSH_0((uintptr_t)obj, 2);
     })
@@ -2246,6 +2248,7 @@ uintptr_t *executeJava() {
     DEF_OPC_210(OPC_NEW_QUICK, {
 		if(persistent) {
     		BEGIN_TX("NEW_QUICK")
+			nvml_alloc = TRUE;
 		}
         Class *class = RESOLVED_CLASS(pc);
         Object *obj;
@@ -2256,6 +2259,7 @@ uintptr_t *executeJava() {
 
 		if(persistent) {
         	END_TX("NEW_QUICK")
+			nvml_alloc = FALSE;
 		}
         PUSH_0((uintptr_t)obj, 3);
     })
@@ -2265,6 +2269,7 @@ uintptr_t *executeJava() {
     DEF_OPC_210(OPC_ANEWARRAY_QUICK, {
 		if(persistent) {
     		BEGIN_TX("ANEWARRAY_QUICK")
+			nvml_alloc = TRUE;
 		}
         Class *class = RESOLVED_CLASS(pc);
         char *name = CLASS_CB(class)->name;
@@ -2298,6 +2303,7 @@ uintptr_t *executeJava() {
 
 		if(persistent) {
         	END_TX("ANEWARRAY_QUICK")
+			nvml_alloc = FALSE;
 		}
         PUSH_0((uintptr_t)obj, 3);
     })
@@ -2328,6 +2334,7 @@ uintptr_t *executeJava() {
     DEF_OPC_210(OPC_MULTIANEWARRAY_QUICK, ({
 		if(persistent) {
     		BEGIN_TX("MULTIANEWARRAY_QUICK")
+			nvml_alloc = TRUE;
 		}
         Class *class = RESOLVED_CLASS(pc);
         int i, dim = MULTI_ARRAY_DIM(pc);
@@ -2347,6 +2354,7 @@ uintptr_t *executeJava() {
 
 		if(persistent) {
         	END_TX("MULTIANEWARRAY_QUICK")
+			nvml_alloc = FALSE;
 		}
         PUSH_0((uintptr_t)obj, 4);
     });)

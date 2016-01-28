@@ -2146,8 +2146,10 @@ void initialiseClass(InitArgs *args) {
 
     /* Register the address of where the java.lang.Class ref _will_ be */
     registerStaticClassRef(&java_lang_Class);
-    (pheap->opc).java_lang_Class = java_lang_Class;
-    (pheap->opc).ldr_vmdata_offset = ldr_vmdata_offset;
+    if(persistent) {
+		(pheap->opc).java_lang_Class = java_lang_Class;
+		(pheap->opc).ldr_vmdata_offset = ldr_vmdata_offset;
+    }
 }
 
 /*	XXX NVM CHANGE 009.002.000	*/
