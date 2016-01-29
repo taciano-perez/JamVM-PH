@@ -1,4 +1,4 @@
-public class CrashString {
+public class tstr {
 	public static String str = "oi";
 	public static int x = 0;
 	public static Object lock = new Object();
