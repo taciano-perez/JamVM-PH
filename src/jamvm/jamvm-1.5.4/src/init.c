@@ -79,6 +79,9 @@ void initVM(InitArgs *args) {
      * Alloc - DLL - UTF8
      * Exception - Natives - JNI	*/
 
+	// JaPHa Modification
+    nvml_alloc = TRUE;
+
     initialiseHooks(args);
     initialiseProperties(args);
     initialiseAlloc(args);
@@ -96,10 +99,9 @@ void initVM(InitArgs *args) {
     initialiseThreadStage2(args);
     initialiseGC(args);
 
-    //END FINALIZATION TX
     END_TX("INITVM")
-
-    VM_initing = FALSE;
+    nvml_alloc = VM_initing = FALSE;
+	// End of modification
 }
 
 unsigned long parseMemValue(char *str) {

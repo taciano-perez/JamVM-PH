@@ -1270,7 +1270,6 @@ uintptr_t *executeJava() {
         Object *obj = (Object *)*--ostack;
         NULL_POINTER_CHECK(obj);
         if(persistent) {
-        	//printf("MONITOR ENTER\n\n");
 			pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE);
 			NVML_DIRECT("ENTEROBJ", obj, sizeof(Object));
 		}
@@ -1287,23 +1286,16 @@ uintptr_t *executeJava() {
 		if(persistent) {
 			pmemobj_tx_process();
 			pmemobj_tx_end();
-			//printf("\n\nMONITOR EXIT\n");
 		}
         DISPATCH(0, 1);
     })
 	// End of modification
 
 #ifdef DIRECT
-
-	// JaPHa Modification
     DEF_OPC_RW(OPC_LDC, ({
         int idx, cache;
         Operand operand;
 
-//		if(persistent) {
-//        	BEGIN_TX("LDC")
-//	        NVML_DIRECT("PCLDC", pc, sizeof(Instruction))
-//		}
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_LDC, idx, cache);
 
         frame->last_pc = pc;
@@ -1320,12 +1312,8 @@ uintptr_t *executeJava() {
         } else
             OPCODE_REWRITE(OPC_LDC_QUICK, cache, operand);
 
-//		if(persistent) {
-//	        END_TX("LDC")
-//		}
         REDISPATCH
     });)
-	// End of modification
 
 	// JaPHa Modification
     DEF_OPC_210(OPC_TABLESWITCH, {
@@ -1370,16 +1358,11 @@ uintptr_t *executeJava() {
     })
 	// End of modification
 
-	// JaPHa Modification
     DEF_OPC_RW(OPC_GETSTATIC, ({
         int idx, cache, opcode;
         FieldBlock *fb;
         Operand operand;
                
-//        if(persistent) {
-//        	BEGIN_TX("GETSTATIC")
-//        	NVML_DIRECT("GETSTATIC", pc, sizeof(Instruction))
-//		}
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_GETSTATIC, idx, cache);
 
         frame->last_pc = pc;
@@ -1399,23 +1382,14 @@ uintptr_t *executeJava() {
         operand.pntr = fb;
         OPCODE_REWRITE(opcode, cache, operand);
 
-//		if(persistent) {
-//	        END_TX("GETSTATIC")
-//		}
         REDISPATCH
     });)
-	// End of modification
 
-	// JaPHa Modification
     DEF_OPC_RW(OPC_PUTSTATIC, ({
         int idx, cache, opcode;
         FieldBlock *fb;
         Operand operand;
 
-//		if(persistent) {
-//        	BEGIN_TX("PUTSTATIC")
-//        	NVML_DIRECT("PUTSTATIC", pc, sizeof(Instruction))
-//		}
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_PUTSTATIC, idx, cache);
 
         frame->last_pc = pc;
@@ -1434,25 +1408,15 @@ uintptr_t *executeJava() {
 
         operand.pntr = fb;
         OPCODE_REWRITE(opcode, cache, operand);
-//		if(persistent) {
-// 	       END_TX("PUTSTATIC")
-//		}
 
         REDISPATCH
     });)
-	// End of modification
 
-
-	// JaPHa Modification
     DEF_OPC_RW(OPC_GETFIELD, ({
         int idx, cache, opcode;
         Operand operand;
         FieldBlock *fb;
 
-//		if(persistent) {
-//        	BEGIN_TX("GETFIELD")
-//        	NVML_DIRECT("GETFIELD", pc, sizeof(Instruction))
-//		}
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_GETFIELD, idx, cache);
 
         frame->last_pc = pc;
@@ -1472,23 +1436,13 @@ uintptr_t *executeJava() {
         operand.i = fb->u.offset;
         OPCODE_REWRITE(opcode, cache, operand);
 
-//		if(persistent) {
-//       		END_TX("GETFIELD")
-//		}
         REDISPATCH
     });)
-	// End of modification
 
-	// JaPHa Modification
     DEF_OPC_RW(OPC_PUTFIELD, ({
         int idx, cache, opcode;
         FieldBlock *fb;
         Operand operand;
-
-//		if(persistent) {
-//        	BEGIN_TX("PUTFIELD")
-//        	NVML_DIRECT("PUTFIELD", pc, sizeof(Instruction))
-//		}
 
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_PUTFIELD, idx, cache);
 
@@ -1509,15 +1463,9 @@ uintptr_t *executeJava() {
         operand.i = fb->u.offset;
         OPCODE_REWRITE(opcode, cache, operand);
 
-//		if(persistent) {
-//       		END_TX("PUTFIELD")
-//		}
-
         REDISPATCH
     });)
-	// End of modification
 
-	// JaPHa Modification
     DEF_OPC_RW(OPC_INVOKEVIRTUAL, ({
         int idx, cache;
         Operand operand;
@@ -1541,17 +1489,10 @@ uintptr_t *executeJava() {
 
         REDISPATCH
     });)
-	// End of modification
 
-	// JaPHa Modification
     DEF_OPC_RW(OPC_INVOKESPECIAL, ({
         int idx, cache;
         Operand operand;
-
-//        if(persistent) {
-//			BEGIN_TX("INVOKESPECIAL")
-//        	NVML_DIRECT("INVOKESPECIAL", pc, sizeof(Instruction))
-//		}
 
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_INVOKESPECIAL, idx, cache);
 
@@ -1573,22 +1514,12 @@ uintptr_t *executeJava() {
             OPCODE_REWRITE(OPC_INVOKENONVIRTUAL_QUICK, cache, operand);
         }
 
-//		if(persistent) {
-//       		END_TX("INVOKESPECIAL")
-//		}
         REDISPATCH
     });)
-	// End of modification
 
-	// JaPHa Modification
     DEF_OPC_RW(OPC_INVOKESTATIC, ({
         int idx, cache;
         Operand operand;
-
-//		if(persistent) {
-//       		BEGIN_TX("INVOKESTATIC")
-//      	NVML_DIRECT("INVOKESTATIC", pc, sizeof(Instruction))
-//		}
 
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_INVOKESTATIC, idx, cache);
 
@@ -1600,22 +1531,13 @@ uintptr_t *executeJava() {
 
         operand.pntr = new_mb;
         OPCODE_REWRITE(OPC_INVOKESTATIC_QUICK, cache, operand);
-//		if(persistent) {
-//       		END_TX("INVOKESTATIC")
-//		}
         REDISPATCH
     });)
-	// End of modification
 
-	// JaPHa Modification
     DEF_OPC_RW(OPC_INVOKEINTERFACE, ({
         int idx, cache;
         Operand operand;
 
-//		if(persistent) {
-//        	BEGIN_TX("INVOKEINTERFACE")
-//        	NVML_DIRECT("INVOKEINTERFACE", pc, sizeof(Instruction))
-//		}
         WITH_OPCODE_CHANGE_CP_DINDEX(OPC_INVOKEINTERFACE, idx, cache);
 
         frame->last_pc = pc;
@@ -1634,20 +1556,10 @@ uintptr_t *executeJava() {
             OPCODE_REWRITE(OPC_INVOKEVIRTUAL_QUICK, cache, operand);
         }
 
-//		if(persistent) {
-//       		END_TX("INVOKEINTERFACE")
-//		}
         REDISPATCH
     });)
-	// End of modification
 
-	// JaPHa Modification
     DEF_OPC_RW(OPC_MULTIANEWARRAY, ({
-//		if(persistent) {
-//    		BEGIN_TX("MULTIANEWARRAY")
-//    		NVML_DIRECT("MULTIANEWARRAY", pc, sizeof(Instruction))
-//		}
-
         int idx = pc->operand.uui.u1;
         int cache = pc->operand.uui.i;
 
@@ -1658,24 +1570,14 @@ uintptr_t *executeJava() {
             goto throwException;
         
         OPCODE_REWRITE(OPC_MULTIANEWARRAY_QUICK, cache, pc->operand);
-//		if(persistent) {
-//       		END_TX("MULTIANEWARRAY")
-//		}
         REDISPATCH
     });)
-	// End of modification
 
-	// JaPHa Modification
     DEF_OPC_RW_4(OPC_NEW, OPC_ANEWARRAY, OPC_CHECKCAST, OPC_INSTANCEOF, ({
         int idx = pc->operand.uui.u1;
         int opcode = pc->operand.uui.u2;
         int cache = pc->operand.uui.i;
         Class *class;
-
-//		if(persistent) {
-// 	       BEGIN_TX("NEW - ANEWARRAY - CHECKCAST - INSTANCEOF")
-// 	       NVML_DIRECT("4 RW", pc, sizeof(Instruction))
-//		}
 
         frame->last_pc = pc;
         class = resolveClass(mb->class, idx, opcode == OPC_NEW);
@@ -1692,12 +1594,8 @@ uintptr_t *executeJava() {
         }
 
         OPCODE_REWRITE((opcode + OPC_NEW_QUICK-OPC_NEW), cache, pc->operand);
-//		if(persistent) {
-//       		END_TX("NEW - ANEWARRAY - CHECKCAST - INSTANCEOF")
-//		}
         REDISPATCH
     });)
-	// End of modification
 #else /* DIRECT */
     DEF_OPC_210(OPC_LDC, {
         frame->last_pc = pc;
@@ -2387,33 +2285,14 @@ uintptr_t *executeJava() {
     });)
 #endif
 
-	// JaPHa Modification
     DEF_OPC_210(OPC_INVOKEVIRTUAL_QUICK, {
         Class *new_class;
         arg1 = ostack - INV_QUICK_ARGS(pc);
         NULL_POINTER_CHECK(*arg1);
         new_class = (*(Object **)arg1)->class;
-        //printf("4 class pointer=%p, ", new_class);
-        ClassBlock* dbgCb = CLASS_CB(new_class);
-        //printf("4.1 gdbCb=%p\n", dbgCb);
-        //printf("4.2 gdbCb->name=%s, ", dbgCb->name);
         new_mb = CLASS_CB(new_class)->method_table[INV_QUICK_IDX(pc)];
-//        if(!strcmp(CLASS_CB(new_class)->name, "java/lang/String")) {
-//        	printf("String - %s\n", new_mb->name);
-//        }
-//        if(!strcmp(CLASS_CB(new_class)->name, "java/lang/String")) {
-//			printf("String - %s\n", new_mb->name);
-//		}
-        //printf("5\n");
-        //unsigned long *teste = (unsigned long *) 0x7ffff7efb240;
-		//if((unsigned long *)arg1 == teste){
-		//	printf("invokevirtual, ");
-		//	printf("class name: %s, ", CLASS_CB(new_class)->name);
-		//	printf("method name: %s\n", new_mb->name);
-		//
         goto invokeMethod;
     })
-	// End of modification
 
 invokeMethod:
 {
@@ -2578,3 +2457,4 @@ void shutdownInterpreter() {
 #endif
 }
 #endif
+

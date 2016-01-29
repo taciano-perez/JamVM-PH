@@ -102,9 +102,7 @@ char *findHashedUtf8(char *string, int add_if_absent) {
     char *interned = NULL;
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.008  */
-	// JaPHa Modification
-	findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
-	// End of modification
+   		findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
    	return interned;
 }
 

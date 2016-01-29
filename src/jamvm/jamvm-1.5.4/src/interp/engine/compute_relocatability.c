@@ -152,9 +152,6 @@ ExecEnv *getExecEnv() {
 // JaPHa Modification
 void flushPHValues() {
 }
-
-void checkPoolAddress(int *ptr) {
-}
 // End of modification
 
 void exitVM(int status) {

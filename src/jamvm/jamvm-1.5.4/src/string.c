@@ -102,9 +102,7 @@ Object *findInternedString(Object *string) {
     Object *interned;
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.007  */
-	// JaPHa Modification
-	findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, string_name, TRUE);
-	// End of modification
+    findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, string_name, TRUE);
 
     return interned;
 }

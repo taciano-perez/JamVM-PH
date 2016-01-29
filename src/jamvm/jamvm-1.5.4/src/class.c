@@ -179,14 +179,12 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
 
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.001  */
-	// JaPHa Modification
-	if ((unsigned long)table == (unsigned long)&boot_classes){
-		findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
-	}else{
-		findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, class_name, TRUE );
-		class_HC = table->hash_count;
-	}
-	// End of modification
+    if ((unsigned long)table == (unsigned long)&boot_classes){
+    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
+    }else{
+    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, class_name, TRUE );
+    	class_HC = table->hash_count;
+    }
 
 
     return entry;
@@ -1393,9 +1391,7 @@ void defineBootPackage(char *classname, int index) {
 
         /* Add if absent, no scavenge, locked */
         /* XXX NVM CHANGE 006.003.002  */
-		// JaPHa Modification
-		findHashEntry(boot_packages, package, hashed, TRUE, FALSE, TRUE, bootp_name, TRUE);
-		// End of modification
+        findHashEntry(boot_packages, package, hashed, TRUE, FALSE, TRUE, bootp_name, TRUE);
 
         if(package != hashed)
             sysFree(package);

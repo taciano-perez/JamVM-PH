@@ -332,9 +332,7 @@ Monitor *findMonitor(Object *obj) {
         Monitor *mon;
         /* Add if absent, scavenge, locked */
         /* XXX NVM CHANGE 006.003.012  */
-		// JaPHa Modification
-		findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
-		// End of modification
+        findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
         return mon;
     }
 }
