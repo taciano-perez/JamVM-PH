@@ -2142,7 +2142,7 @@ void initialiseClass(InitArgs *args) {
 
     /* Register the address of where the java.lang.Class ref _will_ be */
     registerStaticClassRef(&java_lang_Class);
-    if(persistent) {
+    if(is_persistent) {
 		(pheap->opc).java_lang_Class = java_lang_Class;
 		(pheap->opc).ldr_vmdata_offset = ldr_vmdata_offset;
     }

@@ -313,7 +313,7 @@ void *ph_malloc(int len2) {
 	Chunk *found;
 	Thread *self;
 	int err;
-	int have_remaining = 0;
+	int have_remaining = FALSE;
 
 	/* See comment below */
 	char *ret_addr;
@@ -353,7 +353,7 @@ void *ph_malloc(int len2) {
 			/* Chain the remainder onto the freelist only
 			   if it's large enough to hold an object */
 			if(rem->header >= MIN_OBJECT_SIZE) {
-				have_remaining = 1;
+				have_remaining = TRUE;
 				rem->next = found->next;
 				*pheap->chunkpp = rem;
 			} else
@@ -446,7 +446,6 @@ int initialiseRoot(InitArgs *args) {
 		}
 	}
 
-	pheap_created = TRUE;
 	return TRUE;
 }
 //End of modification

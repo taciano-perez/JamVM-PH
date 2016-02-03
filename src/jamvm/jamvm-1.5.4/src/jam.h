@@ -838,7 +838,6 @@ typedef struct pheap {
 	char heapMem[HEAP_SIZE];// heap contents
 } PHeap;
 
-extern void dump_heap();
 extern void* ph_malloc(int len);
 extern int initialiseRoot(InitArgs *args);
 // End of modification
@@ -1209,11 +1208,10 @@ POBJ_LAYOUT_BEGIN(HEAP_POOL);
 POBJ_LAYOUT_ROOT(HEAP_POOL, PHeap);
 POBJ_LAYOUT_END(HEAP_POOL);
 
-int nvml_alloc, persistent, tx_monitor, main_started, main_exited, pheap_created, errr, contX, contE, first_ex, exit_vm, heap_range_added, check_classloader;
+int nvml_alloc, persistent, errr, first_ex;
 PMEMobjpool *pop_heap;
 PMEMoid root_heap;
 PHeap *pheap;
-PMEMmutex tx_mutex;
 
 #define NVML_DIRECT(TYPE, PTR, SIZE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
 										if(errr = pmemobj_tx_add_range_direct(PTR, SIZE)) { \
@@ -1236,5 +1234,4 @@ PMEMmutex tx_mutex;
 				}
 
 extern void flushPHValues();
-extern void checkPoolAddress(int *ptr);
 // End of modification

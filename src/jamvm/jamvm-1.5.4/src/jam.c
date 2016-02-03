@@ -410,7 +410,7 @@ int main(int argc, char *argv[]) {
 	printf("Initialising JVM\n");
 
 	// JaPHa Modification
-	nvml_alloc = persistent = main_started = main_exited = pheap_created = heap_range_added = tx_monitor = exit_vm = FALSE;
+	nvml_alloc = persistent = FALSE;
 	first_ex = TRUE;
 
 	if(access(PATH, F_OK) != -1) {
@@ -487,8 +487,6 @@ int main(int argc, char *argv[]) {
         // JaPHa Modification
         if(i == argc)
 		{
-            if(persistent)
-                main_started = TRUE;
             executeStaticMethod(main_class, mb, array);
         }
         // End of modification
@@ -505,7 +503,6 @@ error:
     mainThreadWaitToExitVM();
 
     log(INFO, "Exit");
-    exit_vm = TRUE;
     exitVM(status);
 
    /* Keep the compiler happy */
