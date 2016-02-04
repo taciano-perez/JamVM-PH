@@ -55,7 +55,6 @@
 #define UNPREPARED 1
 #define PREPARING  2
 
-
 /* Global lock for method preparation */
 static VMWaitLock prepare_lock;
 
@@ -105,6 +104,7 @@ void prepare(MethodBlock *mb, const void ***handlers) {
 
 retry:
     code = mb->code;
+
     switch((uintptr_t)code & 0x3) {
         case PREPARED:
             unlockVMWaitLock(prepare_lock, self);
@@ -868,6 +868,7 @@ retry:
 
                         TRACE("Block start %d end %d length %d last opcode quickened %d\n",
                               ins_start, ins_count, block_len, quickened);
+
                         if(quickened) {
                             QuickPrepareInfo *prepare_info;
 

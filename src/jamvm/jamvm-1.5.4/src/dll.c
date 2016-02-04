@@ -297,7 +297,6 @@ int resolveDll(char *name, Object *loader) {
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
 
-
     /* Do not add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.005  */
     findHashEntry(hash_table, name, dll, FALSE, FALSE, TRUE, dll_ht_name, FALSE);
@@ -333,6 +332,7 @@ int resolveDll(char *name, Object *loader) {
 
         if(verbose)
            jam_printf("[Opened native library %s]\n", name);
+
         dll = sysMalloc(sizeof(DllEntry));
         dll->name = strcpy(sysMalloc(strlen(name) + 1), name);
         dll->handle = handle;
@@ -349,10 +349,10 @@ int resolveDll(char *name, Object *loader) {
         findHashEntry(hash_table, dll, dll2, TRUE, FALSE, TRUE, dll_ht_name, FALSE);
         /* XXX NVM CHANGE 008.000.002	*/
         if (is_persistent){
-        	FILE * fp;
-        	fp = fopen("dlls.txt", "a+");
-        	fprintf(fp, "%s\n", dll->name);
-        	fclose(fp);
+           FILE * fp;
+           fp = fopen("dlls.txt", "a+");
+           fprintf(fp, "%s\n", dll->name);
+           fclose(fp);
         }
         /* If the library has an OnUnload function it must be
            called from a running Java thread (i.e. not within
@@ -475,16 +475,15 @@ void unloadClassLoaderDlls(Object *loader) {
 static void *env = &Jam_JNINativeInterface;
 
 uintptr_t *callJNIWrapper(Class *class, MethodBlock *mb, uintptr_t *ostack) {
-	TRACE("<DLL: Calling JNI method %s.%s%s>\n", CLASS_CB(class)->name,
+    TRACE("<DLL: Calling JNI method %s.%s%s>\n", CLASS_CB(class)->name,
           mb->name, mb->type);
 
-	/* XXX NVM CHANGE 007.000.003 */
-	if (first_ex == FALSE)
-		lookupLoadedDlls(mb);
+    /* XXX NVM CHANGE 007.000.003 */
+    if (first_ex == FALSE)
+        lookupLoadedDlls(mb);
 
     if(!initJNILrefs())
         return NULL;
-
 
     return callJNIMethod(&env, (mb->access_flags & ACC_STATIC) ? class : NULL,
                          mb->type, mb->native_extra_arg, ostack, mb->code,

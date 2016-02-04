@@ -211,7 +211,7 @@ ZipFile *processArchive(char *path) {
         /* Add if absent, no scavenge, not locked */
         findHashEntry((*hash_table), pathname, found, TRUE, FALSE, FALSE, zip_name, FALSE);
     }
-   	/*	XXX NVM CHANGE 004.001.024 */
+    /*	XXX NVM CHANGE 004.001.024 */
     zip = sysMalloc_persistent(sizeof(ZipFile));
 
     zip->data = data;

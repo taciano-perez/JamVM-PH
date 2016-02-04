@@ -35,7 +35,6 @@
 #define BCP_MESSAGE "<directories separated by :>"
 #endif
 
-
 void showNonStandardOptions() {
     printf("  -Xbootclasspath:%s\n", BCP_MESSAGE);
     printf("\t\t   locations where to find the system classes\n");
@@ -135,6 +134,7 @@ void showVersionAndCopyright() {
 void showFullVersion() {
     printf("java full version \"jamvm-%s\"\n", JAVA_COMPAT_VERSION);
 }
+
 int parseCommandLine(int argc, char *argv[], InitArgs *args) {
     int is_jar = FALSE;
     int status = 1;
@@ -240,15 +240,13 @@ int parseCommandLine(int argc, char *argv[], InitArgs *args) {
                 goto exit;
             }
 
-			/* XXX NVM CHANGE 001.001 */
-		} else if (strncmp(argv[i], "-persistentheap:", 16) == 0) {
-			args->persistent_heap = TRUE;
-			args->heap_file = argv[i] + 16;
-			persistent = TRUE;
-
-		} else if (strncmp(argv[i], "-testingmode", 12) == 0) {
-			args->testing_mode = TRUE;
-
+            /* XXX NVM CHANGE 001.001 */
+            } else if (strncmp(argv[i], "-persistentheap:", 16) == 0) {
+                  args->persistent_heap = TRUE;
+                  args->heap_file = argv[i] + 16;
+                  persistent = TRUE;
+            } else if (strncmp(argv[i], "-testingmode", 12) == 0) {
+                  args->testing_mode = TRUE;
         } else if(strncmp(argv[i], "-D", 2) == 0) {
             char *key = strcpy(sysMalloc(strlen(argv[i] + 2) + 1), argv[i] + 2);
             char *pntr;
@@ -354,12 +352,10 @@ exit:
     exit(status);
 }
 
-
-
 int resumeAllListeners(Object *system_loader)
 {
-	Class *op_runtime = findClassFromClassLoader("javax.op.OPRuntime", system_loader);
-	Class *vm_channel = findClassFromClassLoader("gnu.java.nio.VMChannel", system_loader);
+    Class *op_runtime = findClassFromClassLoader("javax.op.OPRuntime", system_loader);
+    Class *vm_channel = findClassFromClassLoader("gnu.java.nio.VMChannel", system_loader);
 
     if(op_runtime != NULL)
         initClass(op_runtime);
@@ -377,7 +373,6 @@ int resumeAllListeners(Object *system_loader)
 
     executeStaticMethod(op_runtime, mb, NULL);
 
-
     if(vm_channel != NULL)
     	initClass(vm_channel);
 
@@ -387,36 +382,34 @@ int resumeAllListeners(Object *system_loader)
     if((mb = findMethod(vm_channel, SYMBOL(class_init), SYMBOL(___V))) != NULL)
          executeStaticMethod(vm_channel, mb);
 
-	// JaPHa Modification
+    // JaPHa Modification
     // TODO FIX RUNTIME REINIT
     //Class *runtime = findSystemClass(SYMBOL(java_lang_Runtime));
 
     //if(runtime != NULL)
-    	//initClass(runtime);
+    //initClass(runtime);
 
-	//if(exceptionOccurred())
-			//return FALSE;
+    //if(exceptionOccurred())
+         //return FALSE;
 
-	//if((mb = findMethod(runtime, SYMBOL(class_init), SYMBOL(___V))) != NULL)
-		// executeStaticMethod(runtime, mb);
-	// End of modification
+    //if((mb = findMethod(runtime, SYMBOL(class_init), SYMBOL(___V))) != NULL)
+         // executeStaticMethod(runtime, mb);
+    // End of modification
 
     return TRUE;
-
 }
 
 int main(int argc, char *argv[]) {
+    printf("Initialising JVM\n");
 
-	printf("Initialising JVM\n");
+    // JaPHa Modification
+    nvml_alloc = persistent = FALSE;
+    first_ex = TRUE;
 
-	// JaPHa Modification
-	nvml_alloc = persistent = FALSE;
-	first_ex = TRUE;
-
-	if(access(PATH, F_OK) != -1) {
-		first_ex = FALSE;
-	}
-	// End of modification
+    if(access(PATH, F_OK) != -1) {
+        first_ex = FALSE;
+    }
+    // End of modification
 
     Class *array_class, *main_class;
     Object *system_loader, *array;
@@ -427,9 +420,11 @@ int main(int argc, char *argv[]) {
     int status;
     int i;
 
+    // JaPHa Modification
     log(INFO, "Entering JamVM Main");
     initialise_log_file();
     initialise_tests_file();
+    // End of modification
 
     setDefaultInitArgs(&args);
     class_arg = parseCommandLine(argc, argv, &args);
@@ -437,12 +432,12 @@ int main(int argc, char *argv[]) {
     args.main_stack_base = &array_class;
     initVM(&args);
 
-	// JaPHa Modification
+    // JaPHa Modification
     printf("JVM Initialized\n");
-	// End of modification
+    // End of modification
 
-    if ((system_loader = getSystemClassLoader()) == NULL)
-    	goto error;
+   if((system_loader = getSystemClassLoader()) == NULL)
+        goto error;
 
     mainThreadSetContextClassLoader(system_loader);
 
@@ -453,7 +448,6 @@ int main(int argc, char *argv[]) {
             *cpntr = '/';
 
     main_class = findClassFromClassLoader(argv[class_arg], system_loader);
-
     if(main_class != NULL)
         initClass(main_class);
 
@@ -483,14 +477,10 @@ int main(int argc, char *argv[]) {
         printf("Entering Java Main \n");
 
         /* Call the main method */
-
-        // JaPHa Modification
         if(i == argc)
-		{
             executeStaticMethod(main_class, mb, array);
-        }
+            
         // End of modification
-
     }
 
 error:

@@ -863,7 +863,6 @@ extern void *sysMalloc(int n);
 extern void sysFree(void *ptr);
 extern void *sysRealloc(void *ptr, int n);
 
-
 /* XXX NVM CHANGE 004.000 - P.A.F
  * Added functions
  */

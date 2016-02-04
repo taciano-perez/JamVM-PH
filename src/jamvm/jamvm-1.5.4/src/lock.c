@@ -560,15 +560,15 @@ Thread *objectLockedBy(Object *obj) {
 }
 
 void initialiseMonitor(InitArgs *args) {
-	if(args->testing_mode == TRUE)
-	{
-		testing_mode = TRUE;
-	}
+    /* XXX NVM CHANGE 000.000.000  */
+    if(args->testing_mode == TRUE){
+        testing_mode = TRUE;
+    }
     /* Init hash table, create lock */
     /* XXX NVM CHANGE 005.001.006 - Monitors HT - N*/
-	// JaPHa Modification
+    // JaPHa Modification
     initHashTable(mon_cache, HASHTABSZE, TRUE, monitor_name, TRUE);
-	// End of modification
+    // End of modification
 }
 
 /* Heap compaction support */

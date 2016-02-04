@@ -40,7 +40,7 @@ extern void lockHashTable0(HashTable *table, Thread *self);
 extern void unlockHashTable0(HashTable *table, Thread *self);
 
 /* XXX NVM CHANGE 006.001 - Init HT = GMM */
-//todo Memset
+//TODO Memset
 //memset(table.hash_table, 0, sizeof(HashEntry)*initial_size);                   \
 
 #define initHashTable(table, initial_size, create_lock, name, create_file)         \
@@ -122,7 +122,6 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
     if(locked)                                                                     \
         unlockHashTable0(&table, self);                                            \
 }
-
 
 #define deleteHashEntry(table, ptr, locked)                                        \
 {                                                                                  \

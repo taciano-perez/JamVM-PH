@@ -117,6 +117,8 @@ static long long total_started_threads_count = 1;
 static int all_threads_suspended = FALSE;
 static int threads_waiting_to_start = 0;
 
+static int main_exited = FALSE;
+
 /* Bitmap - used for generating unique thread ID's */
 #define MAP_INC 32
 static unsigned int *tidBitmap = NULL;
@@ -795,6 +797,9 @@ static void *shell(void *args) {
     void *start = ((void**)args)[1];
     Thread *self = ((Thread**)args)[2];
 
+    if(main_exited)
+        return NULL;
+
     /* VM helper threads should be added to the system group, but this doesn't
        exist.  As the root group is main, we add it to that for now... */
     attachThread(((char**)args)[0], TRUE, &self, self,
@@ -1157,7 +1162,7 @@ void flushPHValues() {
 // End of modification
 
 void exitVM(int status) {
-	/*	XXX NVM CHANGE 009.000.002	*/
+    main_exited = TRUE;
 
     /* Execute System.exit() to run any registered shutdown hooks.
        In the unlikely event that System.exit() can't be found, or
@@ -1172,12 +1177,12 @@ void exitVM(int status) {
         }
     }
 
-	//JaPHa Modification
-	//TODO close the heap before ending the VM
-	if(is_persistent) {
-		pmemobj_close(pop_heap);
-	}
-	//End of Modification
+    //JaPHa Modification
+    //TODO close the heap before ending the VM
+    if(is_persistent) {
+        pmemobj_close(pop_heap);
+    }
+    //End of modification
 
     jamvm_exit(status);
 }
