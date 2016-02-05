@@ -1217,19 +1217,17 @@ PHeap *pheap;
 										} \
 									}
 
-#define BEGIN_TX(TYPE) if(errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE)) \
-					printf("ERROR %d at BEGIN\n", errr); \
-						/*else \
-							printf("%s BEGIN TX\n", TYPE); */\
+#define BEGIN_TX(TYPE) if(errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE)) { \
+					       printf("ERROR %d at BEGIN\n", errr); \
+                       } \
 
 #define END_TX(TYPE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
-					flushPHValues(); \
-					pmemobj_tx_process(); \
-				} \
-				if(pmemobj_tx_stage() != TX_STAGE_NONE) { \
-					pmemobj_tx_end(); \
-					/*printf("%s END TX\n", TYPE); */\
-				}
+					     flushPHValues(); \
+					     pmemobj_tx_process(); \
+				     } \
+				     if(pmemobj_tx_stage() != TX_STAGE_NONE) { \
+					     pmemobj_tx_end(); \
+				     }
 
 extern void flushPHValues();
 // End of modification

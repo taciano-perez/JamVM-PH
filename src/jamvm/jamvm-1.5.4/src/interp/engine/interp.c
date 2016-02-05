@@ -337,12 +337,12 @@ uintptr_t *executeJava() {
     )                                                      \
                                                            \
     DEF_OPC(OPC_PUTSTATIC_QUICK##suffix, level,            \
-        if(persistent) {				   \
+        if(persistent) {				                   \
            BEGIN_TX("PUTSTATIC_QUICK")                     \
            NVML_DIRECT("PUTSTATICQUICK",                   \
            RESOLVED_FIELD(pc), sizeof(FieldBlock));        \
            END_TX("PUTSTATIC_QUICK")                       \
-        }						   \
+        }						                           \
         POP_##level(*(type*)                               \
            (RESOLVED_FIELD(pc)->u.static_value.data), 3);  \
     )                                                      \
@@ -2255,6 +2255,7 @@ uintptr_t *executeJava() {
         }
         PUSH_0((uintptr_t)obj, 4);
     });)
+    // End of modification
 
     /* Special bytecode which forms the body of an abstract method.
        If it is invoked it'll throw an abstract method exception. */
@@ -2269,7 +2270,6 @@ uintptr_t *executeJava() {
         signalException(java_lang_AbstractMethodError, mb->name);
         goto throwException;
     })
-    // End of modification
 
 #ifdef INLINING
     DEF_OPC_RW(OPC_INLINE_REWRITER, ({
