@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 
 clear
 
@@ -15,3 +16,5 @@ python IncludeMakefiles.py
 make all
 
 sudo make install
+
+bash compile_java.sh
