@@ -34,9 +34,6 @@
 #include "symbol.h"
 #include "excep.h"
 
-/*	XXX	NVM VARIABLES - LOCK.C	*/
-static int testing_mode = FALSE;
-
 /* Trace lock operations and inflation/deflation */
 #ifdef TRACELOCK
 #define TRACE(fmt, ...) jam_printf(fmt, ## __VA_ARGS__)
@@ -560,10 +557,7 @@ Thread *objectLockedBy(Object *obj) {
 }
 
 void initialiseMonitor(InitArgs *args) {
-    /* XXX NVM CHANGE 000.000.000  */
-    if(args->testing_mode == TRUE){
-        testing_mode = TRUE;
-    }
+
     /* Init hash table, create lock */
     /* XXX NVM CHANGE 005.001.006 - Monitors HT - N*/
     // JaPHa Modification

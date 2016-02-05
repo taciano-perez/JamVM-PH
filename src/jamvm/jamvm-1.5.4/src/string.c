@@ -42,7 +42,6 @@ static int offset_offset;
 static HashTable hash_table;
 /*	XXX	NVM VARIABLES - STRING.C	*/
 static char* string_name = "string_ht";
-static int testing_mode = FALSE;
 static int is_persistent = FALSE;
 
 int stringHash(Object *ptr) {
@@ -170,10 +169,7 @@ char *String2Cstr(Object *string) {
 }
 
 void initialiseString(InitArgs *args) {
-    /* XXX NVM CHANGE 000.000.000  */
-    if(args->testing_mode == TRUE){
-    	testing_mode = TRUE;
-    }
+
     if(args->persistent_heap == TRUE){
     	is_persistent = TRUE;
     }

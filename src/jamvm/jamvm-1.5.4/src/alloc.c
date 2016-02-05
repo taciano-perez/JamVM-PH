@@ -106,7 +106,6 @@
 
 /*	XXX	NVM VARIABLES - ALLOC.C	*/
 static int is_persistent = FALSE;
-static int testing_mode = FALSE;
 
 uintptr_t get_freelist_header();
 struct chunk *get_freelist_next();
@@ -460,10 +459,6 @@ void initialiseAlloc(InitArgs *args) {
 
     maxHeap = args->max_heap;
     unsigned long volatile * const heapMemAddr = (unsigned long *) HEAPADDR;
-
-    if(args->testing_mode == TRUE) {
-        testing_mode = TRUE;
-    }
 
     if(args->persistent_heap == TRUE) {
         is_persistent = TRUE;
@@ -2502,18 +2497,6 @@ void *gcMemMalloc(int n, char* name, int create_file) {
             write(fd,"",1);
             mem = (uintptr_t*)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
             *mem++ = (unsigned long)mem;
-        }
-        if(testing_mode == TRUE) {
-            char log_string[80], function_string[80];
-            sprintf(log_string, "Allocated %s at %p with size %d", name, mem, size);
-            //log(DEBUG, log_string);
-
-            sprintf(function_string, "GcMemMalloc for %s", name);
-            if(mem == MAP_FAILED) {
-              log_test_results(function_string, FALSE);
-            } else {
-              log_test_results(function_string, TRUE);
-            }
         }
         msync(mem, size, MS_SYNC);
     } else {
