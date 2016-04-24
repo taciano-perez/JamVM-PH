@@ -29,7 +29,7 @@
 #include "config.h"
 
 /* NVM specific includes and defines */
-#include "nvm/test/testing_utils.h"
+//#include "nvm/test/testing_utils.h"
 #include "nvm/utils/logger.h"
 
 /* Architecture dependent definitions */
@@ -662,7 +662,6 @@ typedef struct InitArgs {
     /* XXX NVM CHANGE 001.000 - Parameter  */
     int persistent_heap;
     char *heap_file;
-    int testing_mode;
 
     Property *commandline_props;
     int props_count;
@@ -1218,19 +1217,17 @@ PHeap *pheap;
 										} \
 									}
 
-#define BEGIN_TX(TYPE) if(errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE)) \
-					printf("ERROR %d at BEGIN\n", errr); \
-						/*else \
-							printf("%s BEGIN TX\n", TYPE); */\
+#define BEGIN_TX(TYPE) if(errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE)) { \
+					       printf("ERROR %d at BEGIN\n", errr); \
+                       } \
 
 #define END_TX(TYPE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
-					flushPHValues(); \
-					pmemobj_tx_process(); \
-				} \
-				if(pmemobj_tx_stage() != TX_STAGE_NONE) { \
-					pmemobj_tx_end(); \
-					/*printf("%s END TX\n", TYPE); */\
-				}
+					     flushPHValues(); \
+					     pmemobj_tx_process(); \
+				     } \
+				     if(pmemobj_tx_stage() != TX_STAGE_NONE) { \
+					     pmemobj_tx_end(); \
+				     }
 
 extern void flushPHValues();
 // End of modification

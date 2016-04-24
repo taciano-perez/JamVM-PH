@@ -131,7 +131,7 @@ static char* thread_name = "thread_ht";
 #define freeThreadID(n) tidBitmap[(n-1)>>5] &= ~(1<<((n-1)&0x1f))
 
 // NVM CHANGE PERSISTENT "BOOL"
-static int is_persistent = 0;
+static int is_persistent = FALSE;
 
 /* Generate a new thread ID - assumes the thread queue
  * lock is held */

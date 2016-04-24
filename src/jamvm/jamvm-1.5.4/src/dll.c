@@ -35,7 +35,6 @@
 #include "excep.h"
 
 /*	XXX	NVM VARIABLES - DLL.C	*/
-static int testing_mode = FALSE;
 static char* dll_ht_name = "dll_ht";
 static int is_persistent = FALSE;
 
@@ -262,9 +261,6 @@ void initialiseDll(InitArgs *args) {
 	reloadDlls(args);
 
 #endif
-
-	if(args->testing_mode == TRUE)
-		testing_mode = TRUE;
 
 	if(args->persistent_heap == TRUE)
 		is_persistent = TRUE;

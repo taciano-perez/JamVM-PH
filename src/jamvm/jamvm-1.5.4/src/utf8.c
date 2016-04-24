@@ -37,7 +37,6 @@ static HashTable hash_table;
 
 /*XXX NVM VARIABLES - UTF8.C */
 static char* utf8_name = "utf8_ht";
-static int testing_mode = FALSE;
 static int is_persistent = FALSE;
 
 #define GET_UTF8_CHAR(ptr, c)                         \
@@ -144,10 +143,7 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
 }
 
 void initialiseUtf8(InitArgs *args) {
-    /* XXX NVM CHANGE 000.000.000  */
-    if(args->testing_mode == TRUE) {
-    	testing_mode = TRUE;
-    }
+
     if(args->persistent_heap == TRUE) {
     	is_persistent = TRUE;
     }
