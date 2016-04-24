@@ -1,6 +1,6 @@
 #!/bin/bash
 
-clear
+#clear
 
 rm dlls.txt log.txt /mnt/pmfs/HEAP_POOL
 
