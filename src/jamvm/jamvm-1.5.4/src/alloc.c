@@ -294,7 +294,7 @@ static int sys_page_size;
 static uintptr_t doSweep(Thread *self);
 
 void allocMarkBits() {
-    int no_of_bits = (heaplimit-heapbase)>>(LOG_BYTESPERMARK-LOG_BITSPERMARK);
+    uint no_of_bits = (heaplimit-heapbase)>>(LOG_BYTESPERMARK-LOG_BITSPERMARK);
 
     markbit_size = (no_of_bits+MARKSIZEBITS-1)>>LOG_MARKSIZEBITS;
     markbits = sysMalloc(markbit_size * sizeof(*markbits));
