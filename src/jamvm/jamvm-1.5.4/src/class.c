@@ -1764,6 +1764,7 @@ void freeClassData(Class *class) {
         MethodBlock *mb = &cb->methods[i];
 
 #ifdef DIRECT
+		if (is_persistent) { NVML_DIRECT("FREE_CLASS_DATA", mb->code, sizeof(uintptr_t))} 
         if(!((uintptr_t)mb->code & 0x3)) {
 #ifdef INLINING
             if(cb->state >= CLASS_LINKED)

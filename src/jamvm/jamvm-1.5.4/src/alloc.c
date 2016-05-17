@@ -296,107 +296,22 @@ void allocMarkBits() {
     uint no_of_bits = (heaplimit-heapbase)>>(LOG_BYTESPERMARK-LOG_BITSPERMARK);
 
     markbit_size = (no_of_bits+MARKSIZEBITS-1)>>LOG_MARKSIZEBITS;
-    markbits = sysMalloc(markbit_size * sizeof(*markbits));
+	// JAPHA modification: changed by Taciano on April 24th 2016 to add tx GC
+    //markbits = sysMalloc(markbit_size * sizeof(*markbits));
+	markbits = sysMalloc_persistent(markbit_size * sizeof(*markbits));
 
     TRACE_GC("Allocated mark bits - size is %d\n", markbit_size);
 }
 
 void clearMarkBits() {
-    memset(markbits, 0, markbit_size * sizeof(*markbits));
+	// JAPHA modification: changed by Taciano on April 24th 2016 to add tx GC
+	if (is_persistent) {
+		TX_MEMSET(markbits, 0, markbit_size * sizeof(*markbits));
+	} else {
+		// JAPHA: this is the original code
+		memset(markbits, 0, markbit_size * sizeof(*markbits));
+	}
 }
-
-// JaPHa Modification
-void *ph_malloc(int len2) {
-	uintptr_t largest;
-	Chunk *found;
-	Thread *self;
-	int err;
-	int have_remaining = FALSE;
-
-	/* See comment below */
-	char *ret_addr;
-
-	int n = (len2+HEADER_SIZE+OBJECT_GRAIN-1)&~(OBJECT_GRAIN-1);
-	/* Grab the heap lock, hopefully without having to
-	   wait for it to avoid disabling suspension */
-	self = threadSelf();
-	if(!tryLockVMLock(heap_lock, self)) {
-		disableSuspend(self);
-		lockVMLock(heap_lock, self);
-		enableSuspend(self);
-	}
-
-	/* Scan freelist looking for a chunk big enough to
-	   satisfy allocation request */
-	int has_found = FALSE;
-
-	if(nvml_alloc) {
-		NVML_DIRECT("CHUNKPP", &pheap->chunkpp, sizeof(Chunk*))
-	}
-	uintptr_t len;
-	while(*(pheap->chunkpp)) {
-		len = (*(pheap->chunkpp))->header;
-		if(len == n) {
-			found = *pheap->chunkpp;
-			*pheap->chunkpp = found->next;
-			has_found = TRUE;
-			break;
-		}
-		if(len > n) {
-			Chunk *rem;
-			found = *pheap->chunkpp;
-			rem = (Chunk*)((char*)found + n);
-			rem->header = len - n;
-
-			/* Chain the remainder onto the freelist only
-			   if it's large enough to hold an object */
-			if(rem->header >= MIN_OBJECT_SIZE) {
-				have_remaining = TRUE;
-				rem->next = found->next;
-				*pheap->chunkpp = rem;
-			} else
-				*pheap->chunkpp = found->next;
-
-			has_found = TRUE;
-			break;
-		}
-		pheap->chunkpp = &(*pheap->chunkpp)->next;
-	}
-	if (!has_found) {
-		printf("ERROR: could not find available space\n");
-	}
-
-	if(nvml_alloc) {
-		NVML_DIRECT("HEAPFREE", &(pheap->heapfree), sizeof(pheap->heapfree))
-	}
-
-	pheap->heapfree -= n;
-
-	if(have_remaining) {
-		if(nvml_alloc) {
-			NVML_DIRECT("FOUND", found, HEADER_SIZE * 2 + n)
-		}
-	}
-	else {
-		if(nvml_alloc) {
-			NVML_DIRECT("FOUND", found, HEADER_SIZE + n)
-		}
-	}
-
-	found->header = n | ALLOC_BIT;
-
-	/* Found is a block pointer - if we unlock now, small window
-	 * where new object ref is not held and will therefore be gc'ed.
-	 * Setup ret_addr before unlocking to prevent this.
-	 */
-
-	ret_addr = ((char*)found)+HEADER_SIZE;
-	memset(ret_addr, 0, n-HEADER_SIZE);
-	unlockVMLock(heap_lock, self);
-
-	return ret_addr;
-}
-// End of modification
 
 // JaPHa Modification
 int initialiseRoot(InitArgs *args) {
@@ -422,7 +337,7 @@ int initialiseRoot(InitArgs *args) {
 		pheap->heapbase = (char*) (((uintptr_t)pheap->heapMem + HEADER_SIZE + OBJECT_GRAIN-1) & ~(OBJECT_GRAIN-1)) - HEADER_SIZE;
 		pheap->heapmax = pheap->heapbase + ((args->max_heap - (pheap->heapbase - pheap->heapMem)) & ~(OBJECT_GRAIN - 1));
 		pheap->heaplimit = pheap->heapbase + ((args->min_heap - (pheap->heapbase - pheap->heapMem)) & ~(OBJECT_GRAIN - 1));
-		pheap->freelist = pheap->heapbase;
+		pheap->freelist = (Chunk*) pheap->heapbase;
 		pheap->freelist->header = pheap->heaplimit - pheap->heapbase;
 		pheap->freelist->next = NULL;
 		pheap->chunkpp = &(pheap->freelist);
@@ -543,8 +458,10 @@ void initialiseAlloc(InitArgs *args) {
 }
 
 /* ------------------------- MARK PHASE ------------------------- */
-  
+// JAPHA modification to add tx GC, added by Taciano on Apr 24 2016
+
 #define MARK_AND_PUSH(object, mark) {                \
+	if (is_persistent) { NVML_DIRECT("MARK_AND_PUSH", &markbits[MARKENTRY(object)], sizeof(unsigned int)); } \
     SET_MARK(object, mark);                          \
                                                      \
     if(((char*)object) < mark_scan_ptr) {            \
@@ -565,6 +482,11 @@ void markObject(Object *object, int mark) {
 }
 
 void markRoot(Object *object) {
+	// JAPHA modification to add tx GC, added by Taciano on Apr 24 2016
+	if(is_persistent) {
+		NVML_DIRECT("MARKROOT", &markbits[MARKENTRY(object)], sizeof(unsigned int));
+	}
+	// end of JAPHA modification
     if(object != NULL)
         MARK(object, HARD_MARK);
 }
@@ -583,6 +505,11 @@ void markConservativeRoot(Object *object) {
     if(object == NULL)
         return;
 
+	// JAPHA modification to add tx GC, added by Taciano on Apr 24 2016
+	if(is_persistent) {
+		NVML_DIRECT("MARKCONSERVATIVEROOT", &markbits[MARKENTRY(object)], sizeof(unsigned int));
+	}
+	// end of JAPHA modification
     MARK(object, HARD_MARK);
     addConservativeRoot(object);
 }
@@ -904,6 +831,8 @@ static void doMark(Thread *self, int mark_soft_refs) {
 
     clearMarkBits();
 
+	/* JAPHA Change- modified by Taciano on Apr 24th to add transactional GC */
+	if (is_persistent) NVML_DIRECT("DOMARK_PMEM_OOM", oom, sizeof(unsigned int));
     if(oom) MARK(oom, HARD_MARK);
     markBootClasses();
     markJNIGlobalRefs();
@@ -1061,7 +990,8 @@ static uintptr_t doSweep(Thread *self) {
     uintptr_t largest = 0;
 
     /* Variables used to store verbose gc info */
-    uintptr_t marked = 0, unmarked = 0, freed = 0, cleared = 0;
+	// JAPHA: type changed by Taciano on May 11th to avoid precision errors
+    long long marked = 0, unmarked = 0, freed = 0, cleared = 0;
 
     /* Amount of free heap is re-calculated during scan */
     heapfree = 0;
@@ -1091,6 +1021,8 @@ static uintptr_t doSweep(Thread *self) {
                 handleUnmarkedSpecial(ob);
 
             /* Clear any set flag bits within the header */
+			// JAPHA modification by Taciano on Apr 24 2016 to implement tx GC
+			if (is_persistent) { NVML_DIRECT("DO_SWEEP", &curr->header, sizeof(uintptr_t)) }
             curr->header &= HDR_FLAGS_MASK;
 
             TRACE_GC("FREE: Freeing ob @%p class %s - start of block\n", ob,
@@ -1324,9 +1256,14 @@ void threadRegisteredReferences() {
 #define ADD_CHUNK_TO_FREELIST(start, end)     \
 {                                             \
     Chunk *curr = (Chunk *) start;            \
+	/* JAPHA: modified by Taciano on April 28 2016, to add tx GC */ \
+	if (is_persistent) { NVML_DIRECT("ADD_CHUNK_TO_FREELIST", &curr->header, sizeof(uintptr_t)) } \
     curr->header = end - start;               \
+	if (curr->header < 0) { printf("curr->header < 0\n"); }	\
                                               \
     if(curr->header >= MIN_OBJECT_SIZE) {     \
+		/* JAPHA: modified by Taciano on April 28 2016, to add tx GC */ \
+		if (is_persistent) { NVML_DIRECT("ADD_CHUNK_TO_FREELIST2", last->next, sizeof(struct chunk*)) } \
         last->next = curr;                    \
         last = curr;                          \
     }                                         \
@@ -1342,12 +1279,17 @@ int compactSlideBlock(char *block_addr, char *new_addr) {
     uintptr_t hdr = HEADER(block_addr);
     uintptr_t size = HDR_SIZE(hdr);
 
-    /* Slide the object down the heap.  Use memcpy if
-       the areas don't overlap as it should be faster */
-    if(new_addr + size <= block_addr)
-        memcpy(new_addr, block_addr, size);
-    else
-        memmove(new_addr, block_addr, size);
+		/* Added by Taciano on April 28 2016 to add tx GC */
+	   if (is_persistent) {	
+			NVML_DIRECT("COMPACT_SLIDE_BLOCK-SRC", block_addr, size);
+			NVML_DIRECT("COMPACT_SLIDE_BLOCK-DEST", new_addr, size);
+	   }
+		/* Slide the object down the heap.  Use memcpy if
+		   the areas don't overlap as it should be faster */
+		if(new_addr + size <= block_addr)
+			memcpy(new_addr, block_addr, size);
+		else
+			memmove(new_addr, block_addr, size);
 
     /* If the objects hashCode (address) has been taken we must
        maintain the same value after the object has been moved */
@@ -1358,6 +1300,12 @@ int compactSlideBlock(char *block_addr, char *new_addr) {
         TRACE_COMPACT("Adding hashCode to object %p\n",
                       block_addr + HEADER_SIZE);
 
+		/* Added by Taciano on April 28 2016 to add tx GC */
+		if (is_persistent) { 
+			NVML_DIRECT("COMPACT_SLIDE_BLOCK-HASHADDR", hash_addr, sizeof(uintptr_t));
+			NVML_DIRECT("COMPACT_SLIDE_BLOCK-HDRADDR", hdr_addr, sizeof(uintptr_t));
+		}
+					  
         /* Add the original address onto the end of the object */
         *hash_addr = (uintptr_t)(block_addr + HEADER_SIZE);
         *hdr_addr &= ~HASHCODE_TAKEN_BIT;
@@ -1548,7 +1496,8 @@ uintptr_t doCompact() {
     uintptr_t largest = 0;
 
     /* Variables used to store verbose gc info */
-    uintptr_t marked = 0, unmarked = 0, freed = 0, cleared = 0, moved = 0;
+	// JAPHA: type changed by Taciano on May 11th to avoid precision errors
+    long long marked = 0, unmarked = 0, freed = 0, cleared = 0, moved = 0;
 
     /* Amount of free heap is re-calculated during scan */
     heapfree = 0;
@@ -1686,8 +1635,11 @@ marked_phase2:
     }
 
     // JaPHa Modification
-    if(new_addr != limit)
-        ADD_CHUNK_TO_FREELIST(new_addr, limit);
+	//if(new_addr != limit)
+    if(new_addr != heaplimit) {	// changed by Taciano on May 12th 2016
+		printf("New address = %p, limit=%p\n", new_addr, limit);
+        ADD_CHUNK_TO_FREELIST(new_addr, heaplimit);
+	}
     // End of modification
 
     /* We've now reconstructed the freelist, set freelist
@@ -1759,7 +1711,10 @@ void expandHeap(int min) {
     /* The heap has increased in size - need to reallocate
        the mark bits to cover new area */
 
-    sysFree(markbits);
+	// JAPHA modification: changed by Taciano on April 24th 2016 to add tx GC
+    //sysFree(markbits);
+	  sysFree_persistent(markbits);
+
     allocMarkBits();
 }
 
@@ -1779,6 +1734,85 @@ static long endTime(struct timeval *start) {
     secs = end.tv_sec - start->tv_sec;
 
     return secs * 1000000 + usecs;
+}
+
+/* JAPHA Change- modified by Taciano on Apr 24th to add transactional GC */
+unsigned long gc0_pmem(int mark_soft_refs, int compact) {
+    Thread *self = threadSelf();
+    uintptr_t largest;
+
+    /* Override compact if compaction has been specified
+       on the command line */
+    if(compact_override)
+        compact = compact_value;
+
+    /* Reset flags.  Will be set during GC if a thread needs
+       to be woken up */
+    notify_finaliser_thread = notify_reference_thread = FALSE;
+
+    /* Grab locks associated with the suspension blocked
+       regions.  This ensures all threads have suspended
+       or gone to sleep, and cannot modify a list or obtain
+       a reference after the reference scans */
+
+    /* Potential threads adding a newly created object */
+    lockVMLock(has_fnlzr_lock, self);
+
+    /* Held by the finaliser thread */
+	lockVMWaitLock(run_finaliser_lock, self);	// FIXME JAPHA: we are only doing synchronous GC, no finaliser thread running, must check that
+
+    /* Held by the reference handler thread */
+    lockVMWaitLock(reference_lock, self);
+
+    /* Stop the world */
+    disableSuspend(self);
+    suspendAllThreads(self);
+
+    //if(verbosegc) {		// FIXME JAPHA: for now, we want GC to be verbose
+        struct timeval start;
+        float mark_time;
+        float scan_time;
+
+        getTime(&start);
+		BEGIN_TX("GC");
+        doMark(self, mark_soft_refs);
+        mark_time = endTime(&start)/1000000.0;
+
+        getTime(&start);
+        largest = compact ? doCompact() : doSweep(self);
+		END_TX("GC");
+        scan_time = endTime(&start)/1000000.0;
+
+        jam_printf("<GC: Mark took %f seconds, %s took %f seconds>\n",
+                           mark_time, compact ? "compact" : "scan", scan_time);
+    //} else {
+    //    doMark(self, mark_soft_refs);
+    //    largest = compact ? doCompact() : doSweep(self);
+    //}
+
+    /* Restart the world */
+    resumeAllThreads(self);
+    enableSuspend(self);
+
+    /* Notify the finaliser thread if new finalisers
+       need to be ran */
+    if(notify_finaliser_thread) // FIXME JAPHA: no finaliser thread running, must check that
+        notifyAllVMWaitLock(run_finaliser_lock, self);
+
+    /* Notify the reference thread if new references
+       have been enqueued */
+    if(notify_reference_thread)
+        notifyAllVMWaitLock(reference_lock, self);
+
+    /* Release the locks */
+    unlockVMLock(has_fnlzr_lock, self);
+    unlockVMWaitLock(reference_lock, self);
+    unlockVMWaitLock(run_finaliser_lock, self);
+
+    freeConservativeRoots();
+    freePendingFrees();
+
+    return largest;
 }
 
 unsigned long gc0(int mark_soft_refs, int compact) {
@@ -2002,12 +2036,14 @@ void referenceHandlerThreadLoop(Thread *self) {
 
 void set_has_finaliser_list(){
     // JaPHa Modification
-    OPC *ph_values = get_opc_ptr();
-    has_finaliser_count = ph_values->has_finaliser_count;
-    has_finaliser_size = ph_values->has_finaliser_size;
-    has_finaliser_list = malloc(has_finaliser_size*sizeof(Object*));
-    memcpy(has_finaliser_list, ph_values->has_finaliser_list, has_finaliser_size*sizeof(Object*));
-    // End of modification
+	if (is_persistent) {
+		OPC *ph_values = get_opc_ptr();
+		has_finaliser_count = ph_values->has_finaliser_count;
+		has_finaliser_size = ph_values->has_finaliser_size;
+		has_finaliser_list = malloc(has_finaliser_size*sizeof(Object*));
+		memcpy(has_finaliser_list, ph_values->has_finaliser_list, has_finaliser_size*sizeof(Object*));
+		// End of modification
+	}
 }
 
 void initialiseGC(InitArgs *args) {
@@ -2053,6 +2089,213 @@ void initialiseGC(InitArgs *args) {
 
 
 /* ------------------------- ALLOCATION ROUTINES  ------------------------- */
+
+// JaPHa Modification
+void *ph_malloc(int len2) {
+	uintptr_t largest;
+	Chunk *found;
+	Thread *self;
+	int err;
+	int have_remaining = FALSE;
+
+	/* See comment below */
+	char *ret_addr;
+
+	int n = (len2+HEADER_SIZE+OBJECT_GRAIN-1)&~(OBJECT_GRAIN-1);
+	/* Grab the heap lock, hopefully without having to
+	   wait for it to avoid disabling suspension */
+	self = threadSelf();
+	if(!tryLockVMLock(heap_lock, self)) {
+		disableSuspend(self);
+		lockVMLock(heap_lock, self);
+		enableSuspend(self);
+	}
+
+	/* Scan freelist looking for a chunk big enough to
+	   satisfy allocation request */
+	int has_found = FALSE;
+
+	for (;;) {
+
+		if(nvml_alloc) {
+			NVML_DIRECT("CHUNKPP", &pheap->chunkpp, sizeof(Chunk*))
+		}
+		uintptr_t len;
+		while(*(pheap->chunkpp)) {
+			len = (*(pheap->chunkpp))->header;
+			if(len == n) {
+				found = *pheap->chunkpp;
+				*pheap->chunkpp = found->next;
+				has_found = TRUE;
+				goto got_it_pmem;
+			}
+			if(len > n) {
+				Chunk *rem;
+				found = *pheap->chunkpp;
+				rem = (Chunk*)((char*)found + n);
+				rem->header = len - n;
+
+				/* Chain the remainder onto the freelist only
+				   if it's large enough to hold an object */
+				if(rem->header >= MIN_OBJECT_SIZE) {
+					have_remaining = TRUE;
+					rem->next = found->next;
+					*pheap->chunkpp = rem;
+				} else
+					*pheap->chunkpp = found->next;
+
+				has_found = TRUE;
+				goto got_it_pmem;
+			}
+			pheap->chunkpp = &(*pheap->chunkpp)->next;
+		}
+		
+		if (!has_found) {	// FIXME: this probably isn't needed to the goto above
+			printf("ERROR: could not find available space, will attempt GC\n");
+			if(verbosegc) jam_printf("<GC: Alloc attempt for %d bytes failed.>\n", n);
+			
+			/* The state determines what action to take in the event of
+			allocation failure.  The states go up in seriousness,
+			and are visible to other threads */
+			static enum { gc, run_finalizers, throw_oom } state = gc;
+
+			switch(state) {
+
+				case gc:
+					/* Normal failure.  Do a garbage-collection and retry
+					   allocation if the largest block satisfies the request.
+					   Attempt to ensure heap is at least 25% free, to stop
+					   rapid gc cycles */
+					largest = gc0_pmem(TRUE, FALSE);
+
+					if(n <= largest && (pheap->heapfree * 4 >= (pheap->heaplimit - pheap->heapbase)))
+						break;
+
+					/* We fall through into the next state, but we need to set
+					   the state as it will be visible to other threads */
+					state = run_finalizers;
+
+				case run_finalizers:
+					/* Before expanding heap try to run outstanding finalizers.
+					   If gc found new finalizers, this gives the finalizer chance
+					   to run them */
+					/* XXX NVM CHANGE 000.000.000  */
+					//msync(heapMem, maxHeap, MS_SYNC);
+					unlockVMLock(heap_lock, self);
+					disableSuspend(self);
+
+					if(verbosegc)
+						jam_printf("<GC: Waiting for finalizers to be ran.>\n");
+
+					runFinalizers0(self, 200);
+					lockVMLock(heap_lock, self);
+					enableSuspend(self);
+
+					if(state != run_finalizers)
+						break;
+
+					/* Retry gc, but this time compact the heap rather than just
+					   sweeping it */
+					largest = gc0_pmem(TRUE, TRUE);
+					if(n <= largest && (pheap->heapfree * 4 >= (pheap->heaplimit - pheap->heapbase))) {
+						state = gc;
+						break;
+					}
+
+					// JAPHA: Taciano removed heap expansion for initial version of tx GC on May 5 2016
+					/* Still not freed enough memory so try to expand the heap.
+					   Note we retry allocation even if the heap couldn't be
+					   expanded sufficiently -- there's a chance gc may merge
+					   adjacent blocks together at the top of the heap */
+					   /*
+					if(heaplimit < heapmax) {
+						expandHeap(n);
+						state = gc;
+						break;
+					}
+					*/
+
+					if(verbosegc)
+						jam_printf("<GC: Stack at maximum already."
+								   "  Clearing Soft References>\n");
+
+					/* Can't expand the heap any more.  Try GC again but this time
+					   clearing all soft references.  Note we succeed if we can
+					   satisfy the request -- we may have been able to all along,
+					   but with nothing spare.  We may thrash, but it's better
+					   than throwing OOM */
+					largest = gc0_pmem(FALSE, TRUE);
+					if(n <= largest) {
+						state = gc;
+						break;
+					}
+
+					if(verbosegc)
+						jam_printf("<GC: completely out of heap space"
+								   " - throwing OutOfMemoryError>\n");
+
+					state = throw_oom;
+					/* XXX NVM CHANGE 000.000.000  */
+					//msync(heapMem, maxHeap, MS_SYNC);
+					unlockVMLock(heap_lock, self);
+					signalException(java_lang_OutOfMemoryError, NULL);
+					return NULL;
+					break;
+
+				case throw_oom:
+					/* Already throwing an OutOfMemoryError in some thread.  In
+					   both cases, throw an already prepared OOM (no stacktrace).
+					   Could have a * per-thread flag, so we try to throw a new
+					   OOM in each thread, but if we're this low on memory I
+					   doubt it'll make much difference.  */
+
+					if(verbosegc)
+						jam_printf("<GC: completely out of heap space"
+								   " - throwing prepared OutOfMemoryError>\n");
+
+					state = gc;
+					/* XXX NVM CHANGE 000.000.000  */
+					//msync(heapMem, maxHeap, MS_SYNC);
+					unlockVMLock(heap_lock, self);
+					setException(oom);
+					return NULL;
+					break;
+			}		
+		}
+	}
+
+got_it_pmem:	
+	if(nvml_alloc) {
+		NVML_DIRECT("HEAPFREE", &(pheap->heapfree), sizeof(pheap->heapfree))
+	}
+
+	pheap->heapfree -= n;
+
+	if(have_remaining) {
+		if(nvml_alloc) {
+			NVML_DIRECT("FOUND", found, HEADER_SIZE * 2 + n)
+		}
+	}
+	else {
+		if(nvml_alloc) {
+			NVML_DIRECT("FOUND2", found, HEADER_SIZE + n)
+		}
+	}
+
+	found->header = n | ALLOC_BIT;
+
+	/* Found is a block pointer - if we unlock now, small window
+	 * where new object ref is not held and will therefore be gc'ed.
+	 * Setup ret_addr before unlocking to prevent this.
+	 */
+
+	ret_addr = ((char*)found)+HEADER_SIZE;
+	memset(ret_addr, 0, n-HEADER_SIZE);
+	unlockVMLock(heap_lock, self);
+
+	return ret_addr;
+}
+// End of modification
 
 void *gcMalloc(int len) {
     // JaPHa Modification
@@ -2489,7 +2732,9 @@ void *gcMemMalloc(int n, char* name, int create_file) {
         if( access( name, F_OK ) != -1 ) {
             fd = open (name, O_RDWR | O_APPEND , S_IRUSR | S_IWUSR);
             read(fd, &buffer, sizeof(unsigned long)+sizeof(uintptr_t));
-            mem = (uintptr_t*)mmap((unsigned long)buffer[0],buffer[1], PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+			// JAPHA: modified by Taciano to prevent compilation warning
+            //mem = (uintptr_t*)mmap((unsigned long)buffer[0],buffer[1], PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+			mem = (uintptr_t*)mmap((void*)buffer[0],buffer[1], PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
             *mem++ = (unsigned long)mem;
         } else {
             fd = open (name, O_RDWR | O_CREAT , S_IRUSR | S_IWUSR);
@@ -2559,7 +2804,9 @@ void gcPendingFree(void *addr) {
 void freePendingFrees() {
     while(pending_free_list) {
         void *next = *pending_free_list;
-        sysFree(pending_free_list);
+		// JAPHA modification: changed by Taciano on April 24th 2016 to add tx GC
+        //sysFree(pending_free_list);
+		sysFree_persistent(pending_free_list);
         pending_free_list = next;
     }
 }
@@ -2590,7 +2837,9 @@ void expandNVM(){
 	}else {
 	/* create new chunk and add to the list
 							 ptr + header + chunk len 	*/
-		new = ((unsigned int)new + nvmHeaderSize + new->chunkSize);
+		// JAPHA: modified by Taciano on April 28 2016 to avoid compilation warning
+		//new = ((unsigned int)new + nvmHeaderSize + new->chunkSize);
+		new = (nvmChunk*)(((void*)new) + nvmHeaderSize + new->chunkSize);
 		new->allocBit = 0;
 		new->chunkSize = INCREASE_VALUE;
 		new->next = NULL;
@@ -2630,7 +2879,9 @@ void *sysMalloc_persistent(int size){
 				/*	check if remaining space can hold a chunk		*/
 				if((int)(len - (nvmHeaderSize + n)) >= minSize) {
 					/*	ptr +	header	+ content = OK	*/
-					rem = ((char*)found + nvmHeaderSize + n);
+					// JAPHA: modified by Taciano on April 28 2016 to avoid compilation warning
+					//rem = ((char*)found + nvmHeaderSize + n);
+					rem = (nvmChunk*)((char*)found + nvmHeaderSize + n);
 
 					have_remaining = TRUE;
 					if (shift = (unsigned int)rem & 0x3){
@@ -2663,12 +2914,12 @@ void *sysMalloc_persistent(int size){
 
 		if(have_remaining) {
 			if(nvml_alloc) {
-				NVML_DIRECT("FOUND", found, nvmHeaderSize * 2  + n)
+				NVML_DIRECT("FOUND3", found, nvmHeaderSize * 2  + n)
 			}
 		}
 		else {
 			if(nvml_alloc) {
-				NVML_DIRECT("FOUND", found, nvmHeaderSize + n)
+				NVML_DIRECT("FOUND4", found, nvmHeaderSize + n)
 			}
 		}
 
@@ -2711,7 +2962,9 @@ void sysFree_persistent(void* addr) {
             NVML_DIRECT("TOFREE", toFree, toFree->chunkSize + nvmHeaderSize)
         }
         toFree->allocBit = 0;
-        memset(ptr, 0, toFree->chunkSize);
+		// JAPHA: modified by Taciano on April 28 2016 to avoid compilation warning
+        //memset(ptr, 0, toFree->chunkSize);
+		memset((void*)ptr, 0, toFree->chunkSize);
     } else {
         sysFree(addr);
     }
