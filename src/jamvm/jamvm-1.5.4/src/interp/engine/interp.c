@@ -1270,7 +1270,7 @@ uintptr_t *executeJava() {
         Object *obj = (Object *)*--ostack;
         NULL_POINTER_CHECK(obj);
         if(persistent) {
-            pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE);
+			BEGIN_TX("MONITORENTER")
             NVML_DIRECT("ENTEROBJ", obj, sizeof(Object));
         }
         objectLock(obj);
@@ -1284,8 +1284,7 @@ uintptr_t *executeJava() {
         NULL_POINTER_CHECK(obj);
         objectUnlock(obj);
         if(persistent) {
-            pmemobj_tx_process();
-            pmemobj_tx_end();
+			END_TX("MONITOREXIT")
         }
         DISPATCH(0, 1);
     })

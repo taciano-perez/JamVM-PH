@@ -294,23 +294,14 @@ static uintptr_t doSweep(Thread *self);
 
 void allocMarkBits() {
     uint no_of_bits = (heaplimit-heapbase)>>(LOG_BYTESPERMARK-LOG_BITSPERMARK);
-
     markbit_size = (no_of_bits+MARKSIZEBITS-1)>>LOG_MARKSIZEBITS;
-	// JAPHA modification: changed by Taciano on April 24th 2016 to add tx GC
-    //markbits = sysMalloc(markbit_size * sizeof(*markbits));
-	markbits = sysMalloc_persistent(markbit_size * sizeof(*markbits));
+    markbits = sysMalloc(markbit_size * sizeof(*markbits));
 
     TRACE_GC("Allocated mark bits - size is %d\n", markbit_size);
 }
 
 void clearMarkBits() {
-	// JAPHA modification: changed by Taciano on April 24th 2016 to add tx GC
-	if (is_persistent) {
-		TX_MEMSET(markbits, 0, markbit_size * sizeof(*markbits));
-	} else {
-		// JAPHA: this is the original code
-		memset(markbits, 0, markbit_size * sizeof(*markbits));
-	}
+	memset(markbits, 0, markbit_size * sizeof(*markbits));
 }
 
 // JaPHa Modification
@@ -335,8 +326,10 @@ int initialiseRoot(InitArgs *args) {
 		pheap->heapfree = HEAP_SIZE - sizeof(Chunk);
 		pheap->maxHeap = HEAP_SIZE;
 		pheap->heapbase = (char*) (((uintptr_t)pheap->heapMem + HEADER_SIZE + OBJECT_GRAIN-1) & ~(OBJECT_GRAIN-1)) - HEADER_SIZE;
+		printf("Setting pheap->heapbase=%p\n", pheap->heapbase);
 		pheap->heapmax = pheap->heapbase + ((args->max_heap - (pheap->heapbase - pheap->heapMem)) & ~(OBJECT_GRAIN - 1));
 		pheap->heaplimit = pheap->heapbase + ((args->min_heap - (pheap->heapbase - pheap->heapMem)) & ~(OBJECT_GRAIN - 1));
+		printf("Setting pheap->heaplimit=%p\n", pheap->heaplimit);
 		pheap->freelist = (Chunk*) pheap->heapbase;
 		pheap->freelist->header = pheap->heaplimit - pheap->heapbase;
 		pheap->freelist->next = NULL;
@@ -351,10 +344,9 @@ int initialiseRoot(InitArgs *args) {
 		root_heap = pmemobj_root(pop_heap, heap_size);
 		pheap = (struct pheap*) pmemobj_direct(root_heap);
 		if(pheap->base_address != pheap) {
-			printf("base addresses are different\n");
-			printf("pheap %p\n", pheap);
-			printf("pheap->base_address %p\n", pheap->base_address);
-			pmemobj_close(pop_heap);
+			printf("ERROR: base addresses are different, will abort VM execution\n");
+			printf("Expected base address was %p, but current base address is %p\n", pheap->base_address, pheap);
+			//pmemobj_close(pop_heap);	// attempt to close memory pool is generating segfault, so we'll just skip it
 			exit(-1);
 		}
 	}
@@ -411,7 +403,9 @@ void initialiseAlloc(InitArgs *args) {
     if(is_persistent) {
         maxHeap = pheap->maxHeap;
         heapbase = pheap->heapbase;
+		printf("Setting heapbase=%p\n", heapbase);
         heaplimit = pheap->heaplimit;
+		printf("Setting heaplimit=%p\n", heaplimit);
         heapmax = pheap->heapmax;
         freelist = pheap->freelist;
         chunkpp = pheap->chunkpp;
@@ -458,10 +452,8 @@ void initialiseAlloc(InitArgs *args) {
 }
 
 /* ------------------------- MARK PHASE ------------------------- */
-// JAPHA modification to add tx GC, added by Taciano on Apr 24 2016
 
 #define MARK_AND_PUSH(object, mark) {                \
-	if (is_persistent) { NVML_DIRECT("MARK_AND_PUSH", &markbits[MARKENTRY(object)], sizeof(unsigned int)); } \
     SET_MARK(object, mark);                          \
                                                      \
     if(((char*)object) < mark_scan_ptr) {            \
@@ -482,11 +474,6 @@ void markObject(Object *object, int mark) {
 }
 
 void markRoot(Object *object) {
-	// JAPHA modification to add tx GC, added by Taciano on Apr 24 2016
-	if(is_persistent) {
-		NVML_DIRECT("MARKROOT", &markbits[MARKENTRY(object)], sizeof(unsigned int));
-	}
-	// end of JAPHA modification
     if(object != NULL)
         MARK(object, HARD_MARK);
 }
@@ -505,11 +492,6 @@ void markConservativeRoot(Object *object) {
     if(object == NULL)
         return;
 
-	// JAPHA modification to add tx GC, added by Taciano on Apr 24 2016
-	if(is_persistent) {
-		NVML_DIRECT("MARKCONSERVATIVEROOT", &markbits[MARKENTRY(object)], sizeof(unsigned int));
-	}
-	// end of JAPHA modification
     MARK(object, HARD_MARK);
     addConservativeRoot(object);
 }
@@ -831,8 +813,6 @@ static void doMark(Thread *self, int mark_soft_refs) {
 
     clearMarkBits();
 
-	/* JAPHA Change- modified by Taciano on Apr 24th to add transactional GC */
-	if (is_persistent) NVML_DIRECT("DOMARK_PMEM_OOM", oom, sizeof(unsigned int));
     if(oom) MARK(oom, HARD_MARK);
     markBootClasses();
     markJNIGlobalRefs();
@@ -1637,7 +1617,6 @@ marked_phase2:
     // JaPHa Modification
 	//if(new_addr != limit)
     if(new_addr != heaplimit) {	// changed by Taciano on May 12th 2016
-		printf("New address = %p, limit=%p\n", new_addr, limit);
         ADD_CHUNK_TO_FREELIST(new_addr, heaplimit);
 	}
     // End of modification
@@ -1711,9 +1690,7 @@ void expandHeap(int min) {
     /* The heap has increased in size - need to reallocate
        the mark bits to cover new area */
 
-	// JAPHA modification: changed by Taciano on April 24th 2016 to add tx GC
-    //sysFree(markbits);
-	  sysFree_persistent(markbits);
+    sysFree(markbits);
 
     allocMarkBits();
 }
@@ -1759,7 +1736,7 @@ unsigned long gc0_pmem(int mark_soft_refs, int compact) {
     lockVMLock(has_fnlzr_lock, self);
 
     /* Held by the finaliser thread */
-	lockVMWaitLock(run_finaliser_lock, self);	// FIXME JAPHA: we are only doing synchronous GC, no finaliser thread running, must check that
+	lockVMWaitLock(run_finaliser_lock, self);
 
     /* Held by the reference handler thread */
     lockVMWaitLock(reference_lock, self);
@@ -1768,27 +1745,29 @@ unsigned long gc0_pmem(int mark_soft_refs, int compact) {
     disableSuspend(self);
     suspendAllThreads(self);
 
-    //if(verbosegc) {		// FIXME JAPHA: for now, we want GC to be verbose
+    if(verbosegc) {
         struct timeval start;
         float mark_time;
         float scan_time;
 
         getTime(&start);
-		BEGIN_TX("GC");
+		BEGIN_TX("GC-VERBOSE");
         doMark(self, mark_soft_refs);
         mark_time = endTime(&start)/1000000.0;
 
         getTime(&start);
         largest = compact ? doCompact() : doSweep(self);
-		END_TX("GC");
+		END_TX("GC-VERBOSE");
         scan_time = endTime(&start)/1000000.0;
 
         jam_printf("<GC: Mark took %f seconds, %s took %f seconds>\n",
                            mark_time, compact ? "compact" : "scan", scan_time);
-    //} else {
-    //    doMark(self, mark_soft_refs);
-    //    largest = compact ? doCompact() : doSweep(self);
-    //}
+    } else {
+		BEGIN_TX("GC");
+        doMark(self, mark_soft_refs);
+        largest = compact ? doCompact() : doSweep(self);
+		END_TX("GC");
+    }
 
     /* Restart the world */
     resumeAllThreads(self);
@@ -1796,7 +1775,7 @@ unsigned long gc0_pmem(int mark_soft_refs, int compact) {
 
     /* Notify the finaliser thread if new finalisers
        need to be ran */
-    if(notify_finaliser_thread) // FIXME JAPHA: no finaliser thread running, must check that
+    if(notify_finaliser_thread)
         notifyAllVMWaitLock(run_finaliser_lock, self);
 
     /* Notify the reference thread if new references
@@ -1894,8 +1873,18 @@ void gc1() {
     Thread *self;
     disableSuspend(self = threadSelf());
     lockVMLock(heap_lock, self);
-    enableSuspend(self);
-    gc0(TRUE, FALSE);
+	// JAPHA modification to add async tx GC
+	if(verbosegc) jam_printf("<GC: Attempting async GC>, tx_count=%u\n", total_tx_count);
+	if (total_tx_count == 0) {		// only perform async GC if there is no ongoing NVML transaction
+		if(verbosegc) jam_printf("<GC: Will execute async GC>\n");
+		enableSuspend(self);
+		if (is_persistent) {
+			gc0_pmem(TRUE, FALSE);
+		} else {
+			gc0(TRUE, FALSE);
+		}
+	}
+	// end of JAPHA modification
     unlockVMLock(heap_lock, self);
 }
 
@@ -1962,6 +1951,7 @@ void runFinalizers() {
 void asyncGCThreadLoop(Thread *self) {
     for(;;) {
         threadSleep(self, 1000, 0);
+		if(verbosegc) jam_printf("<GC: Async GC loop has awaken>, tx_count=%u\n", total_tx_count);
         if(systemIdle(self))
             gc1();
     }
@@ -2071,15 +2061,14 @@ void initialiseGC(InitArgs *args) {
 
 
     /* Create and start VM threads for the reference handler and finalizer */
-    // JaPHa Modification
-    // GC Disabled
-    /*createVMThread("Finalizer", finalizerThreadLoop);
-    createVMThread("Reference Handler", referenceHandlerThreadLoop);*/
+	// JAPHA TODO: we don't fully understand the implications of the finalizer thread and NVML transactions (which are per thread). Need to evaluate more carefully.
+	// 				comment by Taciano Perez on May 20th 2016
+    createVMThread("Finalizer", finalizerThreadLoop);
+    createVMThread("Reference Handler", referenceHandlerThreadLoop);
 
     /* Create and start VM thread for asynchronous GC */
-    /*if(args->asyncgc)
-        createVMThread("Async GC", asyncGCThreadLoop);*/
-    // End of modification
+    if(args->asyncgc)
+        createVMThread("Async GC", asyncGCThreadLoop);
 
     /* GC will use mark-sweep or mark-compact as appropriate, but this
        can be changed via the command line */
@@ -2150,8 +2139,7 @@ void *ph_malloc(int len2) {
 			pheap->chunkpp = &(*pheap->chunkpp)->next;
 		}
 		
-		if (!has_found) {	// FIXME: this probably isn't needed to the goto above
-			printf("ERROR: could not find available space, will attempt GC\n");
+		if (!has_found) {	// FIXME: this variable probably isn't needed anymore due to  the gotos above
 			if(verbosegc) jam_printf("<GC: Alloc attempt for %d bytes failed.>\n", n);
 			
 			/* The state determines what action to take in the event of
@@ -2823,7 +2811,7 @@ void expandNVM(){
 	nvmChunk *chunk;
 
 	pheap->nvmCurrentSize = pheap->nvmCurrentSize + INCREASE_VALUE;
-	pheap->nvm_limit = (unsigned int) pheap->nvm + pheap->nvmCurrentSize;
+	pheap->nvm_limit = (unsigned long) pheap->nvm + pheap->nvmCurrentSize;
 
 	memset((pheap->nvm+oldSize), 0, INCREASE_VALUE);
 
@@ -2851,10 +2839,10 @@ void expandNVM(){
 
 /* XXX NVM CHANGE 004.001 - SysMalloc */
 // JaPHa Modification
-void *sysMalloc_persistent(int size){
+void *sysMalloc_persistent(uint size){
 	if (is_persistent){
-		int n = size < sizeof(void*) ? sizeof(void*) : size;
-		int have_remaining = FALSE;
+		uint n = size < sizeof(void*) ? sizeof(void*) : size;
+		uint have_remaining = FALSE;
 		void *ret_addr = NULL;
 		nvmChunk *rem = NULL;
 		nvmChunk *found = NULL;
@@ -2868,7 +2856,7 @@ void *sysMalloc_persistent(int size){
 		while (*(pheap->nvmChunkpp)){
 
 			/*	search unallocated chunk		*/
-			if ((*(pheap->nvmChunkpp))->allocBit == 1){
+			if ((*(pheap->nvmChunkpp))->allocBit == 1) {
 				pheap->nvmChunkpp = &(*(pheap->nvmChunkpp))->next;
 				continue;
 			}
@@ -2908,7 +2896,7 @@ void *sysMalloc_persistent(int size){
 		if (found == NULL) {
 			// we couldn't find any chunk with the desired size
 			// since we don't have GC yet, we'll have to exit the JVM
-			jam_fprintf(stderr, "We're out of chunks and don't have GC, so goodbye!\n");
+			jam_fprintf(stderr, "We're out of chunks and don't have GC for sysMalloc_persistent, so goodbye!\n");
 			exitVM(1);
 		}
 
@@ -2953,7 +2941,7 @@ void sysFree_persistent(void* addr) {
         int err;
         unsigned long ptr = (unsigned long) addr;
         /*	chunk = ptr - header */
-        nvmChunk *toFree = (ptr-nvmHeaderSize);
+        nvmChunk *toFree = (nvmChunk*)(ptr-nvmHeaderSize);
         if(nvml_alloc) {
             NVML_DIRECT("NVMFREESPACE", &(pheap->nvmFreeSpace), sizeof(pheap->nvmFreeSpace))
         }

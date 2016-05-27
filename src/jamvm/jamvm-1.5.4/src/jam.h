@@ -794,10 +794,6 @@ typedef struct opc {
 
 /* Alloc */
 
-// JaPHa Modification
-// created heap structure that contains the old nvm structure and the persistent hashtables,
-// reallocation of the Chunk and nvmChunk structures from the alloc.c to here
-
 #define NVM_INIT_SIZE 	2500000*8
 
 /* Format of an unallocated chunk */
@@ -811,6 +807,8 @@ typedef struct nvmChunk {
 	unsigned int chunkSize;
 	struct nvmChunk *next;
 } nvmChunk;
+
+#define MONITOR_HT_SIZE 528
 
 typedef struct pheap {
 	void *base_address;
@@ -832,7 +830,7 @@ typedef struct pheap {
 	char* bootPck_ht[1032];
 	char* string_ht[16392];
 	char* classes_ht[8200];
-	char* monitor_ht[528];
+	char* monitor_ht[MONITOR_HT_SIZE];
 	char nvm[NVM_INIT_SIZE];
 	char heapMem[HEAP_SIZE];// heap contents
 } PHeap;
@@ -865,7 +863,7 @@ extern void *sysRealloc(void *ptr, int n);
 /* XXX NVM CHANGE 004.000 - P.A.F
  * Added functions
  */
-extern void *sysMalloc_persistent(int n);
+extern void *sysMalloc_persistent(uint n);
 extern void sysFree_persistent(void *addr);
 extern void *sysRealloc_persistent(void *ptr, int n);
 
@@ -1210,6 +1208,8 @@ int nvml_alloc, persistent, errr, first_ex;
 PMEMobjpool *pop_heap;
 PMEMoid root_heap;
 PHeap *pheap;
+uint total_tx_count;
+
 
 #define NVML_DIRECT(TYPE, PTR, SIZE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
 										if(errr = pmemobj_tx_add_range_direct(PTR, SIZE)) { \
@@ -1219,7 +1219,10 @@ PHeap *pheap;
 
 #define BEGIN_TX(TYPE) if(errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE)) { \
 					       printf("ERROR %d at BEGIN\n", errr); \
-                       } \
+                       } else {	\
+						   total_tx_count++; \
+						   if (FALSE) printf("BEGIN_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
+					    } \
 
 #define END_TX(TYPE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
 					     flushPHValues(); \
@@ -1227,6 +1230,8 @@ PHeap *pheap;
 				     } \
 				     if(pmemobj_tx_stage() != TX_STAGE_NONE) { \
 					     pmemobj_tx_end(); \
+   					     total_tx_count--; \
+					     if (FALSE) printf("END_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
 				     }
 
 extern void flushPHValues();

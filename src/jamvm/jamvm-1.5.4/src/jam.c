@@ -403,6 +403,7 @@ int main(int argc, char *argv[]) {
     // JaPHa Modification
     nvml_alloc = persistent = FALSE;
     first_ex = TRUE;
+	total_tx_count = 0;
 
     if(access(PATH, F_OK) != -1) {
         first_ex = FALSE;

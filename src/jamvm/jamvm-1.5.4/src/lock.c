@@ -310,7 +310,11 @@ Monitor *allocMonitor(Object *obj) {
         mon = mon_free_list;
         mon_free_list = mon->next;      
     } else {
-        mon = sysMalloc(sizeof(Monitor));
+		// JAPHA: monitor hash table is persistent, so they must be persistent
+		// FIXME: should they be persistent? Need to think about it.
+        //mon = sysMalloc(sizeof(Monitor));
+		mon = sysMalloc_persistent(sizeof(Monitor));
+		// end of JAPHA modification
         monitorInit(mon);
     }
     mon->obj = obj;
@@ -328,8 +332,12 @@ Monitor *findMonitor(Object *obj) {
     else {
         Monitor *mon;
         /* Add if absent, scavenge, locked */
+		// JAPHA will modify Hashtable in pheap,  need to add to NVML transaction
+		BEGIN_TX("FIND_MONITOR")
+		NVML_DIRECT("FIND_MONITOR", mon_cache.hash_table, MONITOR_HT_SIZE)
         /* XXX NVM CHANGE 006.003.012  */
         findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
+		END_TX("FIND_MONITOR")
         return mon;
     }
 }

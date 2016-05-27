@@ -212,7 +212,8 @@ ZipFile *processArchive(char *path) {
         findHashEntry((*hash_table), pathname, found, TRUE, FALSE, FALSE, zip_name, FALSE);
     }
     /*	XXX NVM CHANGE 004.001.024 */
-    zip = sysMalloc_persistent(sizeof(ZipFile));
+    //zip = sysMalloc_persistent(sizeof(ZipFile));	// JAPHA removed by Taciano on May 20th 2016, this is indexed by a volatile hash table
+		zip = sysMalloc(sizeof(ZipFile));
 
     zip->data = data;
     zip->length = len;
@@ -258,6 +259,7 @@ char *findArchiveDirEntry(char *pathname, ZipFile *zip) {
 
     /* XXX NVM CHANGE 006.003.010  */
     /* Do not add if absent, no scavenge, not locked */
+	//printf("findArchiveDirEntry zip->dir_hash = %p\n", &(*zip->dir_hash));
     findHashEntry((*zip->dir_hash), pathname, found, FALSE, FALSE, FALSE, zip_name, FALSE);
 
     return found;
