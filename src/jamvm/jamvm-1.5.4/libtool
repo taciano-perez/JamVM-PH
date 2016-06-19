@@ -44,7 +44,7 @@ available_tags=" CXX"
 
 # ### BEGIN LIBTOOL CONFIG
 
-# Libtool was configured on host ubuntu:
+# Libtool was configured on host ip-172-31-24-245:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/bash"
@@ -66,12 +66,12 @@ fast_install=yes
 
 # The host system.
 host_alias=
-host=i686-pc-linux-gnu
+host=x86_64-unknown-linux-gnu
 host_os=linux
 
 # The build system.
 build_alias=
-build=i686-pc-linux-gnu
+build=x86_64-unknown-linux-gnu
 build_os=linux-gnu
 
 # An echo program that does not interpret backslashes.
@@ -97,7 +97,7 @@ with_gcc=yes
 EGREP="/bin/grep -E"
 
 # The linker used to build libraries.
-LD="/usr/bin/ld"
+LD="/usr/bin/ld -m elf_x86_64"
 
 # Whether we need hard or soft links.
 LN_S="ln -s"
@@ -329,10 +329,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/i686-linux-gnu/4.8 /usr/lib/i386-linux-gnu /usr/lib /lib/i386-linux-gnu /lib"
+sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/i386-linux-gnu/libfakeroot /usr/lib/i386-linux-gnu/mesa-egl /usr/lib/i386-linux-gnu/mesa /usr/lib/i386-linux-gnu/mir/clientplatform/mesa /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /usr/lib/vmware-tools/lib32/libvmGuestLib.so /usr/lib/vmware-tools/lib64/libvmGuestLib.so /usr/lib/vmware-tools/lib32/libvmGuestLibJava.so /usr/lib/vmware-tools/lib64/libvmGuestLibJava.so /usr/lib/vmware-tools/lib32/libDeployPkg.so /usr/lib/vmware-tools/lib64/libDeployPkg.so "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7312,7 +7312,7 @@ disable_libs=static
 # End:
 # ### BEGIN LIBTOOL TAG CONFIG: CXX
 
-# Libtool was configured on host ubuntu:
+# Libtool was configured on host ip-172-31-24-245:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/bash"
@@ -7334,12 +7334,12 @@ fast_install=yes
 
 # The host system.
 host_alias=
-host=i686-pc-linux-gnu
+host=x86_64-unknown-linux-gnu
 host_os=linux
 
 # The build system.
 build_alias=
-build=i686-pc-linux-gnu
+build=x86_64-unknown-linux-gnu
 build_os=linux-gnu
 
 # An echo program that does not interpret backslashes.
@@ -7365,7 +7365,7 @@ with_gcc=yes
 EGREP="/bin/grep -E"
 
 # The linker used to build libraries.
-LD="/usr/bin/ld"
+LD="/usr/bin/ld -m elf_x86_64"
 
 # Whether we need hard or soft links.
 LN_S="ln -s"
@@ -7494,11 +7494,11 @@ striplib="strip --strip-unneeded"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
-predep_objects="/usr/lib/gcc/i686-linux-gnu/4.8/../../../i386-linux-gnu/crti.o /usr/lib/gcc/i686-linux-gnu/4.8/crtbeginS.o"
+predep_objects="/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/5/crtbeginS.o"
 
 # Dependencies to place after the objects being linked to create a
 # shared library.
-postdep_objects="/usr/lib/gcc/i686-linux-gnu/4.8/crtendS.o /usr/lib/gcc/i686-linux-gnu/4.8/../../../i386-linux-gnu/crtn.o"
+postdep_objects="/usr/lib/gcc/x86_64-linux-gnu/5/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crtn.o"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
@@ -7510,11 +7510,11 @@ postdeps="-lstdc++ -lm -lgcc_s -lc -lgcc_s"
 
 # The directories searched by this compiler when creating a shared
 # library
-compiler_lib_search_dirs="/usr/lib/gcc/i686-linux-gnu/4.8 /usr/lib/gcc/i686-linux-gnu/4.8/../../../i386-linux-gnu /usr/lib/gcc/i686-linux-gnu/4.8/../../../../lib /lib/i386-linux-gnu /lib/../lib /usr/lib/i386-linux-gnu /usr/lib/../lib /usr/lib/gcc/i686-linux-gnu/4.8/../../.."
+compiler_lib_search_dirs="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu /usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib /lib/x86_64-linux-gnu /lib/../lib /usr/lib/x86_64-linux-gnu /usr/lib/../lib /usr/lib/gcc/x86_64-linux-gnu/5/../../.."
 
 # The library search path used internally by the compiler when linking
 # a shared library.
-compiler_lib_search_path="-L/usr/lib/gcc/i686-linux-gnu/4.8 -L/usr/lib/gcc/i686-linux-gnu/4.8/../../../i386-linux-gnu -L/usr/lib/gcc/i686-linux-gnu/4.8/../../../../lib -L/lib/i386-linux-gnu -L/lib/../lib -L/usr/lib/i386-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/i686-linux-gnu/4.8/../../.."
+compiler_lib_search_path="-L/usr/lib/gcc/x86_64-linux-gnu/5 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/5/../../.."
 
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method="pass_all"
@@ -7594,10 +7594,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/i686-linux-gnu/4.8 /usr/lib/i386-linux-gnu /usr/lib /lib/i386-linux-gnu /lib"
+sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/i386-linux-gnu/libfakeroot /usr/lib/i386-linux-gnu/mesa-egl /usr/lib/i386-linux-gnu/mesa /usr/lib/i386-linux-gnu/mir/clientplatform/mesa /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /usr/lib/vmware-tools/lib32/libvmGuestLib.so /usr/lib/vmware-tools/lib64/libvmGuestLib.so /usr/lib/vmware-tools/lib32/libvmGuestLibJava.so /usr/lib/vmware-tools/lib64/libvmGuestLibJava.so /usr/lib/vmware-tools/lib32/libDeployPkg.so /usr/lib/vmware-tools/lib64/libDeployPkg.so "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""

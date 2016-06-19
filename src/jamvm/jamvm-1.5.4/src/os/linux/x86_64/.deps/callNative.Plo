@@ -1,1 +1,6 @@
-# dummy
+callNative.lo: callNative.S /usr/include/stdc-predef.h \
+ ../../../../src/config.h
+
+/usr/include/stdc-predef.h:
+
+../../../../src/config.h:

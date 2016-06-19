@@ -41,7 +41,6 @@ static int offset_offset;
 
 static HashTable hash_table;
 /*	XXX	NVM VARIABLES - STRING.C	*/
-static char* string_name = "string_ht";
 static int is_persistent = FALSE;
 
 int stringHash(Object *ptr) {
@@ -102,7 +101,7 @@ Object *findInternedString(Object *string) {
 
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.007  */
-    findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, string_name, TRUE);
+    findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, HT_NAME_STRING, TRUE);
 
     return interned;
 }
@@ -130,7 +129,7 @@ void freeInternedStrings() {
         /* Ensure new table is less than 2/3 full */
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
         /* XXX NVM CHANGE 006.002.001  */
-        resizeHash(&hash_table, size, string_name, TRUE);
+        resizeHash(&hash_table, size, HT_NAME_STRING, TRUE);
     }
 }
 
@@ -196,7 +195,7 @@ void initialiseString(InitArgs *args) {
 
     /* Init hash table and create lock */
     /* XXX NVM CHANGE 005.001.007 - Strings HT - Y*/
-    initHashTable(hash_table, HASHTABSZE, TRUE, string_name, TRUE);
+    initHashTable(hash_table, HASHTABSZE, TRUE, HT_NAME_STRING, TRUE);
     /* XXX DOC CHANGE */
     if(is_persistent) {
     	OPC *ph_value = get_opc_ptr();

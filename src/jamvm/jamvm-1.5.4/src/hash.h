@@ -64,7 +64,7 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
 /* XXX NVM CHANGE 006.003 - Find Hash */
 #define findHashEntry(table, ptr, ptr2, add_if_absent, scavenge, locked, name, create_file)           \
 {                                                                                  \
-    int hash = HASH(ptr);                                                          \
+	int hash = HASH(ptr);                                                          \
     int i;                                                                         \
                                                                                    \
     Thread *self;                                                                  \
@@ -118,7 +118,7 @@ extern void unlockHashTable0(HashTable *table, Thread *self);
                 }                                                                  \
             }                                                                      \
         }                                                                          \
-                                                                                   \
+		\
     if(locked)                                                                     \
         unlockHashTable0(&table, self);                                            \
 }

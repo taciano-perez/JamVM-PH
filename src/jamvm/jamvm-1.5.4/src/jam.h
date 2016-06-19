@@ -38,12 +38,7 @@
 // JaPHa Modification
 #include <unistd.h>
 #include <libpmemobj.h>
-
-#define PATH "/mnt/pmfs/HEAP_POOL"
-//#define PATH "heap_local"
-#define HEAP_SIZE 3000000
-#define PHEAP_SIZE sizeof(PHeap)*4
-// End of modification
+// end of JaPHa Modification
 
 #ifndef TRUE
 #define         TRUE    1
@@ -794,7 +789,29 @@ typedef struct opc {
 
 /* Alloc */
 
+// JAPHA modifications
+#define PATH "/mnt/pmfs/HEAP_POOL"	// FIXME: this needs to be dynamically configured via -persistentheap:<FILE_NAME>
+//#define HEAP_SIZE 3000000
+#define HEAP_SIZE 8192L*MB		// 8GB
+#define PHEAP_SIZE sizeof(PHeap)*4	// size of NVML pool, need extra space for overhead
+
 #define NVM_INIT_SIZE 	2500000*8
+
+/* Hashtable name constants */
+#define HT_NAME_BOOT	"bootCl_ht"
+#define HT_NAME_CLASS	"classes_ht"
+#define HT_NAME_BOOTPKG	"bootPck_ht"
+#define HT_NAME_UTF8	"utf8_ht"
+#define HT_NAME_STRING	"string_ht"
+#define HT_NAME_MONITOR	"monitor_ht"
+
+/* Hashtable size constants */
+#define MONITOR_HT_SIZE 528
+#define UTF8_HT_SIZE 131080
+#define BOOTCL_HT_SIZE 8200
+#define BOOTPCK_HT_SIZE 1032
+#define STRING_HT_SIZE 16392
+#define CLASSES_HT_SIZE 8200
 
 /* Format of an unallocated chunk */
 typedef struct chunk {
@@ -808,7 +825,6 @@ typedef struct nvmChunk {
 	struct nvmChunk *next;
 } nvmChunk;
 
-#define MONITOR_HT_SIZE 528
 
 typedef struct pheap {
 	void *base_address;
@@ -825,11 +841,11 @@ typedef struct pheap {
 	unsigned int nvmCurrentSize;
 	unsigned long nvm_limit;
 	OPC opc;
-	char* utf8_ht[131080];
-	char* bootCl_ht[8200];
-	char* bootPck_ht[1032];
-	char* string_ht[16392];
-	char* classes_ht[8200];
+	char* utf8_ht[UTF8_HT_SIZE];
+	char* bootCl_ht[BOOTCL_HT_SIZE];
+	char* bootPck_ht[BOOTPCK_HT_SIZE];
+	char* string_ht[STRING_HT_SIZE];
+	char* classes_ht[CLASSES_HT_SIZE];
 	char* monitor_ht[MONITOR_HT_SIZE];
 	char nvm[NVM_INIT_SIZE];
 	char heapMem[HEAP_SIZE];// heap contents
@@ -837,7 +853,7 @@ typedef struct pheap {
 
 extern void* ph_malloc(int len);
 extern int initialiseRoot(InitArgs *args);
-// End of modification
+// End of JAPHA modifications
 
 extern void initialiseAlloc(InitArgs *args);
 extern void initialiseGC(InitArgs *args);
@@ -856,16 +872,16 @@ extern unsigned long freeHeapMem();
 extern unsigned long totalHeapMem();
 extern unsigned long maxHeapMem();
 
-extern void *sysMalloc(int n);
+extern void *sysMalloc(unsigned int n);
 extern void sysFree(void *ptr);
-extern void *sysRealloc(void *ptr, int n);
+extern void *sysRealloc(void *ptr, unsigned int n);
 
 /* XXX NVM CHANGE 004.000 - P.A.F
  * Added functions
  */
-extern void *sysMalloc_persistent(uint n);
+extern void *sysMalloc_persistent(unsigned int n);
 extern void sysFree_persistent(void *addr);
-extern void *sysRealloc_persistent(void *ptr, int n);
+extern void *sysRealloc_persistent(void *ptr, unsigned int n);
 
 /*	XXX NVM CHANGE 009.000.001	*/
 extern OPC *get_opc_ptr();
@@ -1210,7 +1226,6 @@ PMEMoid root_heap;
 PHeap *pheap;
 uint total_tx_count;
 
-
 #define NVML_DIRECT(TYPE, PTR, SIZE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
 										if(errr = pmemobj_tx_add_range_direct(PTR, SIZE)) { \
 											printf("%s ERROR %d: could not add range to transaction\n", TYPE, errr); \
@@ -1233,6 +1248,11 @@ uint total_tx_count;
    					     total_tx_count--; \
 					     if (FALSE) printf("END_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
 				     }
+/*
+#define NVML_DIRECT(TYPE, PTR, SIZE) do {} while (0);
+#define BEGIN_TX(TYPE)  do {} while (0);
+#define END_TX(TYPE)  do {} while (0);
+*/
 
 extern void flushPHValues();
 // End of modification

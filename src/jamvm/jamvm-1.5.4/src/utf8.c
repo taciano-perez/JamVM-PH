@@ -36,7 +36,6 @@
 static HashTable hash_table;
 
 /*XXX NVM VARIABLES - UTF8.C */
-static char* utf8_name = "utf8_ht";
 static int is_persistent = FALSE;
 
 #define GET_UTF8_CHAR(ptr, c)                         \
@@ -100,7 +99,7 @@ char *findHashedUtf8(char *string, int add_if_absent) {
     char *interned = NULL;
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.008  */
-    findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
+    findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, HT_NAME_UTF8, TRUE);
     return interned;
 }
 
@@ -149,7 +148,7 @@ void initialiseUtf8(InitArgs *args) {
     }
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y*/
-    initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
+    initHashTable(hash_table, HASHTABSZE, TRUE, HT_NAME_UTF8, TRUE);
     /* XXX DOC CHANGE */
     if(is_persistent) {
     	OPC *ph_value = get_opc_ptr();

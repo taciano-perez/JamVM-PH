@@ -105,8 +105,6 @@
 */
 
 /*	XXX	NVM VARIABLES - ALLOC.C	*/
-static int is_persistent = FALSE;
-
 uintptr_t get_freelist_header();
 struct chunk *get_freelist_next();
 int file = FALSE;
@@ -306,7 +304,7 @@ void clearMarkBits() {
 
 // JaPHa Modification
 int initialiseRoot(InitArgs *args) {
-	int heap_size;
+	unsigned long heap_size;
 
 	if(HEAP_SIZE < PMEMOBJ_MIN_POOL)
 		heap_size = PMEMOBJ_MIN_POOL;
@@ -326,10 +324,8 @@ int initialiseRoot(InitArgs *args) {
 		pheap->heapfree = HEAP_SIZE - sizeof(Chunk);
 		pheap->maxHeap = HEAP_SIZE;
 		pheap->heapbase = (char*) (((uintptr_t)pheap->heapMem + HEADER_SIZE + OBJECT_GRAIN-1) & ~(OBJECT_GRAIN-1)) - HEADER_SIZE;
-		printf("Setting pheap->heapbase=%p\n", pheap->heapbase);
 		pheap->heapmax = pheap->heapbase + ((args->max_heap - (pheap->heapbase - pheap->heapMem)) & ~(OBJECT_GRAIN - 1));
 		pheap->heaplimit = pheap->heapbase + ((args->min_heap - (pheap->heapbase - pheap->heapMem)) & ~(OBJECT_GRAIN - 1));
-		printf("Setting pheap->heaplimit=%p\n", pheap->heaplimit);
 		pheap->freelist = (Chunk*) pheap->heapbase;
 		pheap->freelist->header = pheap->heaplimit - pheap->heapbase;
 		pheap->freelist->next = NULL;
@@ -368,7 +364,7 @@ void initialiseAlloc(InitArgs *args) {
     unsigned long volatile * const heapMemAddr = (unsigned long *) HEAPADDR;
 
     if(args->persistent_heap == TRUE) {
-        is_persistent = TRUE;
+        persistent = TRUE;
 
         //JaPHa Modification
         if( access(PATH, F_OK ) != -1 ) {
@@ -400,12 +396,12 @@ void initialiseAlloc(InitArgs *args) {
 
     //JaPHa Modification
     //use the pool values in persistent execution
-    if(is_persistent) {
+    if(persistent) {
         maxHeap = pheap->maxHeap;
         heapbase = pheap->heapbase;
-		printf("Setting heapbase=%p\n", heapbase);
+		//printf("Setting heapbase=%p\n", heapbase);
         heaplimit = pheap->heaplimit;
-		printf("Setting heaplimit=%p\n", heaplimit);
+		//printf("Setting heaplimit=%p\n", heaplimit);
         heapmax = pheap->heapmax;
         freelist = pheap->freelist;
         chunkpp = pheap->chunkpp;
@@ -414,7 +410,7 @@ void initialiseAlloc(InitArgs *args) {
 
     /*	XXX NVM CHANGE 009.000.003	*/
     // JaPHa Modification
-    if(is_persistent) {
+    if(persistent) {
         if(file) {
                 ph_value = &(pheap->opc);
                 set_java_lang_class(ph_value->java_lang_Class);
@@ -1002,7 +998,7 @@ static uintptr_t doSweep(Thread *self) {
 
             /* Clear any set flag bits within the header */
 			// JAPHA modification by Taciano on Apr 24 2016 to implement tx GC
-			if (is_persistent) { NVML_DIRECT("DO_SWEEP", &curr->header, sizeof(uintptr_t)) }
+			if (persistent) { NVML_DIRECT("DO_SWEEP", &curr->header, sizeof(uintptr_t)) }
             curr->header &= HDR_FLAGS_MASK;
 
             TRACE_GC("FREE: Freeing ob @%p class %s - start of block\n", ob,
@@ -1237,13 +1233,13 @@ void threadRegisteredReferences() {
 {                                             \
     Chunk *curr = (Chunk *) start;            \
 	/* JAPHA: modified by Taciano on April 28 2016, to add tx GC */ \
-	if (is_persistent) { NVML_DIRECT("ADD_CHUNK_TO_FREELIST", &curr->header, sizeof(uintptr_t)) } \
+	if (persistent) { NVML_DIRECT("ADD_CHUNK_TO_FREELIST", &curr->header, sizeof(uintptr_t)) } \
     curr->header = end - start;               \
 	if (curr->header < 0) { printf("curr->header < 0\n"); }	\
                                               \
     if(curr->header >= MIN_OBJECT_SIZE) {     \
 		/* JAPHA: modified by Taciano on April 28 2016, to add tx GC */ \
-		if (is_persistent) { NVML_DIRECT("ADD_CHUNK_TO_FREELIST2", last->next, sizeof(struct chunk*)) } \
+		if (persistent) { NVML_DIRECT("ADD_CHUNK_TO_FREELIST2", last->next, sizeof(struct chunk*)) } \
         last->next = curr;                    \
         last = curr;                          \
     }                                         \
@@ -1260,7 +1256,7 @@ int compactSlideBlock(char *block_addr, char *new_addr) {
     uintptr_t size = HDR_SIZE(hdr);
 
 		/* Added by Taciano on April 28 2016 to add tx GC */
-	   if (is_persistent) {	
+	   if (persistent) {	
 			NVML_DIRECT("COMPACT_SLIDE_BLOCK-SRC", block_addr, size);
 			NVML_DIRECT("COMPACT_SLIDE_BLOCK-DEST", new_addr, size);
 	   }
@@ -1281,7 +1277,7 @@ int compactSlideBlock(char *block_addr, char *new_addr) {
                       block_addr + HEADER_SIZE);
 
 		/* Added by Taciano on April 28 2016 to add tx GC */
-		if (is_persistent) { 
+		if (persistent) { 
 			NVML_DIRECT("COMPACT_SLIDE_BLOCK-HASHADDR", hash_addr, sizeof(uintptr_t));
 			NVML_DIRECT("COMPACT_SLIDE_BLOCK-HDRADDR", hdr_addr, sizeof(uintptr_t));
 		}
@@ -1878,7 +1874,7 @@ void gc1() {
 	if (total_tx_count == 0) {		// only perform async GC if there is no ongoing NVML transaction
 		if(verbosegc) jam_printf("<GC: Will execute async GC>\n");
 		enableSuspend(self);
-		if (is_persistent) {
+		if (persistent) {
 			gc0_pmem(TRUE, FALSE);
 		} else {
 			gc0(TRUE, FALSE);
@@ -2026,7 +2022,7 @@ void referenceHandlerThreadLoop(Thread *self) {
 
 void set_has_finaliser_list(){
     // JaPHa Modification
-	if (is_persistent) {
+	if (persistent) {
 		OPC *ph_values = get_opc_ptr();
 		has_finaliser_count = ph_values->has_finaliser_count;
 		has_finaliser_size = ph_values->has_finaliser_size;
@@ -2287,7 +2283,7 @@ got_it_pmem:
 
 void *gcMalloc(int len) {
     // JaPHa Modification
-    if(is_persistent) {
+    if(persistent) {
         return ph_malloc(len);
     }
     // End of modification
@@ -2695,26 +2691,27 @@ void *gcMemMalloc(int n, char* name, int create_file) {
     int fd;
 
     // JaPHa Modification
-    if (is_persistent && create_file) {
-        if(!strcmp(name,"utf8_ht")) {
+    if (persistent && create_file) {
+        if(!strcmp(name, HT_NAME_UTF8)) {
             return pheap->utf8_ht;
         }
-        if(!strcmp(name,"bootCl_ht")) {
+        if(!strcmp(name, HT_NAME_BOOT)) {
             return pheap->bootCl_ht;
         }
-        if(!strcmp(name,"bootPck_ht")) {
+        if(!strcmp(name, HT_NAME_BOOTPKG)) {
             return pheap->bootPck_ht;
         }
-        if(!strcmp(name,"string_ht")) {
+        if(!strcmp(name, HT_NAME_STRING)) {
             return pheap->string_ht;
         }
-        if(!strcmp(name,"classes_ht")) {
+        if(!strcmp(name, HT_NAME_CLASS)) {
             return pheap->classes_ht;
         }
-        if(!strcmp(name,"monitor_ht")) {
+        if(!strcmp(name, HT_NAME_MONITOR)) {
             return pheap->monitor_ht;
         }
     // End of modification
+		printf("INITIALIZING HT %s\n", name);
         unsigned long buffer[1];
         size = size + sizeof(unsigned long);
         if( access( name, F_OK ) != -1 ) {
@@ -2806,6 +2803,7 @@ void freePendingFrees() {
 /* MREMAP MAYMOVE ISSUE */
 // JaPHa Modification
 void expandNVM(){
+	printf("Expanding NVM metadata region");
 	unsigned int oldSize = pheap->nvmCurrentSize;
 	nvmChunk *new;
 	nvmChunk *chunk;
@@ -2839,8 +2837,8 @@ void expandNVM(){
 
 /* XXX NVM CHANGE 004.001 - SysMalloc */
 // JaPHa Modification
-void *sysMalloc_persistent(uint size){
-	if (is_persistent){
+void *sysMalloc_persistent(unsigned int size){
+	if (persistent){
 		uint n = size < sizeof(void*) ? sizeof(void*) : size;
 		uint have_remaining = FALSE;
 		void *ret_addr = NULL;
@@ -2925,6 +2923,14 @@ void *sysMalloc_persistent(uint size){
 			pheap->nvmFreeSpace = pheap->nvmFreeSpace - nvmHeaderSize - shift - sizeof(nvmChunk);
 		else
 			pheap->nvmFreeSpace = pheap->nvmFreeSpace - found->chunkSize - sizeof(nvmChunk);
+
+		if (nvml_alloc)	{
+			if ((void*)found >= (void*)(pheap->nvm + pheap->nvmCurrentSize)) {
+				printf("NVM_LIMIT exceeded %p >= %p\n", (void*)found, (void*)pheap->nvm_limit);
+			}
+		}
+
+
 		/* clear chunk */
 		memset(ret_addr, 0, found->chunkSize);
 
@@ -2937,7 +2943,7 @@ void *sysMalloc_persistent(uint size){
 /* XXX NVM CHANGE 004.003 - SysFree */
 // JaPHa Modification
 void sysFree_persistent(void* addr) {
-    if(is_persistent) {
+    if(persistent) {
         int err;
         unsigned long ptr = (unsigned long) addr;
         /*	chunk = ptr - header */
@@ -2960,9 +2966,9 @@ void sysFree_persistent(void* addr) {
 // End of modification
 
 /* XXX NVM CHANGE 004.002 - SysRealloc */
-void *sysRealloc_persistent(void *addr, int size) {
+void *sysRealloc_persistent(void *addr, unsigned int size) {
     void *mem;
-    if (is_persistent) {
+    if (persistent) {
         /*	chunk = ptr - header */
         nvmChunk *toRealloc = (addr-nvmHeaderSize);
         mem = sysMalloc_persistent(size);
@@ -2980,8 +2986,8 @@ void *sysRealloc_persistent(void *addr, int size) {
     }
 }
 
-void *sysMalloc(int size) {
-    int n = size < sizeof(void*) ? sizeof(void*) : size;
+void *sysMalloc(unsigned int size) {
+    unsigned int n = size < sizeof(void*) ? sizeof(void*) : size;
     void *mem = malloc(n);
 
     if(mem == NULL) {
@@ -2992,7 +2998,7 @@ void *sysMalloc(int size) {
     return mem;
 }
 
-void *sysRealloc(void *addr, int size) {
+void *sysRealloc(void *addr, unsigned int size) {
     void *mem = realloc(addr, size);
 
     if(mem == NULL) {

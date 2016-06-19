@@ -324,7 +324,7 @@ on `(hostname || uname -n) 2>/dev/null | sed 1q`
 # Files that config.status was made for.
 config_files=" Makefile src/Makefile src/interp/Makefile src/interp/engine/Makefile src/arch/Makefile src/os/Makefile src/os/linux/Makefile src/os/darwin/Makefile src/os/bsd/Makefile src/os/solaris/Makefile src/os/solaris/x86/Makefile src/os/linux/powerpc/Makefile src/os/linux/arm/Makefile src/os/linux/i386/Makefile src/os/linux/x86_64/Makefile src/os/linux/parisc/Makefile src/os/linux/mips/Makefile src/os/darwin/i386/Makefile src/os/darwin/arm/Makefile src/os/darwin/powerpc/Makefile src/os/bsd/powerpc/Makefile src/os/bsd/arm/Makefile src/os/bsd/i386/Makefile src/os/bsd/x86_64/Makefile src/os/bsd/sparc/Makefile lib/Makefile lib/java/Makefile lib/java/lang/Makefile lib/jamvm/Makefile lib/jamvm/java/Makefile lib/jamvm/java/lang/Makefile lib/java/lang/reflect/Makefile lib/java/security/Makefile lib/gnu/Makefile lib/sun/reflect/annotation/Makefile lib/sun/reflect/Makefile lib/sun/Makefile lib/gnu/classpath/Makefile"
 config_headers=" src/config.h"
-config_links=" src/arch.h:src/arch/i386.h"
+config_links=" src/arch.h:src/arch/x86_64.h"
 config_commands=" depfiles"
 
 ac_cs_usage="\
@@ -367,11 +367,11 @@ Copyright (C) 2008 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/home/lis/Documents/dev/JamVM-PH/src/jamvm/jamvm-1.5.4'
+ac_pwd='/home/ubuntu/JamVM-PH/src/jamvm/jamvm-1.5.4'
 srcdir='.'
 INSTALL='/usr/bin/install -c'
 MKDIR_P='/bin/mkdir -p'
-AWK='mawk'
+AWK='gawk'
 test -n "$AWK" || AWK=awk
 # The default lists apply if the user does not specify any file.
 ac_need_defaults=:
@@ -584,7 +584,7 @@ S["MAINTAINER_MODE_TRUE"]="#"
 S["ALLOCA"]=""
 S["use_zip_no"]="#"
 S["use_zip_yes"]=""
-S["JAVAC"]="javac"
+S["JAVAC"]="ecj"
 S["am__fastdepCCAS_FALSE"]="#"
 S["am__fastdepCCAS_TRUE"]=""
 S["CCASDEPMODE"]="depmode=gcc3"
@@ -632,31 +632,31 @@ S["COMPILE_TIME_RELOC_CHECKS_FALSE"]="#"
 S["COMPILE_TIME_RELOC_CHECKS_TRUE"]=""
 S["interp_cflags"]="-fno-reorder-blocks"
 S["os"]="linux"
-S["arch"]="i386"
+S["arch"]="x86_64"
 S["host_os"]="linux"
-S["host_vendor"]="pc"
-S["host_cpu"]="i386"
-S["host"]="i686-pc-linux-gnu"
+S["host_vendor"]="unknown"
+S["host_cpu"]="x86_64"
+S["host"]="x86_64-unknown-linux-gnu"
 S["build_os"]="linux-gnu"
-S["build_vendor"]="pc"
-S["build_cpu"]="i686"
-S["build"]="i686-pc-linux-gnu"
+S["build_vendor"]="unknown"
+S["build_cpu"]="x86_64"
+S["build"]="x86_64-unknown-linux-gnu"
 S["am__untar"]="${AMTAR} xf -"
 S["am__tar"]="${AMTAR} chof - \"$$tardir\""
-S["AMTAR"]="${SHELL} /home/lis/Documents/dev/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run tar"
+S["AMTAR"]="${SHELL} /home/ubuntu/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run tar"
 S["am__leading_dot"]="."
 S["SET_MAKE"]=""
-S["AWK"]="mawk"
+S["AWK"]="gawk"
 S["mkdir_p"]="/bin/mkdir -p"
 S["MKDIR_P"]="/bin/mkdir -p"
 S["INSTALL_STRIP_PROGRAM"]="$(install_sh) -c -s"
 S["STRIP"]="strip"
-S["install_sh"]="$(SHELL) /home/lis/Documents/dev/JamVM-PH/src/jamvm/jamvm-1.5.4/install-sh"
-S["MAKEINFO"]="${SHELL} /home/lis/Documents/dev/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run makeinfo"
-S["AUTOHEADER"]="${SHELL} /home/lis/Documents/dev/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run autoheader"
-S["AUTOMAKE"]="${SHELL} /home/lis/Documents/dev/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run automake-1.10"
-S["AUTOCONF"]="${SHELL} /home/lis/Documents/dev/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run autoconf"
-S["ACLOCAL"]="${SHELL} /home/lis/Documents/dev/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run aclocal-1.10"
+S["install_sh"]="$(SHELL) /home/ubuntu/JamVM-PH/src/jamvm/jamvm-1.5.4/install-sh"
+S["MAKEINFO"]="${SHELL} /home/ubuntu/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run makeinfo"
+S["AUTOHEADER"]="${SHELL} /home/ubuntu/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run autoheader"
+S["AUTOMAKE"]="${SHELL} /home/ubuntu/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run automake-1.10"
+S["AUTOCONF"]="${SHELL} /home/ubuntu/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run autoconf"
+S["ACLOCAL"]="${SHELL} /home/ubuntu/JamVM-PH/src/jamvm/jamvm-1.5.4/missing --run aclocal-1.10"
 S["VERSION"]="1.5.4"
 S["PACKAGE"]="jamvm"
 S["CYGPATH_W"]="echo"
@@ -752,7 +752,6 @@ D["PACKAGE_BUGREPORT"]=" \"\""
 D["PACKAGE"]=" \"jamvm\""
 D["VERSION"]=" \"1.5.4\""
 D["THREADED"]=" 1"
-D["USE_CACHE"]=" 1"
 D["DIRECT"]=" 1"
 D["INLINING"]=" 1"
 D["CLASSPATH_INSTALL_DIR"]=" \"/usr/local/classpath\""

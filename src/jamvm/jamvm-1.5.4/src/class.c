@@ -75,9 +75,6 @@ static Class *package_array_class;
 #define PCKG_INITSZE 1<<6
 static HashTable boot_packages;
 /*	XXX	NVM VARIABLES - CLASS.C	*/
-static char* boot_name = "bootCl_ht";
-static char* class_name = "classes_ht";
-static char* bootp_name = "bootPck_ht";
 static int is_persistent = FALSE;
 static int class_HC = 0;
 
@@ -159,7 +156,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                 table = sysMalloc_persistent(sizeof(HashTable));
 
                 /* XXX NVM CHANGE 005.001.001 - Classes HT - Y*/
-                initHashTable((*table), CLASS_INITSZE, TRUE, class_name, TRUE);
+                initHashTable((*table), CLASS_INITSZE, TRUE, HT_NAME_CLASS, TRUE);
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
@@ -174,9 +171,9 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.001  */
     if ((unsigned long)table == (unsigned long)&boot_classes) {
-    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, boot_name, TRUE );
+    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, HT_NAME_BOOT, TRUE );
     } else {
-    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, class_name, TRUE );
+    	findHashEntry((*table), class, entry, TRUE, FALSE, TRUE, HT_NAME_CLASS, TRUE );
     	class_HC = table->hash_count;
     }
 
@@ -1364,15 +1361,17 @@ char *findFileEntry(char *path, int *file_len) {
 }
 
 void defineBootPackage(char *classname, int index) {
+	//printf("defineBootPackage %s\n", classname);
     char *last_slash = strrchr(classname, '/');
 
     if(last_slash != NULL && last_slash != classname) {
         int len = last_slash - classname + 1;
-        PackageEntry *package = sysMalloc(sizeof(PackageEntry) + len);
+        PackageEntry *package = sysMalloc_persistent(sizeof(PackageEntry) + len);
         PackageEntry *hashed;
         
         package->index = index;
         slash2dots2buff(classname, package->name, len);
+		//printf("Package name: %s\n", package->name);
 
 #undef HASH
 #undef COMPARE
@@ -1382,14 +1381,15 @@ void defineBootPackage(char *classname, int index) {
 
         /* Add if absent, no scavenge, locked */
         /* XXX NVM CHANGE 006.003.002  */
-        findHashEntry(boot_packages, package, hashed, TRUE, FALSE, TRUE, bootp_name, TRUE);
+        findHashEntry(boot_packages, package, hashed, TRUE, FALSE, TRUE, HT_NAME_BOOTPKG, TRUE);
 
         if(package != hashed)
-            sysFree(package);
+            sysFree_persistent(package);
     }
 }
 
 Class *loadSystemClass(char *classname) {
+	//printf("Will load systemClass %s\n", classname);
     int file_len, fname_len = strlen(classname) + 8;
     char buff[max_cp_element_len + fname_len];
     char filename[fname_len];
@@ -1463,16 +1463,18 @@ Class *findHashedClass(char *classname, Object *class_loader) {
     /* Do not add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.003  */
    if((unsigned long)table == (unsigned long)&boot_classes) {
-	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, boot_name, TRUE );
+	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, HT_NAME_BOOT, TRUE );
    } else {
-	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, class_name, TRUE );
+	   findHashEntry((*table), name, class, FALSE, FALSE, TRUE, HT_NAME_CLASS, TRUE );
    }
 
    return class;
 }
 
 Class *findSystemClass0(char *classname) {
+   //printf("Entered findSystemClass0 to find %s\n", classname);
    Class *class = findHashedClass(classname, NULL);
+  // printf("findHashedClass returned %p\n", class);
 
    if(class == NULL)
        class = loadSystemClass(classname);
@@ -1650,7 +1652,7 @@ Object *bootPackage(char *package_name) {
 
     /* Do not add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.004  */
-    findHashEntry(boot_packages, package_name, hashed, FALSE, FALSE, TRUE, bootp_name, TRUE);
+    findHashEntry(boot_packages, package_name, hashed, FALSE, FALSE, TRUE, HT_NAME_BOOTPKG, TRUE);
 
     if(hashed != NULL)
         return createBootPackage(hashed);
@@ -2085,8 +2087,8 @@ void initialiseClass(InitArgs *args) {
 
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.002 - BC/BP HT - Y/Y*/
-    initHashTable(boot_classes,  CLASS_INITSZE, TRUE, boot_name,  TRUE);
-    initHashTable(boot_packages, PCKG_INITSZE,  TRUE, bootp_name, TRUE);
+    initHashTable(boot_classes,  CLASS_INITSZE, TRUE, HT_NAME_BOOT,  TRUE);
+    initHashTable(boot_packages, PCKG_INITSZE,  TRUE, HT_NAME_BOOTPKG, TRUE);
 
     /* XXX DOC CHANGE */
     if(is_persistent) {

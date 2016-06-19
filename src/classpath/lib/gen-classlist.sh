@@ -110,7 +110,7 @@ s|$|/) next|'
 
 sed "$sed_omit_hash" <tmp.omit >tmp.awk
 sed "$sed_omit_main_loop" <tmp.omit >>tmp.awk
-mawk -f tmp.awk < ${top_builddir}/lib/classes.1 > ${top_builddir}/lib/classes.tmp
+gawk -f tmp.awk < ${top_builddir}/lib/classes.1 > ${top_builddir}/lib/classes.tmp
 mv ${top_builddir}/lib/classes.tmp ${top_builddir}/lib/classes.1
 
 vm_omitlist=
@@ -123,7 +123,7 @@ if test -n "$vm_omitlist"; then
    cat $vm_omitlist | sed "$sed_omit_hash" > tmp.awk
    cat $vm_omitlist | sed "$sed_omit_main_loop" >> tmp.awk
 fi
-mawk -f tmp.awk < vm.add >>${top_builddir}/lib/classes.1
+gawk -f tmp.awk < vm.add >>${top_builddir}/lib/classes.1
 
 rm -f vm.omit vm.add tmp.omit tmp.awk
 

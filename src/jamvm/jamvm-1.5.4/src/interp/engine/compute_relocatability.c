@@ -99,7 +99,7 @@ Object *allocMultiArray(Class *array_class, int dim, intptr_t *count) {
     return NULL;
 }
 
-void *sysMalloc(int n) {
+void *sysMalloc(unsigned int n) {
     return NULL;
 }
 

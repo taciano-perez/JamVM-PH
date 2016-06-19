@@ -44,4 +44,4 @@ datarootdir=${prefix}/share
 tools_dir=${datarootdir}/classpath
 tools_cp=${tools_dir}/tools.zip
 
-exec java -classpath "${tools_cp}" gnu.classpath.tools.appletviewer.Main "$@"
+exec  -classpath "${tools_cp}" gnu.classpath.tools.appletviewer.Main "$@"

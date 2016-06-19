@@ -92,9 +92,6 @@
 static Monitor *mon_free_list = NULL;
 static HashTable mon_cache;
 
-/*	XXX	NVM VARIABLES - LOCK.C	*/
-static char* monitor_name = "monitor_ht";
-
 void monitorInit(Monitor *mon) {
     memset(mon, 0, sizeof(Monitor));
     pthread_mutex_init(&mon->lock, NULL);
@@ -333,11 +330,15 @@ Monitor *findMonitor(Object *obj) {
         Monitor *mon;
         /* Add if absent, scavenge, locked */
 		// JAPHA will modify Hashtable in pheap,  need to add to NVML transaction
-		BEGIN_TX("FIND_MONITOR")
-		NVML_DIRECT("FIND_MONITOR", mon_cache.hash_table, MONITOR_HT_SIZE)
+		if (persistent) {
+			BEGIN_TX("FIND_MONITOR")
+			NVML_DIRECT("FIND_MONITOR", mon_cache.hash_table, MONITOR_HT_SIZE)
+		}
         /* XXX NVM CHANGE 006.003.012  */
-        findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
-		END_TX("FIND_MONITOR")
+        findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, HT_NAME_MONITOR, FALSE);
+		if (persistent) {
+			END_TX("FIND_MONITOR")
+		}
         return mon;
     }
 }
@@ -569,7 +570,7 @@ void initialiseMonitor(InitArgs *args) {
     /* Init hash table, create lock */
     /* XXX NVM CHANGE 005.001.006 - Monitors HT - N*/
     // JaPHa Modification
-    initHashTable(mon_cache, HASHTABSZE, TRUE, monitor_name, TRUE);
+    initHashTable(mon_cache, HASHTABSZE, TRUE, HT_NAME_MONITOR, TRUE);
     // End of modification
 }
 

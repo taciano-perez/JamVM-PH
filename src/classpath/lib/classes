@@ -1431,6 +1431,8 @@
 ../javax/print/Doc.java
 ../javax/print/CancelablePrintJob.java
 ../javax/print/AttributeException.java
+../javax/op/OPRuntime.java
+../javax/op/OPResumeListener.java
 ../javax/net/ssl/X509TrustManager.java
 ../javax/net/ssl/X509KeyManager.java
 ../javax/net/ssl/X509ExtendedKeyManager.java
