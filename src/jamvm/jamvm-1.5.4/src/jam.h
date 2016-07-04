@@ -798,20 +798,33 @@ typedef struct opc {
 #define NVM_INIT_SIZE 	2500000*8
 
 /* Hashtable name constants */
+/* persistent HTs */
 #define HT_NAME_BOOT	"bootCl_ht"
 #define HT_NAME_CLASS	"classes_ht"
 #define HT_NAME_BOOTPKG	"bootPck_ht"
 #define HT_NAME_UTF8	"utf8_ht"
 #define HT_NAME_STRING	"string_ht"
 #define HT_NAME_MONITOR	"monitor_ht"
+#define HT_NAME_ZIP	"zip_ht"
 
 /* Hashtable size constants */
-#define MONITOR_HT_SIZE 528
-#define UTF8_HT_SIZE 131080
-#define BOOTCL_HT_SIZE 8200
-#define BOOTPCK_HT_SIZE 1032
-#define STRING_HT_SIZE 16392
-#define CLASSES_HT_SIZE 8200
+#define HT_ENTRY_SIZE	16	// FIXME: this is the sizeof(HashEntry) as defined by hash.h for the test platform; need to find a better solution for that
+
+#define MONITOR_HT_ENTRY_COUNT	32		// max number of HashTable entries supported by MONITOR HT
+#define UTF8_HT_ENTRY_COUNT		32768	// max number of HashTable entries supported by UTF8 HT
+#define BOOTCL_HT_ENTRY_COUNT	4096	// max number of HashTable entries supported by BOOTCL HT
+#define BOOTPCK_HT_ENTRY_COUNT	64		// max number of HashTable entries supported by BOOTPCK HT
+#define STRING_HT_ENTRY_COUNT	2048	// max number of HashTable entries supported by STRING HT
+#define CLASSES_HT_ENTRY_COUNT	4096	// max number of HashTable entries supported by CLASSES HT
+#define ZIP_HT_ENTRY_COUNT		16384	// max number of HashTable entries supported by ZIP HT
+
+#define MONITOR_HT_SIZE MONITOR_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define UTF8_HT_SIZE UTF8_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define BOOTCL_HT_SIZE BOOTCL_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define BOOTPCK_HT_SIZE BOOTPCK_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define STRING_HT_SIZE STRING_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define CLASSES_HT_SIZE CLASSES_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define ZIP_HT_SIZE ZIP_HT_ENTRY_COUNT*HT_ENTRY_SIZE
 
 /* Format of an unallocated chunk */
 typedef struct chunk {
@@ -847,6 +860,7 @@ typedef struct pheap {
 	char* string_ht[STRING_HT_SIZE];
 	char* classes_ht[CLASSES_HT_SIZE];
 	char* monitor_ht[MONITOR_HT_SIZE];
+	char* zip_ht[ZIP_HT_SIZE];
 	char nvm[NVM_INIT_SIZE];
 	char heapMem[HEAP_SIZE];// heap contents
 } PHeap;
@@ -1251,7 +1265,7 @@ uint total_tx_count;
 /*
 #define NVML_DIRECT(TYPE, PTR, SIZE) do {} while (0);
 #define BEGIN_TX(TYPE)  do {} while (0);
-#define END_TX(TYPE)  do {} while (0);
+#define END_TX(TYPE)  flushPHValues();
 */
 
 extern void flushPHValues();

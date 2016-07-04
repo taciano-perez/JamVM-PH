@@ -23,9 +23,7 @@
 #include <stdlib.h>
 #include "jam.h"
 #include "hash.h"
-//HT SIZE
-//Changed Default size of UTF8 hash 1 << 10
-#define HASHTABSZE 1<<13
+
 #define HASH(ptr) utf8Hash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (ptr1 == ptr2) || \
                   ((hash1 == hash2) && utf8Comp(ptr1, ptr2))
@@ -148,7 +146,7 @@ void initialiseUtf8(InitArgs *args) {
     }
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y*/
-    initHashTable(hash_table, HASHTABSZE, TRUE, HT_NAME_UTF8, TRUE);
+    initHashTable(hash_table, UTF8_HT_ENTRY_COUNT, TRUE, HT_NAME_UTF8, TRUE);
     /* XXX DOC CHANGE */
     if(is_persistent) {
     	OPC *ph_value = get_opc_ptr();

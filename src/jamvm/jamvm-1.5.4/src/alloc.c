@@ -2692,24 +2692,30 @@ void *gcMemMalloc(int n, char* name, int create_file) {
 
     // JaPHa Modification
     if (persistent && create_file) {
-        if(!strcmp(name, HT_NAME_UTF8)) {
+        if(strcmp(name, HT_NAME_UTF8) == 0) {
             return pheap->utf8_ht;
-        }
-        if(!strcmp(name, HT_NAME_BOOT)) {
+        } else
+        if(strcmp(name, HT_NAME_BOOT) == 0) {
             return pheap->bootCl_ht;
-        }
-        if(!strcmp(name, HT_NAME_BOOTPKG)) {
+        } else
+        if(strcmp(name, HT_NAME_BOOTPKG) == 0) {
             return pheap->bootPck_ht;
-        }
-        if(!strcmp(name, HT_NAME_STRING)) {
+        } else
+        if(strcmp(name, HT_NAME_STRING) == 0) {
             return pheap->string_ht;
-        }
-        if(!strcmp(name, HT_NAME_CLASS)) {
+        } else
+        if(strcmp(name, HT_NAME_CLASS) == 0) {
             return pheap->classes_ht;
-        }
-        if(!strcmp(name, HT_NAME_MONITOR)) {
+        } else
+        if(strcmp(name, HT_NAME_MONITOR) == 0) {
             return pheap->monitor_ht;
-        }
+        } else
+        if(strcmp(name, HT_NAME_MONITOR) == 0) {
+            return pheap->monitor_ht;
+        } else
+        if(strcmp(name, HT_NAME_ZIP) == 0) {
+            return pheap->zip_ht;
+       }
     // End of modification
 		printf("INITIALIZING HT %s\n", name);
         unsigned long buffer[1];

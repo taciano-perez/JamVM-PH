@@ -42,6 +42,10 @@ import gnu.java.nio.FileChannelImpl;
 
 import java.nio.channels.FileChannel;
 
+import javax.op.OPResumeListener;
+import javax.op.OPRuntime;
+
+
 /* Written using "Java Class Libraries", 2nd edition, ISBN 0-201-31002-3
  * "The Java Language Specification", ISBN 0-201-63451-1
  * Status: Believe complete and correct to 1.1.
@@ -58,7 +62,7 @@ import java.nio.channels.FileChannel;
  * @author Aaron M. Renn (arenn@urbanophile.com)
  * @author Tom Tromey (tromey@cygnus.com)
  */
-public class RandomAccessFile implements DataOutput, DataInput, Closeable
+public class RandomAccessFile implements DataOutput, DataInput, Closeable, OPResumeListener
 {
 
   // The underlying file.
@@ -68,7 +72,51 @@ public class RandomAccessFile implements DataOutput, DataInput, Closeable
   private DataOutputStream out;
   private DataInputStream in;
   
+  // JAPHA modifications
+  private int _fdmode;
+  private File _file;
   
+	/**
+	* Implementation of OPResumeListener interface. Called every time a VM with persistent heap is resumed.
+	*/
+    public void resume() {
+
+	    final String fileName = _file.getPath();
+
+		// The obligatory SecurityManager stuff
+		SecurityManager s = System.getSecurityManager();
+		if (s != null)
+		  {
+			s.checkRead(fileName);
+
+			if ((_fdmode & FileChannelImpl.WRITE) != 0)
+			  s.checkWrite(fileName);
+		  }
+
+		try
+		  {
+			ch = FileChannelImpl.create(_file, _fdmode);
+		  }
+		catch (FileNotFoundException fnfe)
+		  {
+			  System.out.println("JAPHA: FileNotFoundException thrown in RandomAccessFile.resume() 1");
+			//throw fnfe;
+		  }
+		catch (IOException ioe)
+		  {
+			FileNotFoundException fnfe = new FileNotFoundException(_file.getPath());
+			fnfe.initCause(ioe);
+			System.out.println("JAPHA: FileNotFoundException thrown in RandomAccessFile.resume() 2");
+			//throw fnfe;
+		  }
+		fd = new FileDescriptor(ch);
+		if ((_fdmode & FileChannelImpl.WRITE) != 0)
+		  out = new DataOutputStream (new FileOutputStream (fd));
+		else
+		  out = null;
+		in = new DataInputStream (new FileInputStream (fd));
+	}
+	
   /**
    * This method initializes a new instance of <code>RandomAccessFile</code>
    * to read from the specified <code>File</code> object with the specified 
@@ -92,6 +140,8 @@ public class RandomAccessFile implements DataOutput, DataInput, Closeable
   public RandomAccessFile (File file, String mode)
     throws FileNotFoundException
   {
+      OPRuntime.addListener(this);
+	  this._file = file;
     int fdmode;
     if (mode.equals("r"))
       fdmode = FileChannelImpl.READ;
@@ -107,8 +157,10 @@ public class RandomAccessFile implements DataOutput, DataInput, Closeable
 	fdmode = (FileChannelImpl.READ | FileChannelImpl.WRITE
 		  | FileChannelImpl.DSYNC);
       }
-    else
-      throw new IllegalArgumentException ("invalid mode: " + mode);
+	  else {
+		throw new IllegalArgumentException ("invalid mode: " + mode);
+	  }
+	this._fdmode = fdmode;
 
     final String fileName = file.getPath();
 

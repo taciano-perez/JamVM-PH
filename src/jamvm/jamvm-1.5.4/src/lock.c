@@ -43,7 +43,6 @@
 
 #define UN_USED -1
 
-#define HASHTABSZE 1<<5
 #define PREPARE(obj) allocMonitor(obj)
 #define HASH(obj) (getObjectHashcode(obj) >> LOG_OBJECT_GRAIN)
 #define COMPARE(obj, mon, hash1, hash2) hash1 == hash2 && mon->obj == obj
@@ -570,7 +569,7 @@ void initialiseMonitor(InitArgs *args) {
     /* Init hash table, create lock */
     /* XXX NVM CHANGE 005.001.006 - Monitors HT - N*/
     // JaPHa Modification
-    initHashTable(mon_cache, HASHTABSZE, TRUE, HT_NAME_MONITOR, TRUE);
+    initHashTable(mon_cache, MONITOR_HT_ENTRY_COUNT, TRUE, HT_NAME_MONITOR, TRUE);
     // End of modification
 }
 

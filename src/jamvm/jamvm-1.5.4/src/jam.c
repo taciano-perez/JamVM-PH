@@ -438,8 +438,10 @@ int main(int argc, char *argv[]) {
 
     mainThreadSetContextClassLoader(system_loader);
 
-    resumeAllListeners(system_loader);
-
+    // JaPHa Modification
+	resumeAllListeners(system_loader);
+    // end of JaPHa Modification
+	
     for(cpntr = argv[class_arg]; *cpntr; cpntr++)
         if(*cpntr == '.')
             *cpntr = '/';

@@ -26,7 +26,6 @@
 #include "hash.h"
 #include "symbol.h"
 
-#define HASHTABSZE 1<<10
 #define HASH(ptr) stringHash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (ptr1 == ptr2) || \
                   ((hash1 == hash2) && stringComp(ptr1, ptr2))
@@ -195,7 +194,7 @@ void initialiseString(InitArgs *args) {
 
     /* Init hash table and create lock */
     /* XXX NVM CHANGE 005.001.007 - Strings HT - Y*/
-    initHashTable(hash_table, HASHTABSZE, TRUE, HT_NAME_STRING, TRUE);
+    initHashTable(hash_table, STRING_HT_ENTRY_COUNT, TRUE, HT_NAME_STRING, TRUE);
     /* XXX DOC CHANGE */
     if(is_persistent) {
     	OPC *ph_value = get_opc_ptr();

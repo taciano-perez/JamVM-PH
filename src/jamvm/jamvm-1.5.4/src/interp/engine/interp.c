@@ -1314,12 +1314,7 @@ uintptr_t *executeJava() {
         REDISPATCH
     });)
 
-    // JaPHa Modification
     DEF_OPC_210(OPC_TABLESWITCH, {
-        if(persistent) {
-            BEGIN_TX("TABLESWITCH")
-            NVML_DIRECT("TABLESWITCH", pc, sizeof(Instruction))
-        }
         SwitchTable *table = (SwitchTable*)pc->operand.pntr;
         int index = *--ostack;
 
@@ -1328,19 +1323,10 @@ uintptr_t *executeJava() {
         else
             pc = table->entries[index - table->low];
 
-        if(persistent) {
-            END_TX("TABLESWITCH")
-        }
         DISPATCH_SWITCH
     })
-    // End of modification
 
-    // JaPHa Modification
     DEF_OPC_210(OPC_LOOKUPSWITCH, {
-        if(persistent) {
-            BEGIN_TX("LOOKUPSWITCH")
-            NVML_DIRECT("LOOKUPSWITCH", pc, sizeof(Instruction))
-        }
         LookupTable *table = (LookupTable*)pc->operand.pntr;
         int key = *--ostack;
         int i;
@@ -1350,12 +1336,8 @@ uintptr_t *executeJava() {
 
         pc = (i == table->num_entries ? table->deflt
                                       : table->entries[i].handler);
-        if(persistent) {
-            END_TX("LOOKUPSWITCH")
-        }
         DISPATCH_SWITCH
     })
-    // End of modification
 
     DEF_OPC_RW(OPC_GETSTATIC, ({
         int idx, cache, opcode;
@@ -2010,7 +1992,7 @@ uintptr_t *executeJava() {
         }
         FieldBlock *fb = RESOLVED_FIELD(pc);
         if(persistent) {
-            NVML_DIRECT("FB", fb, sizeof(FieldBlock))
+            NVML_DIRECT("PUTSTATIC2_QUICK", fb, sizeof(FieldBlock))
             END_TX("PUTSTATIC2_QUICK")
         }
         POP_LONG(fb->u.static_value.l, 3);

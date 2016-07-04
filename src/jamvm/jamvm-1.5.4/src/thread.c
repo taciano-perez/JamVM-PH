@@ -1172,15 +1172,17 @@ void exitVM(int status) {
         Class *system = findSystemClass(SYMBOL(java_lang_System));
         if(system) {
             MethodBlock *exit = findMethod(system, SYMBOL(exit), SYMBOL(_I__V));
+			// FIXME: this is actually quitting the VM, and we never get to pmemobj_close below
             if(exit)
                 executeStaticMethod(system, exit, status);
         }
     }
-
+	
     //JaPHa Modification
     //TODO close the heap before ending the VM
     if(is_persistent) {
         pmemobj_close(pop_heap);
+		printf("EXIT VM\n");
     }
     //End of modification
 

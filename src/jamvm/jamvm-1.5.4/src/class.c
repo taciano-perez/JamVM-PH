@@ -72,7 +72,6 @@ static MethodBlock *vm_loader_create_package = NULL;
 static Class *package_array_class;
 
 /* hash table containing packages loaded by the boot loader */
-#define PCKG_INITSZE 1<<6
 static HashTable boot_packages;
 /*	XXX	NVM VARIABLES - CLASS.C	*/
 static int is_persistent = FALSE;
@@ -102,9 +101,6 @@ int enqueue_mtbl_idx;
 
 /* hash table containing classes loaded by the boot loader and
    internally created arrays */
-// HT SIZE
-// Changed default size 1 << 8
-#define CLASS_INITSZE 1<<9
 static HashTable boot_classes;
 
 /* Array large enough to hold all primitive classes -
@@ -156,7 +152,7 @@ static Class *addClassToHash(Class *class, Object *class_loader) {
                 table = sysMalloc_persistent(sizeof(HashTable));
 
                 /* XXX NVM CHANGE 005.001.001 - Classes HT - Y*/
-                initHashTable((*table), CLASS_INITSZE, TRUE, HT_NAME_CLASS, TRUE);
+                initHashTable((*table), CLASSES_HT_ENTRY_COUNT, TRUE, HT_NAME_CLASS, TRUE);
 
                 INST_DATA(vmdata, HashTable*, ldr_data_tbl_offset) = table;
                 INST_DATA(class_loader, Object*, ldr_vmdata_offset) = vmdata;
@@ -2087,8 +2083,8 @@ void initialiseClass(InitArgs *args) {
 
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.002 - BC/BP HT - Y/Y*/
-    initHashTable(boot_classes,  CLASS_INITSZE, TRUE, HT_NAME_BOOT,  TRUE);
-    initHashTable(boot_packages, PCKG_INITSZE,  TRUE, HT_NAME_BOOTPKG, TRUE);
+    initHashTable(boot_classes,  BOOTCL_HT_ENTRY_COUNT, TRUE, HT_NAME_BOOT,  TRUE);
+    initHashTable(boot_packages, BOOTPCK_HT_ENTRY_COUNT,  TRUE, HT_NAME_BOOTPKG, TRUE);
 
     /* XXX DOC CHANGE */
     if(is_persistent) {

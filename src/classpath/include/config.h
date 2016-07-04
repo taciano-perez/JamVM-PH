@@ -14,7 +14,7 @@
 #define HAVE_ACCEPT 1
 
 /* Define to 1 if you have the <alsa/asoundlib.h> header file. */
-#define HAVE_ALSA_ASOUNDLIB_H 1
+/* #undef HAVE_ALSA_ASOUNDLIB_H */
 
 /* Define to 1 if you have the <asm/ioctls.h> header file. */
 #define HAVE_ASM_IOCTLS_H 1

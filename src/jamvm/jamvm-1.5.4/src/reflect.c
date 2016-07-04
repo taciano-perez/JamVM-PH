@@ -356,8 +356,11 @@ Object *getClassMethods(Class *class, int public) {
         if((mb->name[0] != '<') && (!public || (mb->access_flags & ACC_PUBLIC))
                                 && ((mb->access_flags & ACC_MIRANDA) == 0))
 
-            if((methods[j++] = createMethodObject(mb)) == NULL)
+            if((methods[j++] = createMethodObject(mb)) == NULL) {
                 return NULL;
+			} else {
+				//printf("getClassMethods method name = %s\n", mb->name);
+			}
     }
 
     return array;
