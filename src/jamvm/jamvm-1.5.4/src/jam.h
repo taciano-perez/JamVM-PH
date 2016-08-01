@@ -1239,6 +1239,32 @@ PMEMobjpool *pop_heap;
 PMEMoid root_heap;
 PHeap *pheap;
 uint total_tx_count;
+/*
+#define NVML_DIRECT(TYPE, PTR, SIZE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
+										if(errr = pmemobj_tx_add_range_direct(PTR, SIZE)) { \
+											printf("%s ERROR %d: could not add range to transaction\n", TYPE, errr); \
+										} \
+									}
+#define BEGIN_TX(TYPE) total_tx_count++; if (total_tx_count == 1) { \
+							if(errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE)) { \
+							   printf("ERROR %d at BEGIN\n", errr); \
+						   } else {	\
+							   if (FALSE) printf("BEGIN_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
+							} \
+						}
+
+// JAPHA: should flushPHValue be here?
+#define END_TX(TYPE) total_tx_count--; if (total_tx_count == 0) { \
+						if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
+							 pmemobj_tx_process(); \
+						 } \
+						 if(pmemobj_tx_stage() != TX_STAGE_NONE) { \
+							 flushPHValues(); \
+							 pmemobj_tx_end(); \
+							 if (FALSE) printf("END_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
+						 } \
+					}
+*/
 
 #define NVML_DIRECT(TYPE, PTR, SIZE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
 										if(errr = pmemobj_tx_add_range_direct(PTR, SIZE)) { \
@@ -1253,20 +1279,22 @@ uint total_tx_count;
 						   if (FALSE) printf("BEGIN_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
 					    } \
 
+// JAPHA: should flushPHValue be here?
 #define END_TX(TYPE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
-					     flushPHValues(); \
 					     pmemobj_tx_process(); \
 				     } \
 				     if(pmemobj_tx_stage() != TX_STAGE_NONE) { \
+					     flushPHValues(); \
 					     pmemobj_tx_end(); \
    					     total_tx_count--; \
 					     if (FALSE) printf("END_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
 				     }
+
 /*
 #define NVML_DIRECT(TYPE, PTR, SIZE) do {} while (0);
 #define BEGIN_TX(TYPE)  do {} while (0);
 #define END_TX(TYPE)  flushPHValues();
+//	#define END_TX(TYPE)  do {} while (0);
 */
-
 extern void flushPHValues();
 // End of modification

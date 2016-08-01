@@ -2100,11 +2100,12 @@ void *ph_malloc(int len2) {
 	   satisfy allocation request */
 	int has_found = FALSE;
 
+	if(nvml_alloc) {
+		NVML_DIRECT("CHUNKPP", &pheap->chunkpp, sizeof(Chunk*))
+	}
+	
 	for (;;) {
 
-		if(nvml_alloc) {
-			NVML_DIRECT("CHUNKPP", &pheap->chunkpp, sizeof(Chunk*))
-		}
 		uintptr_t len;
 		while(*(pheap->chunkpp)) {
 			len = (*(pheap->chunkpp))->header;
