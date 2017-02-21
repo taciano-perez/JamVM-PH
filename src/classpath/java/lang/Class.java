@@ -430,6 +430,19 @@ public final class Class<T>
     return VMClass.getDeclaredConstructors (this, publicOnly);
   }
   
+  //JAPHA change to avoid problem when calling methods by reflection
+  public boolean equals(Object o) {
+	  if (o instanceof Class) {
+		  if (o != null) {
+			  Class otherClass = (Class) o;
+			  if (otherClass.getName().equals(this.getName())) {
+				  return true;
+			  }
+		  }
+	  }
+	  return super.equals(o);
+  }
+  
   /**
    * Get a field declared in this class, where name is its simple name. The
    * implicit length field of arrays is not available. A security check may
@@ -504,8 +517,9 @@ public final class Class<T>
   {
     memberAccessCheck(Member.DECLARED);
     Method match = matchMethod(getDeclaredMethods(false), methodName, types);
-    if (match == null)
+    if (match == null) {
       throw new NoSuchMethodException(methodName);
+	}
     return match;
   }
 
@@ -757,8 +771,10 @@ public final class Class<T>
     for (int i = 0; i < list.length; i++)
       {
 	Method method = list[i];
-	if (!method.getName().equals(name))
+	//System.out.println("matchMethod: method name " + method.getName());
+	if (!method.getName().equals(name)) {
 	  continue;
+	}
 	if (!matchParameters(args, method.getParameterTypes()))
 	  continue;
 	if (match == null
@@ -782,10 +798,11 @@ public final class Class<T>
     if (types1.length != types2.length)
       return false;
     for (int i = 0; i < types1.length; i++)
-      {
-	if (types1[i] != types2[i])
-	  return false;
-      }
+	{
+		if (!types1[i].equals(types2[i])) {
+			return false;
+		}
+	}
     return true;
   }
   

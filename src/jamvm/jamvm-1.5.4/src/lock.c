@@ -34,9 +34,6 @@
 #include "symbol.h"
 #include "excep.h"
 
-/*	XXX	NVM VARIABLES - LOCK.C	*/
-static int testing_mode = FALSE;
-
 /* Trace lock operations and inflation/deflation */
 #ifdef TRACELOCK
 #define TRACE(fmt, ...) jam_printf(fmt, ## __VA_ARGS__)
@@ -46,7 +43,6 @@ static int testing_mode = FALSE;
 
 #define UN_USED -1
 
-#define HASHTABSZE 1<<5
 #define PREPARE(obj) allocMonitor(obj)
 #define HASH(obj) (getObjectHashcode(obj) >> LOG_OBJECT_GRAIN)
 #define COMPARE(obj, mon, hash1, hash2) hash1 == hash2 && mon->obj == obj
@@ -94,9 +90,6 @@ static int testing_mode = FALSE;
 
 static Monitor *mon_free_list = NULL;
 static HashTable mon_cache;
-
-/*	XXX	NVM VARIABLES - LOCK.C	*/
-static char* monitor_name = "monitor_ht";
 
 void monitorInit(Monitor *mon) {
     memset(mon, 0, sizeof(Monitor));
@@ -313,7 +306,11 @@ Monitor *allocMonitor(Object *obj) {
         mon = mon_free_list;
         mon_free_list = mon->next;      
     } else {
-        mon = sysMalloc(sizeof(Monitor));
+		// JAPHA: monitor hash table is persistent, so they must be persistent
+		// FIXME: should they be persistent? Need to think about it.
+        //mon = sysMalloc(sizeof(Monitor));
+		mon = sysMalloc_persistent(sizeof(Monitor));
+		// end of JAPHA modification
         monitorInit(mon);
     }
     mon->obj = obj;
@@ -331,8 +328,16 @@ Monitor *findMonitor(Object *obj) {
     else {
         Monitor *mon;
         /* Add if absent, scavenge, locked */
+		// JAPHA will modify Hashtable in pheap,  need to add to NVML transaction
+		if (persistent) {
+			BEGIN_TX("FIND_MONITOR")
+			NVML_DIRECT("FIND_MONITOR", mon_cache.hash_table, MONITOR_HT_SIZE)
+		}
         /* XXX NVM CHANGE 006.003.012  */
-        findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, monitor_name, FALSE);
+        findHashEntry(mon_cache, obj, mon, TRUE, TRUE, TRUE, HT_NAME_MONITOR, FALSE);
+		if (persistent) {
+			END_TX("FIND_MONITOR")
+		}
         return mon;
     }
 }
@@ -560,13 +565,12 @@ Thread *objectLockedBy(Object *obj) {
 }
 
 void initialiseMonitor(InitArgs *args) {
-	if(args->testing_mode == TRUE)
-	{
-		testing_mode = TRUE;
-	}
+
     /* Init hash table, create lock */
     /* XXX NVM CHANGE 005.001.006 - Monitors HT - N*/
-    initHashTable(mon_cache, HASHTABSZE, TRUE, monitor_name, FALSE);
+    // JaPHa Modification
+    initHashTable(mon_cache, MONITOR_HT_ENTRY_COUNT, TRUE, HT_NAME_MONITOR, TRUE);
+    // End of modification
 }
 
 /* Heap compaction support */

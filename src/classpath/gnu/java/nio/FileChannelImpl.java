@@ -99,38 +99,38 @@ public final class FileChannelImpl extends FileChannel
     
     //init();
 
-    FileChannelImpl ch = null;
+    FileChannelImpl ch_ = null;
     try
       {
-        ch = new FileChannelImpl(VMChannel.getStdin(), READ);
+        ch_ = new FileChannelImpl(VMChannel.getStdin(), READ);
       }
     catch (IOException ioe)
       {
         throw new Error(ioe);
       }
-    in = ch;
+    in = ch_;
     
-    ch = null;
+    ch_ = null;
     try
       {
-        ch = new FileChannelImpl(VMChannel.getStdout(), WRITE);
+        ch_ = new FileChannelImpl(VMChannel.getStdout(), WRITE);
       }
     catch (IOException ioe)
       {
         throw new Error(ioe);
       }
-    out = ch;
+    out = ch_;
     
-    ch = null;
+    ch_ = null;
     try
       {
-        ch = new FileChannelImpl(VMChannel.getStderr(), WRITE);        
+        ch_ = new FileChannelImpl(VMChannel.getStderr(), WRITE);        
       }
     catch (IOException ioe)
       {
         throw new Error(ioe);
       }
-    err = ch;
+    err = ch_;
   }
 
   /**

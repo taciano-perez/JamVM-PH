@@ -23,13 +23,10 @@
 #include <stdlib.h>
 #include "jam.h"
 #include "hash.h"
-// todo HT SIZE
-//1 << 10
-//Changed Default size of UTF8 hash 1 << 10
-#define HASHTABSZE 1<<13
+
 #define HASH(ptr) utf8Hash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (ptr1 == ptr2) || \
-                  (utf8Comp(ptr1, ptr2) && (hash1 == hash2))
+                  ((hash1 == hash2) && utf8Comp(ptr1, ptr2))
 #define PREPARE(ptr) ptr
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
@@ -37,8 +34,6 @@
 static HashTable hash_table;
 
 /*XXX NVM VARIABLES - UTF8.C */
-static char* utf8_name = "utf8_ht";
-static int testing_mode = FALSE;
 static int is_persistent = FALSE;
 
 #define GET_UTF8_CHAR(ptr, c)                         \
@@ -84,7 +79,7 @@ int utf8Hash(char *utf8) {
 }
 
 int utf8Comp(char *ptr, char *ptr2) {
-     while(*ptr && *ptr2) {
+    while(*ptr && *ptr2) {
         unsigned short c, c2;
 
         GET_UTF8_CHAR(ptr, c);
@@ -102,12 +97,12 @@ char *findHashedUtf8(char *string, int add_if_absent) {
     char *interned = NULL;
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.008  */
-   		findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, utf8_name, TRUE);
-   	return interned;
+    findHashEntry(hash_table, string, interned, add_if_absent, FALSE, TRUE, HT_NAME_UTF8, TRUE);
+    return interned;
 }
 
 char *copyUtf8(char *string) {
-	/*XXX NVM CHANGE 004.001.030	*/
+    /*XXX NVM CHANGE 004.001.030	*/
     char *buff = strcpy(sysMalloc_persistent(strlen(string) + 1), string);
     char *found = findHashedUtf8(buff, TRUE);
 
@@ -145,17 +140,15 @@ char *slash2dots2buff(char *utf8, char *buff, int buff_len) {
 }
 
 void initialiseUtf8(InitArgs *args) {
-	if(args->testing_mode == TRUE){
-		testing_mode = TRUE;
-	}
-	if(args->persistent_heap == TRUE){
-		is_persistent = TRUE;
-	}
+
+    if(args->persistent_heap == TRUE) {
+    	is_persistent = TRUE;
+    }
     /* Init hash table, and create lock */
     /* XXX NVM CHANGE 005.001.009 - UTF8 HT - Y*/
-    initHashTable(hash_table, HASHTABSZE, TRUE, utf8_name, TRUE);
+    initHashTable(hash_table, UTF8_HT_ENTRY_COUNT, TRUE, HT_NAME_UTF8, TRUE);
     /* XXX DOC CHANGE */
-    if(is_persistent){
+    if(is_persistent) {
     	OPC *ph_value = get_opc_ptr();
     	hash_table.hash_count = ph_value->utf8_hash_count;
     }
@@ -196,9 +189,7 @@ char *unicode2Utf8(unsigned short *unicode, int len, char *utf8) {
 }
 #endif
 
-
 /*	XXX NVM CHANGE 009.004.001	*/
-int get_utf8_HC()
-{
-	return hash_table.hash_count;
+int get_utf8_HC() {
+    return hash_table.hash_count;
 }

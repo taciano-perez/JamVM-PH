@@ -99,7 +99,7 @@ Object *allocMultiArray(Class *array_class, int dim, intptr_t *count) {
     return NULL;
 }
 
-void *sysMalloc(int n) {
+void *sysMalloc(unsigned int n) {
     return NULL;
 }
 
@@ -148,6 +148,11 @@ CodePntr findCatchBlock(Class *exception) {
 ExecEnv *getExecEnv() {
     return NULL;
 }
+
+// JaPHa Modification
+void flushPHValues() {
+}
+// End of modification
 
 void exitVM(int status) {
 }

@@ -40,3 +40,6 @@
 #define testFlcBit(obj) (*HDR_ADDRESS(obj) & FLC_BIT)
 
 #define isPlaceholderObj(obj) (obj->class == NULL)
+
+// JAPHA: added by Taciano to avoid warnings while compiling alloc.c
+extern const char *pmem_errormsg(void);

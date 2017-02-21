@@ -29,11 +29,16 @@
 #include "config.h"
 
 /* NVM specific includes and defines */
-#include "nvm/test/testing_utils.h"
+//#include "nvm/test/testing_utils.h"
 #include "nvm/utils/logger.h"
 
 /* Architecture dependent definitions */
 #include "arch.h"
+
+// JaPHa Modification
+#include <unistd.h>
+#include <libpmemobj.h>
+// end of JaPHa Modification
 
 #ifndef TRUE
 #define         TRUE    1
@@ -652,7 +657,6 @@ typedef struct InitArgs {
     /* XXX NVM CHANGE 001.000 - Parameter  */
     int persistent_heap;
     char *heap_file;
-    int testing_mode;
 
     Property *commandline_props;
     int props_count;
@@ -687,7 +691,6 @@ typedef struct opc {
 	uintptr_t freelist_header;
 	struct chunk *freelist_next;
 	unsigned int heapfree;
-	unsigned int nvmFreeSpace;
 	int boot_classes_hash_count;
 	int boot_packages_hash_count;
 	int classes_hash_count;
@@ -786,6 +789,86 @@ typedef struct opc {
 
 /* Alloc */
 
+// JAPHA modifications
+#define PATH "/mnt/pmfs/HEAP_POOL"	// FIXME: this needs to be dynamically configured via -persistentheap:<FILE_NAME>
+//#define HEAP_SIZE 3000000
+#define HEAP_SIZE 8192L*MB		// 8GB
+#define PHEAP_SIZE sizeof(PHeap)*4	// size of NVML pool, need extra space for overhead
+
+#define NVM_INIT_SIZE 	2500000*8
+
+/* Hashtable name constants */
+/* persistent HTs */
+#define HT_NAME_BOOT	"bootCl_ht"
+#define HT_NAME_CLASS	"classes_ht"
+#define HT_NAME_BOOTPKG	"bootPck_ht"
+#define HT_NAME_UTF8	"utf8_ht"
+#define HT_NAME_STRING	"string_ht"
+#define HT_NAME_MONITOR	"monitor_ht"
+#define HT_NAME_ZIP	"zip_ht"
+
+/* Hashtable size constants */
+#define HT_ENTRY_SIZE	16	// FIXME: this is the sizeof(HashEntry) as defined by hash.h for the test platform; need to find a better solution for that
+
+#define MONITOR_HT_ENTRY_COUNT	32		// max number of HashTable entries supported by MONITOR HT
+#define UTF8_HT_ENTRY_COUNT		32768	// max number of HashTable entries supported by UTF8 HT
+#define BOOTCL_HT_ENTRY_COUNT	4096	// max number of HashTable entries supported by BOOTCL HT
+#define BOOTPCK_HT_ENTRY_COUNT	64		// max number of HashTable entries supported by BOOTPCK HT
+#define STRING_HT_ENTRY_COUNT	2048	// max number of HashTable entries supported by STRING HT
+#define CLASSES_HT_ENTRY_COUNT	4096	// max number of HashTable entries supported by CLASSES HT
+#define ZIP_HT_ENTRY_COUNT		16384	// max number of HashTable entries supported by ZIP HT
+
+#define MONITOR_HT_SIZE MONITOR_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define UTF8_HT_SIZE UTF8_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define BOOTCL_HT_SIZE BOOTCL_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define BOOTPCK_HT_SIZE BOOTPCK_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define STRING_HT_SIZE STRING_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define CLASSES_HT_SIZE CLASSES_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+#define ZIP_HT_SIZE ZIP_HT_ENTRY_COUNT*HT_ENTRY_SIZE
+
+/* Format of an unallocated chunk */
+typedef struct chunk {
+	uintptr_t header;
+	struct chunk *next;
+} Chunk;
+
+typedef struct nvmChunk {
+	int allocBit;
+	unsigned int chunkSize;
+	struct nvmChunk *next;
+} nvmChunk;
+
+
+typedef struct pheap {
+	void *base_address;
+	Chunk *freelist;
+	Chunk **chunkpp;
+	unsigned long heapfree;
+	unsigned long maxHeap;
+	char *heapbase;
+	char *heapmax;
+	char *heaplimit;
+	nvmChunk *nvmfreelist;
+	nvmChunk **nvmChunkpp;
+	unsigned int nvmFreeSpace;
+	unsigned int nvmCurrentSize;
+	unsigned long nvm_limit;
+	OPC opc;
+	char* utf8_ht[UTF8_HT_SIZE];
+	char* bootCl_ht[BOOTCL_HT_SIZE];
+	char* bootPck_ht[BOOTPCK_HT_SIZE];
+	char* string_ht[STRING_HT_SIZE];
+	char* classes_ht[CLASSES_HT_SIZE];
+	char* monitor_ht[MONITOR_HT_SIZE];
+	char* zip_ht[ZIP_HT_SIZE];
+	char nvm[NVM_INIT_SIZE];
+	char heapMem[HEAP_SIZE];// heap contents
+} PHeap;
+
+extern void* ph_malloc(int len);
+extern int initialiseRoot(InitArgs *args);
+// End of JAPHA modifications
+
 extern void initialiseAlloc(InitArgs *args);
 extern void initialiseGC(InitArgs *args);
 extern Class *allocClass();
@@ -803,17 +886,16 @@ extern unsigned long freeHeapMem();
 extern unsigned long totalHeapMem();
 extern unsigned long maxHeapMem();
 
-extern void *sysMalloc(int n);
+extern void *sysMalloc(unsigned int n);
 extern void sysFree(void *ptr);
-extern void *sysRealloc(void *ptr, int n);
-
+extern void *sysRealloc(void *ptr, unsigned int n);
 
 /* XXX NVM CHANGE 004.000 - P.A.F
  * Added functions
  */
-extern void *sysMalloc_persistent(int n);
+extern void *sysMalloc_persistent(unsigned int n);
 extern void sysFree_persistent(void *addr);
-extern void *sysRealloc_persistent(void *ptr, int n);
+extern void *sysRealloc_persistent(void *ptr, unsigned int n);
 
 /*	XXX NVM CHANGE 009.000.001	*/
 extern OPC *get_opc_ptr();
@@ -1145,3 +1227,74 @@ extern void getTimeoutRelative(struct timespec *ts, long long millis,
 
 extern int sigElement2Size(char element);
 
+// JaPHa Modification
+// definition of the pool layout and necessary variables
+
+POBJ_LAYOUT_BEGIN(HEAP_POOL);
+POBJ_LAYOUT_ROOT(HEAP_POOL, PHeap);
+POBJ_LAYOUT_END(HEAP_POOL);
+
+int nvml_alloc, persistent, errr, first_ex;
+PMEMobjpool *pop_heap;
+PMEMoid root_heap;
+PHeap *pheap;
+uint total_tx_count;
+/*
+#define NVML_DIRECT(TYPE, PTR, SIZE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
+										if(errr = pmemobj_tx_add_range_direct(PTR, SIZE)) { \
+											printf("%s ERROR %d: could not add range to transaction\n", TYPE, errr); \
+										} \
+									}
+#define BEGIN_TX(TYPE) total_tx_count++; if (total_tx_count == 1) { \
+							if(errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE)) { \
+							   printf("ERROR %d at BEGIN\n", errr); \
+						   } else {	\
+							   if (FALSE) printf("BEGIN_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
+							} \
+						}
+
+// JAPHA: should flushPHValue be here?
+#define END_TX(TYPE) total_tx_count--; if (total_tx_count == 0) { \
+						if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
+							 pmemobj_tx_process(); \
+						 } \
+						 if(pmemobj_tx_stage() != TX_STAGE_NONE) { \
+							 flushPHValues(); \
+							 pmemobj_tx_end(); \
+							 if (FALSE) printf("END_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
+						 } \
+					}
+*/
+
+#define NVML_DIRECT(TYPE, PTR, SIZE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
+										if(errr = pmemobj_tx_add_range_direct(PTR, SIZE)) { \
+											printf("%s ERROR %d: could not add range to transaction\n", TYPE, errr); \
+										} \
+									}
+
+#define BEGIN_TX(TYPE) if(errr = pmemobj_tx_begin(pop_heap, NULL, TX_LOCK_NONE)) { \
+					       printf("ERROR %d at BEGIN\n", errr); \
+                       } else {	\
+						   total_tx_count++; \
+						   if (FALSE) printf("BEGIN_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
+					    } \
+
+// JAPHA: should flushPHValue be here?
+#define END_TX(TYPE) if(pmemobj_tx_stage() == TX_STAGE_WORK) { \
+					     pmemobj_tx_process(); \
+				     } \
+				     if(pmemobj_tx_stage() != TX_STAGE_NONE) { \
+					     flushPHValues(); \
+					     pmemobj_tx_end(); \
+   					     total_tx_count--; \
+					     if (FALSE) printf("END_TX(" #TYPE "), tx_count=%u\n", total_tx_count);	\
+				     }
+
+/*
+#define NVML_DIRECT(TYPE, PTR, SIZE) do {} while (0);
+#define BEGIN_TX(TYPE)  do {} while (0);
+#define END_TX(TYPE)  flushPHValues();
+//	#define END_TX(TYPE)  do {} while (0);
+*/
+extern void flushPHValues();
+// End of modification

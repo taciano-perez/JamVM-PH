@@ -14,7 +14,7 @@ library_names='libjvm.so.0.0.0 libjvm.so.0 libjvm.so'
 old_library=''
 
 # Libraries that this one depends upon.
-dependency_libs=' -lffi -lz -ldl -lm -lpthread'
+dependency_libs=' -lffi -lz -ldl -lm -lpthread -lpmemobj -lpmem'
 
 # Version information for libjvm.
 current=0

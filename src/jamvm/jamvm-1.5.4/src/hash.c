@@ -40,8 +40,12 @@ void unlockHashTable0(HashTable *table, Thread *self) {
 
 /* XXX NVM CHANGE 006.002 - Resize Hash */
 void resizeHash(HashTable *table, int new_size, char* name , int create_file) {
+	// FIXME: resize implementation is messed up --- need to rethink and refactor it
+//	if (strcmp(HT_NAME_ZIP, name) != 0) {
+		printf("WARNING: resizeHash on %s being invoked, if this is a persistent HT, there is trouble ahead.\n", name);
+//	}
     /* XXX NVM CHANGE 005.001.011 - Resize Hash*/
-	HashEntry *new_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*new_size, name, create_file);
+    HashEntry *new_table = (HashEntry*)gcMemMalloc(sizeof(HashEntry)*new_size, name, create_file);
     int i;
 
     memset(new_table, 0, sizeof(HashEntry)*new_size);

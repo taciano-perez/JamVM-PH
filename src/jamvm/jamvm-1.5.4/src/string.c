@@ -26,7 +26,6 @@
 #include "hash.h"
 #include "symbol.h"
 
-#define HASHTABSZE 1<<10
 #define HASH(ptr) stringHash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) (ptr1 == ptr2) || \
                   ((hash1 == hash2) && stringComp(ptr1, ptr2))
@@ -41,8 +40,6 @@ static int offset_offset;
 
 static HashTable hash_table;
 /*	XXX	NVM VARIABLES - STRING.C	*/
-static char* string_name = "string_ht";
-static int testing_mode = FALSE;
 static int is_persistent = FALSE;
 
 int stringHash(Object *ptr) {
@@ -100,9 +97,10 @@ Object *createString(char *utf8) {
 
 Object *findInternedString(Object *string) {
     Object *interned;
+
     /* Add if absent, no scavenge, locked */
     /* XXX NVM CHANGE 006.003.007  */
-    findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, string_name, TRUE);
+    findHashEntry(hash_table, string, interned, TRUE, FALSE, TRUE, HT_NAME_STRING, TRUE);
 
     return interned;
 }
@@ -130,7 +128,7 @@ void freeInternedStrings() {
         /* Ensure new table is less than 2/3 full */
         size = hash_table.hash_count*3 > size*2 ? size<< 1 : size;
         /* XXX NVM CHANGE 006.002.001  */
-        resizeHash(&hash_table, size, string_name, TRUE);
+        resizeHash(&hash_table, size, HT_NAME_STRING, TRUE);
     }
 }
 
@@ -169,13 +167,10 @@ char *String2Cstr(Object *string) {
 }
 
 void initialiseString(InitArgs *args) {
-	if(args->testing_mode == TRUE)
-	{
-		testing_mode = TRUE;
-	}
-	if(args->persistent_heap == TRUE){
-		is_persistent = TRUE;
-	}
+
+    if(args->persistent_heap == TRUE){
+    	is_persistent = TRUE;
+    }
     FieldBlock *count = NULL, *value = NULL, *offset = NULL;
 
     string_class = findSystemClass0(SYMBOL(java_lang_String));
@@ -199,9 +194,9 @@ void initialiseString(InitArgs *args) {
 
     /* Init hash table and create lock */
     /* XXX NVM CHANGE 005.001.007 - Strings HT - Y*/
-    initHashTable(hash_table, HASHTABSZE, TRUE, string_name, TRUE);
+    initHashTable(hash_table, STRING_HT_ENTRY_COUNT, TRUE, HT_NAME_STRING, TRUE);
     /* XXX DOC CHANGE */
-    if(is_persistent){
+    if(is_persistent) {
     	OPC *ph_value = get_opc_ptr();
     	hash_table.hash_count = ph_value->string_hash_count;
     }
@@ -257,7 +252,6 @@ char *String2Utf8(Object *string) {
 #endif
 
 /*	XXX NVM CHANGE 009.003.001	*/
-int get_string_HC()
-{
-	return hash_table.hash_count;
+int get_string_HC() {
+    return hash_table.hash_count;
 }

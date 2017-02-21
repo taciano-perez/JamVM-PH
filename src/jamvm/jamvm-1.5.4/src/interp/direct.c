@@ -55,7 +55,6 @@
 #define UNPREPARED 1
 #define PREPARING  2
 
-
 /* Global lock for method preparation */
 static VMWaitLock prepare_lock;
 
@@ -105,6 +104,7 @@ void prepare(MethodBlock *mb, const void ***handlers) {
 
 retry:
     code = mb->code;
+
     switch((uintptr_t)code & 0x3) {
         case PREPARED:
             unlockVMWaitLock(prepare_lock, self);
@@ -549,12 +549,12 @@ retry:
                         i = high - low + 4;
 #endif
                     } else {
-                        SwitchTable *table = sysMalloc(sizeof(SwitchTable));
+                        SwitchTable *table = sysMalloc_persistent(sizeof(SwitchTable));
 
                         table->low = low;
                         table->high = high; 
                         table->deflt = &new_code[map[pc + deflt]];
-                        table->entries = sysMalloc((high - low + 1) * sizeof(Instruction *));
+                        table->entries = sysMalloc_persistent((high - low + 1) * sizeof(Instruction *));
 
                         for(i = 3; i < (high - low + 4); i++)
                             table->entries[i - 3] = &new_code[map[pc + ntohl(aligned_pc[i])]];
@@ -607,11 +607,11 @@ retry:
                         i = npairs*2+2;
 #endif
                     } else {
-                        LookupTable *table = sysMalloc(sizeof(LookupTable));
+                        LookupTable *table = sysMalloc_persistent(sizeof(LookupTable));
    
                         table->num_entries = npairs;
                         table->deflt = &new_code[map[pc + deflt]];
-                        table->entries = sysMalloc(npairs * sizeof(LookupEntry));
+                        table->entries = sysMalloc_persistent(npairs * sizeof(LookupEntry));
                             
                         for(i = 2, j = 0; j < npairs; i += 2, j++) {
                             table->entries[j].key = ntohl(aligned_pc[i]);
@@ -868,6 +868,7 @@ retry:
 
                         TRACE("Block start %d end %d length %d last opcode quickened %d\n",
                               ins_start, ins_count, block_len, quickened);
+
                         if(quickened) {
                             QuickPrepareInfo *prepare_info;
 

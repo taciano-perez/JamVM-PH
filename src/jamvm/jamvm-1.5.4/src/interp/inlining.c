@@ -531,8 +531,8 @@ CodeBlockHeader *findCodeBlock(TestCodeBlock *block) {
     if(branch_patching_dup && block->patchers != NULL)
         ret_block = newDuplicateBlock(block);
     else {
-        /* Search hash table.  Add if absent, scavenge and not locked
-    /* XXX NVM CHANGE 006.003.011 - Execution State  */
+        /* Search hash table.  Add if absent, scavenge and not locked */
+        /* XXX NVM CHANGE 006.003.011 - Execution State  */
         findHashEntry(code_hash_table, block, ret_block, TRUE, TRUE, FALSE, inline_name, FALSE );
     }
 
@@ -891,11 +891,8 @@ void removeFromProfile(MethodBlock *mb, BasicBlock *block) {
 
     if(profile_info->next)
         profile_info->next->prev = profile_info->prev;
-    /*XXX NVM CHANGE 004.003.002
-    sysFree_persistent(profile_info);
-    */
-    sysFree(profile_info);
 
+    sysFree(profile_info);
 }
 
 void inlineBlock(MethodBlock *mb, BasicBlock *block, Thread *self) {
@@ -937,6 +934,7 @@ void inlineBlock(MethodBlock *mb, BasicBlock *block, Thread *self) {
 
     for(end = end->next; start != end; ) {
         BasicBlock *next = start->next;
+
         sysFree(start->opcodes);
         sysFree(start);
         start = next;
@@ -955,9 +953,6 @@ void inlineBlock(MethodBlock *mb, BasicBlock *block, Thread *self) {
    they have been executed).
 */
 void addToProfile(MethodBlock *mb, BasicBlock *block, Thread *self) {
-	/*XXX NVM CHANGE 004.001.029
-    ProfileInfo *info = sysMalloc_persistent(sizeof(ProfileInfo));
-    */
     ProfileInfo *info = sysMalloc(sizeof(ProfileInfo));
 
     TRACE("Adding block (start %p) to profile\n", block->start);

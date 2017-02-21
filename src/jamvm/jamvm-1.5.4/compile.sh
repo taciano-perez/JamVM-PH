@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 
 clear
 
@@ -10,6 +11,10 @@ sudo make clean
 
 python O2Remover.py
 
+python IncludeMakefiles.py
+
 make all
 
 sudo make install
+
+bash compile_java.sh

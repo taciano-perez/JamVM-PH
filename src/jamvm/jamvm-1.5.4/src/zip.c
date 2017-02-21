@@ -39,7 +39,6 @@
 #include <fcntl.h>
 
 /* Common definitions needed for hashtable */
-#define HASHTABSZE 1<<8
 #define PREPARE(ptr) ptr
 #define SCAVENGE(ptr) FALSE
 #define FOUND(ptr1, ptr2) ptr2
@@ -84,8 +83,6 @@
 #define HASH(ptr) zipHash(ptr)
 #define COMPARE(ptr1, ptr2, hash1, hash2) ((hash1 == hash2) && \
                                            zipComp(ptr1, ptr2)) 
-/*	XXX	NVM VARIABLES - ZIP.C	*/
-static char* zip_name = "zip_ht";
 
 /* The filenames within the zip file are added to a hash-table for faster
    access.  To save memory, the entries point directly into the zip file's
@@ -175,7 +172,7 @@ ZipFile *processArchive(char *path) {
     hash_table = sysMalloc(sizeof(HashTable));
 
     /* XXX NVM CHANGE 005.001.010 - Files HT - N - NW!!*/
-    initHashTable((*hash_table), HASHTABSZE, FALSE, zip_name, FALSE);
+    initHashTable((*hash_table), ZIP_HT_ENTRY_COUNT, FALSE, HT_NAME_ZIP, FALSE);
 
     /* Get the offset from the start of the file of the first directory entry */
     pntr = data + READ_LE_INT(pntr + END_CEN_DIR_START_OFFSET);
@@ -209,10 +206,11 @@ ZipFile *processArchive(char *path) {
 
         /* XXX NVM CHANGE 006.003.009  */
         /* Add if absent, no scavenge, not locked */
-        findHashEntry((*hash_table), pathname, found, TRUE, FALSE, FALSE, zip_name, FALSE);
+        findHashEntry((*hash_table), pathname, found, TRUE, FALSE, FALSE, HT_NAME_ZIP, FALSE);
     }
-   	/*	XXX NVM CHANGE 004.001.024 */
-    zip = sysMalloc_persistent(sizeof(ZipFile));
+    /*	XXX NVM CHANGE 004.001.024 */
+    //zip = sysMalloc_persistent(sizeof(ZipFile));	// JAPHA removed by Taciano on May 20th 2016, this is indexed by a volatile hash table
+		zip = sysMalloc(sizeof(ZipFile));
 
     zip->data = data;
     zip->length = len;
@@ -258,7 +256,8 @@ char *findArchiveDirEntry(char *pathname, ZipFile *zip) {
 
     /* XXX NVM CHANGE 006.003.010  */
     /* Do not add if absent, no scavenge, not locked */
-    findHashEntry((*zip->dir_hash), pathname, found, FALSE, FALSE, FALSE, zip_name, FALSE);
+	//printf("findArchiveDirEntry zip->dir_hash = %p\n", &(*zip->dir_hash));
+    findHashEntry((*zip->dir_hash), pathname, found, FALSE, FALSE, FALSE, HT_NAME_ZIP, FALSE);
 
     return found;
 }
