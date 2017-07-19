@@ -9,6 +9,9 @@ configure text
 config.sub text
 config.guess text
 configure text
+missing text
+Makefile text
+Makefile.* text
 
 # Denote all files that are truly binary and should not be modified.
 *.png binary
